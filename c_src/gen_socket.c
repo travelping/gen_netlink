@@ -1,4 +1,10 @@
-/* Copyright (c) 2010, Michael Santos <michael.santos@gmail.com>
+/*
+ * Copyright (c) 2010, Travelping GmbH <info@travelping.com
+ * All rights reserved.
+ *  
+ * based on procket:
+ *
+ * Copyright (c) 2010, Michael Santos <michael.santos@gmail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -31,10 +37,7 @@
  */
 #include "erl_nif.h"
 #include "erl_driver.h"
-#include "ancillary.h"
-#include "procket.h"
-
-#define BACKLOG     5
+#include "gen_socket.h"
 
 static ERL_NIF_TERM error_tuple(ErlNifEnv *env, int errnum);
 
@@ -43,7 +46,7 @@ static ERL_NIF_TERM atom_error;
 static ERL_NIF_TERM atom_eagain;
 
 
-    static int
+static int
 load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
 {
     atom_ok = enif_make_atom(env, "ok");
@@ -54,33 +57,8 @@ load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
 }
 
 
-/* Retrieve the file descriptor from the forked privileged process */
-/* 0: connected Unix socket */
-    static ERL_NIF_TERM
-nif_fdrecv(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
-{
-    int fd = -1;    /* connected socket */
-    int s = -1;     /* socket received from pipe */
-
-
-    if (!enif_get_int(env, argv[0], &fd))
-        return enif_make_badarg(env);
-
-    if (ancil_recv_fd(fd, &s) < 0) {
-        (void)close(fd);
-        return error_tuple(env, errno);
-    }
-
-    (void)close(fd);
-
-    return enif_make_tuple(env, 2,
-            atom_ok,
-            enif_make_int(env, s));
-}
-
-
 /*  0: procotol, 1: type, 2: family */
-    static ERL_NIF_TERM
+static ERL_NIF_TERM
 nif_socket(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     int s = -1;
@@ -88,7 +66,6 @@ nif_socket(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     int type = 0;
     int protocol = 0;
     int flags = 0;
-
 
     if (!enif_get_int(env, argv[0], &family))
         return enif_make_badarg(env);
@@ -114,7 +91,7 @@ nif_socket(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 
 
 /* 0: file descriptor, 1: backlog */
-    static ERL_NIF_TERM
+static ERL_NIF_TERM
 nif_listen(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     int s = -1;
@@ -135,7 +112,7 @@ nif_listen(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 
 
 /* 0: socket, 1: struct sockaddr length */
-    static ERL_NIF_TERM
+static ERL_NIF_TERM
 nif_accept(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     int l = -1;
@@ -174,7 +151,7 @@ nif_accept(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 
 /* 0: file descriptor
  */
-    static ERL_NIF_TERM
+static ERL_NIF_TERM
 nif_close(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     int sockfd = -1;
@@ -192,7 +169,7 @@ nif_close(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 
 /* 0: socket, 1: length */
 /* 0: socket, 1: length, 2: flags, 3: struct sockaddr length */
-    static ERL_NIF_TERM
+static ERL_NIF_TERM
 nif_recvfrom(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     int sockfd = -1;
@@ -246,7 +223,7 @@ nif_recvfrom(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 
 
 /* 0: socket, 1: buffer, 2: flags, 3: struct sockaddr */
-    static ERL_NIF_TERM
+static ERL_NIF_TERM
 nif_sendto(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     int sockfd = -1;
@@ -277,7 +254,7 @@ nif_sendto(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 
 
 /* 0: socket descriptor, 1: struct sockaddr */
-    static ERL_NIF_TERM
+static ERL_NIF_TERM
 nif_bind(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     int s = -1;
@@ -298,7 +275,7 @@ nif_bind(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 
 
 /* 0: socket descriptor, 1: struct sockaddr */
-    static ERL_NIF_TERM
+static ERL_NIF_TERM
 nif_connect(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     int s = -1;
@@ -321,7 +298,7 @@ nif_connect(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 /* 0: (int)socket descriptor, 1: (int)device dependent request,
  * 2: (char *)argp, pointer to structure
  */
-    static ERL_NIF_TERM
+static ERL_NIF_TERM
 nif_ioctl(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     int s = -1;
@@ -353,7 +330,7 @@ nif_ioctl(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 /* 0: int socket descriptor, 1: int level,
  * 2: int optname, 3: void *optval
  */
-    static ERL_NIF_TERM
+static ERL_NIF_TERM
 nif_setsockopt(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     int s = -1;
@@ -380,7 +357,7 @@ nif_setsockopt(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 
-    static ERL_NIF_TERM
+static ERL_NIF_TERM
 error_tuple(ErlNifEnv *env, int errnum)
 {
     return enif_make_tuple(env, 2,
@@ -390,8 +367,6 @@ error_tuple(ErlNifEnv *env, int errnum)
 
 
 static ErlNifFunc nif_funcs[] = {
-    {"fdrecv", 1, nif_fdrecv},
-
     {"close", 1, nif_close},
     {"accept", 2, nif_accept},
     {"bind", 2, nif_bind},
@@ -404,6 +379,6 @@ static ErlNifFunc nif_funcs[] = {
     {"setsockopt", 4, nif_setsockopt}
 };
 
-ERL_NIF_INIT(procket, nif_funcs, load, NULL, NULL, NULL)
+ERL_NIF_INIT(gen_socket, nif_funcs, load, NULL, NULL, NULL)
 
 

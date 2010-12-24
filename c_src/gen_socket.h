@@ -1,4 +1,9 @@
 /*
+ * Copyright (c) 2010, Travelping GmbH <info@travelping.com
+ * All rights reserved.
+ *  
+ * based on procket:
+ *
  * Copyright (c) 2010, Michael Santos <michael.santos@gmail.com>
  * All rights reserved.
  * 
@@ -51,7 +56,7 @@
 #include <sys/ioctl.h>
 
 
-#define PROCKET_VERSION   "0.01"
+#define GEN_SOCKET_VERSION   "0.01"
 #define MAXBUFLEN           4096    /* Largest message accepted on stdin */
 #ifndef UNIX_PATH_MAX
 #define UNIX_PATH_MAX  sizeof(((struct sockaddr_un *)0)->sun_path)
@@ -84,22 +89,5 @@
 
 
 extern char *__progname;
-
-
-typedef struct {
-    char *path;             /* path to pipe file */
-    char *address;          /* <port> or <ipaddr:port> */
-    char *ifname;           /* network interface name */
-    int verbose;            /* Debug messages */
-
-    in_addr_t ip;           /* IP Address */
-    in_port_t port;         /* Port */
-
-    int s;                  /* socket fd */
-    int family;             /* socket family: PF_INET */
-    int type;               /* socket type: SOCK_STREAM */
-    int protocol;           /* socket protocol: IPPROTO_TCP */
-    int backlog;            /* Listen backlog */
-} PROCKET_STATE;
 
 

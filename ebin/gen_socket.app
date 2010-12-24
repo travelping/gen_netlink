@@ -1,9 +1,9 @@
-{application, procket,
+{application, gen_socket,
     [
     {description, "Low level socket operations"},
     {vsn, "0.02"},
     {modules, [
-        procket,
+        gen_socket,
         packet,
         mktmp,
         icmp,

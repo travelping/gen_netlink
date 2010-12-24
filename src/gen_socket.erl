@@ -1,3 +1,8 @@
+%% Copyright (c) 2010, Travelping GmbH <info@travelping.com
+%% All rights reserved.
+%%  
+%% based on procket:
+%%
 %% Copyright (c) 2010, Michael Santos <michael.santos@gmail.com>
 %% All rights reserved.
 %% 
@@ -28,12 +33,12 @@
 %% LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
 %% ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 %% POSSIBILITY OF SUCH DAMAGE.
--module(procket).
--include("procket.hrl").
+
+-module(gen_socket).
+-include("gen_socket.hrl").
 
 -export([
         init/0,
-        open/1,open/2,
         socket/3,
         listen/1,listen/2,
         connect/2,
@@ -45,7 +50,7 @@
         ioctl/3,
         setsockopt/4
     ]).
--export([make_args/2,progname/0]).
+-export([progname/0]).
 
 -on_load(on_load/0).
 
@@ -58,9 +63,6 @@ on_load() ->
 
 
 close(_) ->
-    erlang:error(not_implemented).
-
-fdrecv(_) ->
     erlang:error(not_implemented).
 
 accept(Socket) ->
@@ -110,103 +112,6 @@ sendto(_,_,_,_) ->
 setsockopt(_,_,_,_) ->
     erlang:error(not_implemented).
 
-
-open(Port) ->
-    open(Port, []).
-open(Port, Options) when is_integer(Port), is_list(Options) ->
-    Opt = case proplists:get_value(pipe, Options) of
-        undefined ->
-            Tmp = mktmp:dirname(),
-            ok = mktmp:make_dir(Tmp),
-            Path = Tmp ++ "/sock",
-            [{pipe, Path}, {tmpdir, Tmp}] ++ Options;
-        _ ->
-            [{tmpdir, false}] ++ Options
-    end,
-    open1(Port, Opt).
-
-open1(Port, Options) ->
-    Pipe = proplists:get_value(pipe, Options),
-    {ok, Sockfd} = fdopen(Pipe),
-    Cmd = make_args(Port, Options),
-    case os:cmd(Cmd) of
-        [] ->
-            FD = fdget(Sockfd),
-            cleanup(Sockfd, Pipe, Options),
-            FD;
-        Error ->
-            cleanup(Sockfd, Pipe, Options),
-            {error, {procket_cmd, Error}}
-    end.
-
-cleanup(Sockfd, Pipe, Options) ->
-    close(Sockfd),
-    ok = file:delete(Pipe),
-    case proplists:get_value(tmpdir, Options) of
-        false ->
-            ok;
-        Path ->
-            mktmp:close(Path)
-    end.
-
-fdopen(Path) when is_list(Path) ->
-    fdopen(list_to_binary(Path));
-fdopen(Path) when is_binary(Path), byte_size(Path) < ?UNIX_PATH_MAX ->
-    {ok, Socket} = socket(?PF_LOCAL, ?SOCK_STREAM, 0),
-    Sun = <<?PF_LOCAL:16/native, Path/binary, 0:((?UNIX_PATH_MAX-byte_size(Path))*8)>>,
-    ok = bind(Socket, Sun),
-    ok = listen(Socket, ?BACKLOG),
-    {ok, Socket}.
-
-fdget(Socket) ->
-    {ok, S} = accept(Socket),
-    fdrecv(S).
-
-make_args(Port, Options) ->
-    Bind = " " ++ case proplists:lookup(ip, Options) of
-        none ->
-            integer_to_list(Port);
-        IP ->
-            get_switch(IP) ++ ":" ++ integer_to_list(Port)
-    end,
-    proplists:get_value(progname, Options, "sudo " ++ progname()) ++ " " ++
-    string:join([ get_switch(proplists:lookup(Arg, Options)) || Arg <- [
-                pipe,
-                protocol,
-                family,
-                type,
-                interface
-            ], proplists:lookup(Arg, Options) /= none ],
-        " ") ++ Bind.
-
-get_switch({pipe, Arg}) ->
-    "-p " ++ Arg;
-
-get_switch({protocol, Proto}) when is_atom(Proto) ->
-    get_switch({protocol, protocol(Proto)});
-get_switch({protocol, Proto}) when is_integer(Proto) ->
-    "-P " ++ integer_to_list(Proto);
-
-get_switch({type, Type}) when is_atom(Type) ->
-    get_switch({type, type(Type)});
-get_switch({type, Type}) when is_integer(Type) ->
-    "-T " ++ integer_to_list(Type);
-
-get_switch({family, Family}) when is_atom(Family) ->
-    get_switch({family, family(Family)});
-get_switch({family, Family}) when is_integer(Family) ->
-    "-F " ++ integer_to_list(Family);
-
-get_switch({ip, Arg}) when is_tuple(Arg) -> inet_parse:ntoa(Arg);
-get_switch({ip, Arg}) when is_list(Arg) -> Arg;
-
-get_switch({interface, Name}) when is_list(Name) ->
-    % An interface name is expected to consist of a reasonable
-    % subset of all charactes, use a whitelist and extend it if needed
-    SName = [C || C <- Name, ((C >= $a) and (C =< $z)) or ((C >= $A) and (C =< $Z))
-                          or ((C >= $0) and (C =< $9)) or (C == $.)],
-    "-I " ++ SName.
-
 progname() ->
     filename:join([
         filename:dirname(code:which(?MODULE)),
@@ -215,18 +120,77 @@ progname() ->
         ?MODULE
     ]).
 
-
 %% Protocol family (aka domain)
 family(unspec) -> 0;
 family(inet) -> 2;
+family(ax25) -> 3;
+family(ipx) -> 4;
+family(appletalk) -> 5;
+family(netrom) -> 6;
+family(bridge) -> 7;
+family(atmpvc) -> 8;
+family(x25) -> 9;
+family(inet6) -> 10;
+family(rose) -> 11;
+family(decnet) -> 12;
+family(netbeui) -> 13;
+family(security) -> 14;
+family(key) -> 15;
 family(packet) -> 17;
+family(ash) -> 18;
+family(econet) -> 19;
+family(atmsvc) -> 20;
+family(rds) -> 21;
+family(sna) -> 22;
+family(irda) -> 23;
+family(pppox) -> 24;
+family(wanpipe) -> 25;
+family(llc) -> 26;
+family(can) -> 29;
+family(tipc) -> 30;
+family(bluetooth) -> 31;
+family(iucv) -> 32;
+family(rxrpc) -> 33;
+family(isdn) -> 34;
+family(phonet) -> 35;
+family(ieee802154) -> 36;
 family(Proto) when Proto == local; Proto == unix; Proto == file -> 1;
+family(Proto) when Proto == netlink; Proto == route -> 16;
 
 family(0) -> unspec;
 family(1) -> unix;
 family(2) -> inet;
-family(17) -> packet.
-
+family(3) -> ax25;
+family(4) -> ipx;
+family(5) -> appletalk;
+family(6) -> netrom;
+family(7) -> bridge;
+family(8) -> atmpvc;
+family(9) -> x25;
+family(10) -> inet6;
+family(11) -> rose;
+family(12) -> decnet;
+family(13) -> netbeui;
+family(14) -> security;
+family(15) -> key;
+family(17) -> packet;
+family(18) -> ash;
+family(19) -> econet;
+family(20) -> atmsvc;
+family(21) -> rds;
+family(22) -> sna;
+family(23) -> irda;
+family(24) -> pppox;
+family(25) -> wanpipe;
+family(26) -> llc;
+family(29) -> can;
+family(30) -> tipc;
+family(31) -> bluetooth;
+family(32) -> iucv;
+family(33) -> rxrpc;
+family(34) -> isdn;
+family(35) -> phonet;
+family(36) -> ieee802154.
 
 %% Socket type
 type(stream) -> 1;
@@ -240,14 +204,63 @@ type(3) -> raw.
 
 % Select a protocol within the family (0 means use the default
 % protocol in the family)
-protocol(raw) -> 0;
+protocol(ip) -> 0;
 protocol(icmp) -> 1;
+protocol(igmp) -> 2;
+protocol(ipip) -> 4;
 protocol(tcp) -> 6;
+protocol(egp) -> 8;
+protocol(pup) -> 12;
 protocol(udp) -> 17;
+protocol(idp) -> 22;
+protocol(tp) -> 29;
+protocol(dccp) -> 33;
+protocol(ipv6) -> 41;
+protocol(routing) -> 43;
+protocol(fragment) -> 44;
+protocol(rsvp) -> 46;
+protocol(gre) -> 47;
+protocol(esp) -> 50;
+protocol(ah) -> 51;
+protocol(icmpv6) -> 58;
+protocol(none) -> 59;
+protocol(dstopts) -> 60;
+protocol(mtp) -> 92;
+protocol(encap) -> 98;
+protocol(pim) -> 103;
+protocol(comp) -> 108;
+protocol(sctp) -> 132;
+protocol(udplite) -> 136;
+protocol(raw) -> 255;
 
-protocol(0) -> raw;
+protocol(0) -> ip;
 protocol(1) -> icmp;
+protocol(2) -> igmp;
+protocol(4) -> ipip;
 protocol(6) -> tcp;
-protocol(17) -> udp.
+protocol(8) -> egp;
+protocol(12) -> pup;
+protocol(17) -> udp;
+protocol(22) -> idp;
+protocol(29) -> tp;
+protocol(33) -> dccp;
+protocol(41) -> ipv6;
+protocol(43) -> routing;
+protocol(44) -> fragment;
+protocol(46) -> rsvp;
+protocol(47) -> gre;
+protocol(50) -> esp;
+protocol(51) -> ah;
+protocol(58) -> icmpv6;
+protocol(59) -> none;
+protocol(60) -> dstopts;
+protocol(92) -> mtp;
+protocol(98) -> encap;
+protocol(103) -> pim;
+protocol(108) -> comp;
+protocol(132) -> sctp;
+protocol(136) -> udplite;
+protocol(255) -> raw.
+
 
 

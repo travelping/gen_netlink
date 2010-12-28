@@ -1,6 +1,6 @@
 -module(netlink).
 
--export([start/0, nl_ct_dec/1, dec_netlink/2, create_table/0, gen_const/1, define_consts/0]).
+-export([start/0, nl_ct_dec/1, nl_rt_dec/1, dec_netlink/2, create_table/0, gen_const/1, define_consts/0]).
 
 -include("gen_socket.hrl").
 
@@ -44,6 +44,30 @@
 -define(NFNLGRP_CONNTRACK_EXP_UPDATE, 5).
 -define(NFNLGRP_CONNTRACK_EXP_DESTROY, 6).
 
+-define(RTNLGRP_NONE, 0).
+-define(RTNLGRP_LINK, 1).
+-define(RTNLGRP_NOTIFY, 2).
+-define(RTNLGRP_NEIGH, 3).
+-define(RTNLGRP_TC, 4).
+-define(RTNLGRP_IPV4_IFADDR, 4).
+-define(RTNLGRP_IPV4_MROUTE, 5).
+-define(RTNLGRP_IPV4_ROUTE, 6).
+-define(RTNLGRP_IPV4_RULE, 7).
+-define(RTNLGRP_IPV6_IFADDR, 8).
+-define(RTNLGRP_IPV6_MROUTE, 9).
+-define(RTNLGRP_IPV6_ROUTE, 10).
+-define(RTNLGRP_IPV6_IFINFO, 11).
+-define(RTNLGRP_DECnet_IFADDR, 12).
+-define(RTNLGRP_NOP2,13).
+-define(RTNLGRP_DECnet_ROUTE, 14).
+-define(RTNLGRP_DECnet_RULE, 15).
+-define(RTNLGRP_NOP4, 16).
+-define(RTNLGRP_IPV6_PREFIX, 17).
+-define(RTNLGRP_IPV6_RULE, 18).
+-define(RTNLGRP_ND_USEROPT, 19).
+-define(RTNLGRP_PHONET_IFADDR, 20).
+-define(RTNLGRP_PHONET_ROUTE, 21).
+
 %%
 %% grep define src/netlink.erl | awk -F"[(,]" '{ printf "enc_opt(%s)%*s ?%s;\n", tolower($2), 32 - length($2), "->", $2 }'
 %%
@@ -78,7 +102,30 @@ enc_opt(nfnlgrp_conntrack_update)      -> ?NFNLGRP_CONNTRACK_UPDATE;
 enc_opt(nfnlgrp_conntrack_destroy)     -> ?NFNLGRP_CONNTRACK_DESTROY;
 enc_opt(nfnlgrp_conntrack_exp_new)     -> ?NFNLGRP_CONNTRACK_EXP_NEW;
 enc_opt(nfnlgrp_conntrack_exp_update)  -> ?NFNLGRP_CONNTRACK_EXP_UPDATE;
-enc_opt(nfnlgrp_conntrack_exp_destroy) -> ?NFNLGRP_CONNTRACK_EXP_DESTROY.
+enc_opt(nfnlgrp_conntrack_exp_destroy) -> ?NFNLGRP_CONNTRACK_EXP_DESTROY;
+enc_opt(rtnlgrp_none)                  -> ?RTNLGRP_NONE;
+enc_opt(rtnlgrp_link)                  -> ?RTNLGRP_LINK;
+enc_opt(rtnlgrp_notify)                -> ?RTNLGRP_NOTIFY;
+enc_opt(rtnlgrp_neigh)                 -> ?RTNLGRP_NEIGH;
+enc_opt(rtnlgrp_tc)                    -> ?RTNLGRP_TC;
+enc_opt(rtnlgrp_ipv4_ifaddr)           -> ?RTNLGRP_IPV4_IFADDR;
+enc_opt(rtnlgrp_ipv4_mroute)           -> ?RTNLGRP_IPV4_MROUTE;
+enc_opt(rtnlgrp_ipv4_route)            -> ?RTNLGRP_IPV4_ROUTE;
+enc_opt(rtnlgrp_ipv4_rule)             -> ?RTNLGRP_IPV4_RULE;
+enc_opt(rtnlgrp_ipv6_ifaddr)           -> ?RTNLGRP_IPV6_IFADDR;
+enc_opt(rtnlgrp_ipv6_mroute)           -> ?RTNLGRP_IPV6_MROUTE;
+enc_opt(rtnlgrp_ipv6_route)            -> ?RTNLGRP_IPV6_ROUTE;
+enc_opt(rtnlgrp_ipv6_ifinfo)           -> ?RTNLGRP_IPV6_IFINFO;
+enc_opt(rtnlgrp_decnet_ifaddr)         -> ?RTNLGRP_DECnet_IFADDR;
+enc_opt(rtnlgrp_nop2)                  -> ?RTNLGRP_NOP2;
+enc_opt(rtnlgrp_decnet_route)          -> ?RTNLGRP_DECnet_ROUTE;
+enc_opt(rtnlgrp_decnet_rule)           -> ?RTNLGRP_DECnet_RULE;
+enc_opt(rtnlgrp_nop4)                  -> ?RTNLGRP_NOP4;
+enc_opt(rtnlgrp_ipv6_prefix)           -> ?RTNLGRP_IPV6_PREFIX;
+enc_opt(rtnlgrp_ipv6_rule)             -> ?RTNLGRP_IPV6_RULE;
+enc_opt(rtnlgrp_nd_useropt)            -> ?RTNLGRP_ND_USEROPT;
+enc_opt(rtnlgrp_phonet_ifaddr)         -> ?RTNLGRP_PHONET_IFADDR;
+enc_opt(rtnlgrp_phonet_route)          -> ?RTNLGRP_PHONET_ROUTE.
 
 %%
 %% grep define src/netlink.erl | awk -F"[(,]" '{ printf "dec_opt(?%s)%*s %s;\n", $2, 32 - length($2), "->", tolower($2) }'
@@ -132,6 +179,88 @@ dec_nfnl_subsys(?NFNL_SUBSYS_ULOG)              -> ulog;
 dec_nfnl_subsys(?NFNL_SUBSYS_COUNT)             -> count;
 dec_nfnl_subsys(SubSys) when is_integer(SubSys) -> SubSys.
 
+-define(RTM_NEWLINK, 16).
+-define(RTM_DELLINK, 17).
+-define(RTM_GETLINK, 18).
+-define(RTM_SETLINK, 19).
+-define(RTM_NEWADDR, 20).
+-define(RTM_DELADDR, 21).
+-define(RTM_GETADDR, 22).
+-define(RTM_NEWROUTE, 24).
+-define(RTM_DELROUTE, 25).
+-define(RTM_GETROUTE, 26).
+-define(RTM_NEWNEIGH, 28).
+-define(RTM_DELNEIGH, 29).
+-define(RTM_GETNEIGH, 30).
+-define(RTM_NEWRULE, 32).
+-define(RTM_DELRULE, 33).
+-define(RTM_GETRULE, 34).
+-define(RTM_NEWQDISC, 36).
+-define(RTM_DELQDISC, 37).
+-define(RTM_GETQDISC, 38).
+-define(RTM_NEWTCLASS, 40).
+-define(RTM_DELTCLASS, 41).
+-define(RTM_GETTCLASS, 42).
+-define(RTM_NEWTFILTER, 44).
+-define(RTM_DELTFILTER, 45).
+-define(RTM_GETTFILTER, 46).
+-define(RTM_NEWACTION, 48).
+-define(RTM_DELACTION, 49).
+-define(RTM_GETACTION, 50).
+-define(RTM_NEWPREFIX, 52).
+-define(RTM_GETMULTICAST, 58).
+-define(RTM_GETANYCAST, 62).
+-define(RTM_NEWNEIGHTBL, 64).
+-define(RTM_GETNEIGHTBL, 66).
+-define(RTM_SETNEIGHTBL, 67).
+-define(RTM_NEWNDUSEROPT, 68).
+-define(RTM_NEWADDRLABEL, 72).
+-define(RTM_DELADDRLABEL, 73).
+-define(RTM_GETADDRLABEL, 74).
+-define(RTM_GETDCB, 78).
+-define(RTM_SETDCB, 79).
+
+%% grep "^-define(RTM_" src/netlink.erl | awk -F"[(,]" '{ printf "dec_rtm_msgtype(?%s)%*s %s;\n", $2, 23 - length($2), "->", tolower(substr($2,5)) }'
+dec_rtm_msgtype(?RTM_NEWLINK)          -> newlink;
+dec_rtm_msgtype(?RTM_DELLINK)          -> dellink;
+dec_rtm_msgtype(?RTM_GETLINK)          -> getlink;
+dec_rtm_msgtype(?RTM_SETLINK)          -> setlink;
+dec_rtm_msgtype(?RTM_NEWADDR)          -> newaddr;
+dec_rtm_msgtype(?RTM_DELADDR)          -> deladdr;
+dec_rtm_msgtype(?RTM_GETADDR)          -> getaddr;
+dec_rtm_msgtype(?RTM_NEWROUTE)         -> newroute;
+dec_rtm_msgtype(?RTM_DELROUTE)         -> delroute;
+dec_rtm_msgtype(?RTM_GETROUTE)         -> getroute;
+dec_rtm_msgtype(?RTM_NEWNEIGH)         -> newneigh;
+dec_rtm_msgtype(?RTM_DELNEIGH)         -> delneigh;
+dec_rtm_msgtype(?RTM_GETNEIGH)         -> getneigh;
+dec_rtm_msgtype(?RTM_NEWRULE)          -> newrule;
+dec_rtm_msgtype(?RTM_DELRULE)          -> delrule;
+dec_rtm_msgtype(?RTM_GETRULE)          -> getrule;
+dec_rtm_msgtype(?RTM_NEWQDISC)         -> newqdisc;
+dec_rtm_msgtype(?RTM_DELQDISC)         -> delqdisc;
+dec_rtm_msgtype(?RTM_GETQDISC)         -> getqdisc;
+dec_rtm_msgtype(?RTM_NEWTCLASS)        -> newtclass;
+dec_rtm_msgtype(?RTM_DELTCLASS)        -> deltclass;
+dec_rtm_msgtype(?RTM_GETTCLASS)        -> gettclass;
+dec_rtm_msgtype(?RTM_NEWTFILTER)       -> newtfilter;
+dec_rtm_msgtype(?RTM_DELTFILTER)       -> deltfilter;
+dec_rtm_msgtype(?RTM_GETTFILTER)       -> gettfilter;
+dec_rtm_msgtype(?RTM_NEWACTION)        -> newaction;
+dec_rtm_msgtype(?RTM_DELACTION)        -> delaction;
+dec_rtm_msgtype(?RTM_GETACTION)        -> getaction;
+dec_rtm_msgtype(?RTM_NEWPREFIX)        -> newprefix;
+dec_rtm_msgtype(?RTM_GETMULTICAST)     -> getmulticast;
+dec_rtm_msgtype(?RTM_GETANYCAST)       -> getanycast;
+dec_rtm_msgtype(?RTM_NEWNEIGHTBL)      -> newneightbl;
+dec_rtm_msgtype(?RTM_GETNEIGHTBL)      -> getneightbl;
+dec_rtm_msgtype(?RTM_SETNEIGHTBL)      -> setneightbl;
+dec_rtm_msgtype(?RTM_NEWNDUSEROPT)     -> newnduseropt;
+dec_rtm_msgtype(?RTM_NEWADDRLABEL)     -> newaddrlabel;
+dec_rtm_msgtype(?RTM_DELADDRLABEL)     -> deladdrlabel;
+dec_rtm_msgtype(?RTM_GETADDRLABEL)     -> getaddrlabel;
+dec_rtm_msgtype(?RTM_GETDCB)           -> getdcb;
+dec_rtm_msgtype(?RTM_SETDCB)           -> setdcb.
 
 create_table() ->
     ets:new(?TAB, [named_table, public]).
@@ -161,8 +290,8 @@ define_consts() ->
                     {nat_src, none},
                     {timeout, uint32},
                     {mark, uint32},
-                    {counters_orig, none},
-                    {counters_reply, none},
+                    {counters_orig, counters},
+                    {counters_reply, counters},
                     {use, none},
                     {id, uint32},
                     {nat_dst, none},
@@ -237,7 +366,120 @@ define_consts() ->
                                            {listen, atom},
                                            {max, atom},
                                            {ignore, atom}
-                                          ]}
+                                          ]},
+     {{ctnetlink, counters}, [
+                              {unspec, none},
+                              {packets, uint64},
+                              {bytes, uint64},
+                              {packets32, uint32},
+                              {bytes32, uint32}
+                             ]},
+     {{rtnetlink, neigh, inet}, [
+                                 {unspec, none},
+                                 {dst, inet},
+                                 {lladdr, mac},
+                                 {cacheinfo, none},
+                                 {probes, uint32}
+                 ]},
+     {{rtnetlink, neigh, inet6}, [
+                                 {unspec, none},
+                                 {dst, inet6},
+                                 {lladdr, mac},
+                                 {cacheinfo, none},
+                                 {probes, uint32}
+                 ]},
+     {{rtnetlink, route, inet}, [
+                                 {unspec, none},
+                                 {dst, inet},
+                                 {src, inet},
+                                 {iif, huint32},
+                                 {oif, huint32},
+                                 {gateway, inet},
+                                 {priority, huint32},
+                                 {prefsrc, inet},
+                                 {metrics, none},
+                                 {multipath, none},
+                                 {protoinfo, none},
+                                 {flow, huint32},
+                                 {cacheinfo, none},
+                                 {session, none},
+                                 {mp_algo, none},
+                                 {table, huint32}
+                                ]},
+     {{rtnetlink, route, inet6}, [
+                                 {unspec, none},
+                                 {dst, inet6},
+                                 {src, inet6},
+                                 {iif, huint32},
+                                 {oif, huint32},
+                                 {gateway, inet6},
+                                 {priority, huint32},
+                                 {prefsrc, inet6},
+                                 {metrics, none},
+                                 {multipath, none},
+                                 {protoinfo, none},
+                                 {flow, huint32},
+                                 {cacheinfo, none},
+                                 {session, none},
+                                 {mp_algo, none},
+                                 {table, huint32}
+                                ]},
+     {{rtnetlink, addr, inet}, [
+                                {unspec, none},
+                                {address, inet},
+                                {local, inet},
+                                {label, string},
+                                {broadcast, inet},
+                                {anycast, inet},
+                                {cacheinfo, none},
+                                {multicast, inet}
+                               ]},
+     {{rtnetlink, addr, inet6}, [
+                                {unspec, none},
+                                {address, inet6},
+                                {local, inet6},
+                                {label, string},
+                                {broadcast, inet6},
+                                {anycast, inet6},
+                                {cacheinfo, none},
+                                {multicast, inet6}
+                                ]},
+     {{rtnetlink, link}, [
+                          {unspec, none},
+                          {address, mac},
+                          {broadcast, mac},
+                          {ifname, string},
+                          {mtu, huint32},
+                          {link, none},
+                          {qdisc, string},
+                          {stats, if_stats},
+                          {cost, none},
+                          {priority, none},
+                          {master, none},
+                          {wireless, none},
+                          {protinfo, none},
+                          {txqlen, huint32},
+                          {map, if_map},
+                          {weight, none},
+                          {operstate, atom},
+                          {linkmode, huint32},
+                          {linkinfo, none},
+                          {net_ns_pid, none},
+                          {ifalias, none},
+                          {num_vf, none},
+                          {vfinfo_list, none},
+                          {stats64, if_stats64},
+                          {vf_ports, none}
+                         ]},
+     {{rtnetlink, link, operstate}, [
+                                     {unknown, atom},
+                                     {notpresent, atom},
+                                     {down, atom},
+                                     {lowerlayerdown, atom},
+                                     {testing, atom},
+                                     {dormant, atom},
+                                     {up, atom}
+                                    ]}
     ].
 
 dec_netlink(Type, Attr) ->
@@ -266,20 +508,34 @@ setsockoption(Socket, Level, OptName, Val) when is_integer(Val) ->
     gen_socket:setsockoption(Socket, Level, OptName, Val).
 
 start() ->
-    {ok, Socket} = gen_socket:socket(netlink, raw, ?NETLINK_NETFILTER),
-    ok = gen_socket:bind(Socket, sockaddr_nl(netlink, 0, -1)),
+    %% {ok, CtNl} = gen_socket:socket(netlink, raw, ?NETLINK_NETFILTER),
+    %% ok = gen_socket:bind(CtNl, sockaddr_nl(netlink, 0, -1)),
 
-    ok = gen_socket:setsockoption(Socket, sol_socket, so_sndbuf, 32768),
-    ok = gen_socket:setsockoption(Socket, sol_socket, so_rcvbuf, 32768),
+    %% ok = gen_socket:setsockoption(CtNl, sol_socket, so_sndbuf, 32768),
+    %% ok = gen_socket:setsockoption(CtNl, sol_socket, so_rcvbuf, 32768),
 
-    ok = setsockoption(Socket, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_new),
-    ok = setsockoption(Socket, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_update),
-    ok = setsockoption(Socket, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_destroy),
+    %% ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_new),
+    %% ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_update),
+    %% ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_destroy),
+
+    %% %% UDP is close enough (connection less, datagram oriented), so we can use the driver from it
+    %% {ok, Ct} = gen_udp:open(0, [binary, {fd, CtNl}]),
+
+    {ok, RtNl} = gen_socket:socket(netlink, raw, ?NETLINK_ROUTE),
+    ok = gen_socket:bind(RtNl, sockaddr_nl(netlink, 0, -1)),
+
+    ok = gen_socket:setsockoption(RtNl, sol_socket, so_sndbuf, 32768),
+    ok = gen_socket:setsockoption(RtNl, sol_socket, so_rcvbuf, 32768),
+
+    ok = setsockoption(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_link),
+    ok = setsockoption(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_notify),
+    ok = setsockoption(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_ipv4_ifaddr),
+    ok = setsockoption(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_ipv4_route),
 
     %% UDP is close enough (connection less, datagram oriented), so we can use the driver from it
-    {ok, _S} = gen_udp:open(0, [binary, {fd, Socket}]),
+    {ok, Rt} = gen_udp:open(0, [binary, {fd, RtNl}]),
 
-    loop(Socket).
+    loop(undef, Rt).
 
 dec_flag(Type, << F:1/bits, R/bits >>, Cnt, Acc) ->
     case F of
@@ -295,20 +551,44 @@ nl_dec_nl_attr(Type, Attr, flag, false, << Val/binary >>) ->
 nl_dec_nl_attr(Type, Attr, atom, false, << Val:8 >>) ->
     {Atom, _} = dec_netlink(Type, Val),
     {Attr, Atom};
+nl_dec_nl_attr(_Type, Attr, string, false, Val) ->
+    {Attr, binary_to_list(binary:part(Val, 0, size(Val) - 1))};
 nl_dec_nl_attr(_Type, Attr, uint8, false, << Val:8 >>) ->
     {Attr, Val};
 nl_dec_nl_attr(_Type, Attr, uint16, false, << Val:16 >>) ->
     {Attr, Val};
 nl_dec_nl_attr(_Type, Attr, uint32, false, << Val:32 >>) ->
     {Attr, Val};
+nl_dec_nl_attr(_Type, Attr, uint64, false, << Val:64 >>) ->
+    {Attr, Val};
+nl_dec_nl_attr(_Type, Attr, huint16, false, << Val:16/native-integer >>) ->
+    {Attr, Val};
+nl_dec_nl_attr(_Type, Attr, huint32, false, << Val:32/native-integer >>) ->
+    {Attr, Val};
+nl_dec_nl_attr(_Type, Attr, huint64, false, << Val:64/native-integer >>) ->
+    {Attr, Val};
 nl_dec_nl_attr(_Type, Attr, protocol, false, << Proto:8 >>) ->
     {Attr,  gen_socket:protocol(Proto)};
+nl_dec_nl_attr(_Type, Attr, mac, false, << A:8, B:8, C:8, D:8, E:8, F:8 >>) ->
+    {Attr, {A, B, C, D, E, F}};
 nl_dec_nl_attr(_Type, Attr, inet, false, << A:8, B:8, C:8, D:8 >>) ->
     {Attr, {A, B, C, D}};
 nl_dec_nl_attr(_Type, Attr, inet6, false, <<A:16, B:16, C:16, D:16, E:16, F:16, G:16, H:16>>) ->
     {Attr, {A,B,C,D,E,F,G,H}};
 nl_dec_nl_attr(Type, Attr, _NestedType, true, Data) ->
     { Attr, nl_dec_nla(Type, Data) };
+
+nl_dec_nl_attr(_Type, Attr, if_map, false, << MemStart:64/native-integer, MemEnd:64/native-integer,
+                                              BaseAddr:64/native-integer, Irq:16/native-integer,
+                                              Dma:8, Port:8 >>) ->
+    {Attr, {MemStart, MemEnd, BaseAddr, Irq, Dma, Port}};
+
+nl_dec_nl_attr(_Type, Attr, if_stats, false, Data) ->
+    {Attr, list_to_tuple([ H || <<H:4/native-integer-unit:8>> <= Data ])};
+
+nl_dec_nl_attr(_Type, Attr, if_stats64, false, Data) ->
+    {Attr, list_to_tuple([ H || <<H:4/native-integer-unit:8>> <= Data ])};
+
 nl_dec_nl_attr(Type, Attr, DType, _NestedType, Data) ->
     io:format("nl_dec_nl_attr (wildcard): ~p ~p ~p~n", [Type, Attr, DType]),
     {Type, Data}.
@@ -337,10 +617,30 @@ nl_dec_nla(_Type, << >>, Acc) ->
 nl_dec_nla(Type, Data) ->
     nl_dec_nla(Type, Data, []).
 
-nl_dec_payload({ctnetlink} = Type, << Family:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
+nl_dec_payload({ctnetlink} = Type, _MsgType, << Family:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
     { gen_socket:family(Family), Version, ResId, nl_dec_nla(Type, Data) };
 
-nl_dec_payload(_SubSys, Data) ->
+nl_dec_payload({rtnetlink}, MsgType, << Family:8, _Pad1:8, _Pad2:16, IfIndex:32/native-signed-integer, State:16/native-integer, Flags:8, NdmType:8, Data/binary >>) 
+  when MsgType == newneigh; MsgType == delneigh ->
+    Fam = gen_socket:family(Family),
+    { Fam, IfIndex, State, Flags, NdmType, nl_dec_nla({rtnetlink,neigh,Fam}, Data) };
+
+nl_dec_payload({rtnetlink}, MsgType, << Family:8, DstLen:8, SrcLen:8, Tos:8, Table:8, Protocol:8, Scope:8, RtmType:8, Flags:32/native-integer, Data/binary >>) 
+  when MsgType == newroute; MsgType == delroute ->
+    Fam = gen_socket:family(Family),
+    { Fam, DstLen, SrcLen, Tos, Table, gen_socket:protocol(Protocol), Scope, RtmType, Flags, nl_dec_nla({rtnetlink,route,Fam}, Data) };
+
+nl_dec_payload({rtnetlink}, MsgType, << Family:8, PrefixLen:8, Flags:8, Scope:8, Index:32/native-integer, Data/binary >>) 
+  when MsgType == newaddr; MsgType == deladdr ->
+    Fam = gen_socket:family(Family),
+    { Fam, PrefixLen, Flags, Scope, Index, nl_dec_nla({rtnetlink,addr,Fam}, Data) };
+
+nl_dec_payload({rtnetlink}, MsgType, << Family:8, _Pad:8, Type:16/native-integer, Index:32/native-integer, Flags:32/native-integer, Change:32/native-integer, Data/binary >>) 
+  when MsgType == newlink; MsgType == dellink ->
+    Fam = gen_socket:family(Family),
+    { Fam, Type, Index, Flags, Change, nl_dec_nla({rtnetlink,link}, Data) };
+
+nl_dec_payload(_SubSys, _MsgType, Data) ->
     Data.
 
 nlmsg_ok(DataLen, MsgLen) ->
@@ -351,15 +651,28 @@ nl_ct_dec(<< _IpHdr:5/bytes, Len:32/native-integer, Type:16/native-integer, Flag
         true -> 
             SubSys = dec_nfnl_subsys(Type bsr 8),
             MsgType = Type band 16#00FF,
-            { SubSys, MsgType, Flags, Seq, Pid, nl_dec_payload({SubSys}, Data) };
+            { SubSys, MsgType, Flags, Seq, Pid, nl_dec_payload({SubSys}, MsgType, Data) };
+        _ ->
+            { error, format }
+    end.
+
+nl_rt_dec(<< _IpHdr:5/bytes, Len:32/native-integer, Type:16/native-integer, Flags:16/native-integer, Seq:32/native-integer, Pid:32/native-integer, Data/binary >> = Msg) ->
+    case nlmsg_ok(size(Msg) - 5, Len) of
+        true -> 
+            MsgType = dec_rtm_msgtype(Type),
+            { rtnetlink, MsgType, Flags, Seq, Pid, nl_dec_payload({rtnetlink}, MsgType, Data) };
         _ ->
             { error, format }
     end.
 
 % Echo back whatever data we receive on Socket.
-loop(Socket) ->
+loop(Ct, Rt) ->
     receive
-        {udp, _S, _IP, _Port, Data} ->
-            io:format("got: ~p~ndec: ~p~n", [Data, nl_ct_dec(Data)])
+        {udp, Ct, _IP, _port, Data} ->
+            io:format("got ~p~ndec: ~p~n", [Data, nl_ct_dec(Data)]);
+        {udp, Rt, _IP, _Port, Data} ->
+            io:format("got ~p~ndec: ~p~n", [Data, nl_rt_dec(Data)]);
+        {udp, S, _IP, _Port, Data} ->
+            io:format("got on Socket ~p~n", [S])
     end,
-    loop(Socket).
+    loop(Ct, Rt).

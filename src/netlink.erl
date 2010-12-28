@@ -1,8 +1,10 @@
 -module(netlink).
 
--export([start/0, nl_dec/1]).
+-export([start/0, nl_ct_dec/1, dec_netlink/2, create_table/0, gen_const/1, define_consts/0]).
 
 -include("gen_socket.hrl").
+
+-define(TAB, ?MODULE).
 
 %% netlink event sources
 -define(NETLINK_ROUTE, 0).
@@ -130,88 +132,119 @@ dec_nfnl_subsys(?NFNL_SUBSYS_ULOG)              -> ulog;
 dec_nfnl_subsys(?NFNL_SUBSYS_COUNT)             -> count;
 dec_nfnl_subsys(SubSys) when is_integer(SubSys) -> SubSys.
 
--define(CTA_UNSPEC,0).
--define(CTA_TUPLE_ORIG,1).
--define(CTA_TUPLE_REPLY,2).
--define(CTA_STATUS,3).
--define(CTA_PROTOINFO,4).
--define(CTA_HELP,5).
--define(CTA_NAT_SRC,6).
--define(CTA_TIMEOUT,7).
--define(CTA_MARK,8).
--define(CTA_COUNTERS_ORIG,9).
--define(CTA_COUNTERS_REPLY,10).
--define(CTA_USE,11).
--define(CTA_ID,12).
--define(CTA_NAT_DST,13).
--define(CTA_TUPLE_MASTER,14).
--define(CTA_NAT_SEQ_ADJ_ORIG,15).
--define(CTA_NAT_SEQ_ADJ_REPLY,16).
--define(CTA_SECMARK,17).
 
-%% grep "^-define(CTA_" src/netlink.erl | awk -F"[(,]" '{ printf "dec_cta_type(?%s)%*s %s;\n", $2, 32 - length($2), "->", tolower(substr($2,5)) }'
-dec_cta_type(?CTA_UNSPEC)                    -> unspec;
-dec_cta_type(?CTA_TUPLE_ORIG)                -> tuple_orig;
-dec_cta_type(?CTA_TUPLE_REPLY)               -> tuple_reply;
-dec_cta_type(?CTA_STATUS)                    -> status;
-dec_cta_type(?CTA_PROTOINFO)                 -> protoinfo;
-dec_cta_type(?CTA_HELP)                      -> help;
-dec_cta_type(?CTA_NAT_SRC)                   -> nat_src;
-dec_cta_type(?CTA_TIMEOUT)                   -> timeout;
-dec_cta_type(?CTA_MARK)                      -> mark;
-dec_cta_type(?CTA_COUNTERS_ORIG)             -> counters_orig;
-dec_cta_type(?CTA_COUNTERS_REPLY)            -> counters_reply;
-dec_cta_type(?CTA_USE)                       -> use;
-dec_cta_type(?CTA_ID)                        -> id;
-dec_cta_type(?CTA_NAT_DST)                   -> nat_dst;
-dec_cta_type(?CTA_TUPLE_MASTER)              -> tuple_master;
-dec_cta_type(?CTA_NAT_SEQ_ADJ_ORIG)          -> nat_seq_adj_orig;
-dec_cta_type(?CTA_NAT_SEQ_ADJ_REPLY)         -> nat_seq_adj_reply;
-dec_cta_type(?CTA_SECMARK)                   -> secmark.
+create_table() ->
+    ets:new(?TAB, [named_table, public]).
 
--define(CTA_TUPLE_UNSPEC,0).
--define(CTA_TUPLE_IP,1).
--define(CTA_TUPLE_PROTO,2).
+emit_enum(Type, Cnt, [{C, DType}|T]) ->
+    ets:insert(?TAB, {{Type, Cnt}, C, DType}),
+    ets:insert(?TAB, {{Type, C}, Cnt, DType}),
+    emit_enum(Type, Cnt + 1, T);
+emit_enum(_, _, []) ->
+    ok.
 
-dec_cta_tuple(?CTA_TUPLE_UNSPEC) -> unspec;
-dec_cta_tuple(?CTA_TUPLE_IP)     -> ip;
-dec_cta_tuple(?CTA_TUPLE_PROTO)  -> proto.
+gen_const([{Type, Consts}|T]) ->
+    io:format("insert: ~p ~p~n", [Type, Consts]),
+    emit_enum(Type, 0, Consts),
+    gen_const(T);
+gen_const([]) ->
+    ok.
 
--define(CTA_IP_UNSPEC,0).
--define(CTA_IP_V4_SRC,1).
--define(CTA_IP_V4_DST,2).
--define(CTA_IP_V6_SRC,3).
--define(CTA_IP_V6_DST,4).
+define_consts() ->
+    [{{ctnetlink}, [
+                    {unspec, none},
+                    {tuple_orig, tuple},
+                    {tuple_reply, tuple},
+                    {status, flag},
+                    {protoinfo, protoinfo},
+                    {help, none},
+                    {nat_src, none},
+                    {timeout, uint32},
+                    {mark, uint32},
+                    {counters_orig, none},
+                    {counters_reply, none},
+                    {use, none},
+                    {id, uint32},
+                    {nat_dst, none},
+                    {tuple_master, nested},
+                    {nat_seq_adj_orig, none},
+                    {nat_seq_adj_reply, none},
+                    {secmark, uint32}
+                 ]},
+     {{ctnetlink, status}, [
+                            {expected, flag},
+                            {seen_reply, flag},
+                            {assured, flag},
+                            {confirmed, flag},
+                            {src_nat, flag},
+                            {dst_nat, flag},
+                            {seq_adjust, flag},
+                            {src_nat_done, flag},
+                            {dst_nat_done, flag},
+                            {dying, flag},
+                            {fixed_timeout, flag}
+                          ]},
+     {{ctnetlink, tuple}, [
+                {unspec, none},
+                {ip, ip},
+                {proto, proto}
+               ]},
+     {{ctnetlink, tuple, ip}, [
+                               {unspec, none},
+                               {v4_src, inet},
+                               {v4_dst, inet},
+                               {v6_src, inet6},
+                               {v6_dst, inet6}
+                              ]},
+     {{ctnetlink, tuple, proto}, [
+                                  {unspec, none},
+                                  {num, protocol},
+                                  {src_port, uint16},
+                                  {dst_port, uint16},
+                                  {icmp_id, none},
+                                  {icmp_type, none},
+                                  {icmp_code, none},
+                                  {icmpv6_id, none},
+                                  {icmpv6_type, none},
+                                  {icmpv6_code, none}
+                              ]},
+     {{ctnetlink, protoinfo}, [
+                               {unspec, none},
+                               {tcp, tcp},
+                               {dccp, dccp},
+                               {sctp, sctp}
+                              ]},
 
-%% grep "^-define(CTA_IP" src/netlink.erl | awk -F"[(,]" '{ printf "dec_cta_ip(?%s)%*s %s;\n", $2, 32 - length($2), "->", tolower(substr($2,8)) }'
-dec_cta_ip(?CTA_IP_UNSPEC)                 -> unspec;
-dec_cta_ip(?CTA_IP_V4_SRC)                 -> v4_src;
-dec_cta_ip(?CTA_IP_V4_DST)                 -> v4_dst;
-dec_cta_ip(?CTA_IP_V6_SRC)                 -> v6_src;
-dec_cta_ip(?CTA_IP_V6_DST)                 -> v6_dst.
+     {{ctnetlink, protoinfo, tcp}, [
+                                    {unspec, none},
+                                    {state, atom},
+                                    {wscale_original, uint8},
+                                    {wscale_reply, uint8},
+                                    {flags_original, uint16},
+                                    {flags_reply, uint16}
+                                   ]},
 
--define(CTA_PROTO_UNSPEC,0).
--define(CTA_PROTO_NUM,1).
--define(CTA_PROTO_SRC_PORT,2).
--define(CTA_PROTO_DST_PORT,3).
--define(CTA_PROTO_ICMP_ID,4).
--define(CTA_PROTO_ICMP_TYPE,5).
--define(CTA_PROTO_ICMP_CODE,6).
--define(CTA_PROTO_ICMPV6_ID,7).
--define(CTA_PROTO_ICMPV6_TYPE,8).
--define(CTA_PROTO_ICMPV6_CODE,9).
+     {{ctnetlink, protoinfo, tcp, state}, [
+                                           {none, atom},
+                                           {syn_sent, atom},
+                                           {syn_recv, atom},
+                                           {established, atom},
+                                           {fin_wait, atom},
+                                           {close_wait, atom},
+                                           {last_ack, atom},
+                                           {time_wait, atom},
+                                           {close, atom},
+                                           {listen, atom},
+                                           {max, atom},
+                                           {ignore, atom}
+                                          ]}
+    ].
 
-%% grep "^-define(CTA_PROTO_" src/netlink.erl | awk -F"[(,]" '{ printf "dec_cta_proto(?%s)%*s %s;\n", $2, 32 - length($2), "->", tolower(substr($2,11)) }'
-dec_cta_proto(?CTA_PROTO_UNSPEC)              -> unspec;
-dec_cta_proto(?CTA_PROTO_NUM)                 -> num;
-dec_cta_proto(?CTA_PROTO_SRC_PORT)            -> src_port;
-dec_cta_proto(?CTA_PROTO_DST_PORT)            -> dst_port;
-dec_cta_proto(?CTA_PROTO_ICMP_ID)             -> icmp_id;
-dec_cta_proto(?CTA_PROTO_ICMP_TYPE)           -> icmp_type;
-dec_cta_proto(?CTA_PROTO_ICMP_CODE)           -> icmp_code;
-dec_cta_proto(?CTA_PROTO_ICMPV6_ID)           -> icmpv6_id;
-dec_cta_proto(?CTA_PROTO_ICMPV6_TYPE)         -> icmpv6_type;
-dec_cta_proto(?CTA_PROTO_ICMPV6_CODE)         -> icmpv6_code.
+dec_netlink(Type, Attr) ->
+    case ets:lookup(?TAB, {Type, Attr}) of
+        [{_, Id, DType}] -> {Id, DType};
+        _ -> {none, none}
+    end.
 
 sockaddr_nl(Family, Pid, Groups) ->
     sockaddr_nl({Family, Pid, Groups}).
@@ -248,58 +281,77 @@ start() ->
 
     loop(Socket).
 
-nl_dec_ct_ip(Type, _Nested, << A:8, B:8, C:8, D:8 >>) when Type == v4_src; Type == v4_dst ->
-    {Type, {A, B, C, D}};
-nl_dec_ct_ip(Type, _Nested, <<A:16, B:16, C:16, D:16, E:16, F:16, G:16, H:16>>) when Type == v6_src; Type == v6_dst ->
-    {Type, {A,B,C,D,E,F,G,H}}.
-
-nl_dec_ct_proto(Type, _Nested, << Proto:8 >>) when Type == num ->
-    {Type, gen_socket:protocol(Proto)};
-nl_dec_ct_proto(Type, _Nested, << Port:16 >>) when Type == src_port; Type == dst_port ->
-    {Type, Port};
-nl_dec_ct_proto(Type, _Nested, Data) ->
-    {Type, Data}.
-
-nl_dec_ct_tuples(ip, _Nested, Data) ->
-    {ip, nl_dec_nla(fun(T, N, D) -> nl_dec_ct_ip(dec_cta_ip(T), N, D) end, Data, [])};
-nl_dec_ct_tuples(proto, _Nested, Data) ->
-    {proto, nl_dec_nla(fun(T, N, D) -> nl_dec_ct_proto(dec_cta_proto(T), N, D) end, Data, [])};
-nl_dec_ct_tuples(Type, _Nested, Data) ->
-    {Type, Data}.
-
-nl_dec_ct_attr(Type, _Nested, << Val:32 >> ) when Type == id; Type == timeout; Type == mark; Type == secmark ->
-    {Type, Val};
-nl_dec_ct_attr(Type, true, Data) when Type == tuple_master; Type == tuple_orig; Type == tuple_reply ->
-    {Type, nl_dec_nla(fun(T, N, D) -> nl_dec_ct_tuples(dec_cta_tuple(T), N, D) end, Data, [])};
-nl_dec_ct_attr(Type, _Nested, Data) ->
+dec_flag(Type, << F:1/bits, R/bits >>, Cnt, Acc) ->
+    case F of
+        <<1:1>> -> {Flag, _} = dec_netlink(Type, Cnt),
+                   dec_flag(Type, R, Cnt - 1, [Flag | Acc]);
+        _ -> dec_flag(Type, R, Cnt - 1, Acc)
+    end;
+dec_flag(_Type, << >>, _Cnt, Acc) ->
+    Acc.
+                     
+nl_dec_nl_attr(Type, Attr, flag, false, << Val/binary >>) ->
+    {Attr, dec_flag(Type, Val, bit_size(Val) - 1, [])};
+nl_dec_nl_attr(Type, Attr, atom, false, << Val:8 >>) ->
+    {Atom, _} = dec_netlink(Type, Val),
+    {Attr, Atom};
+nl_dec_nl_attr(_Type, Attr, uint8, false, << Val:8 >>) ->
+    {Attr, Val};
+nl_dec_nl_attr(_Type, Attr, uint16, false, << Val:16 >>) ->
+    {Attr, Val};
+nl_dec_nl_attr(_Type, Attr, uint32, false, << Val:32 >>) ->
+    {Attr, Val};
+nl_dec_nl_attr(_Type, Attr, protocol, false, << Proto:8 >>) ->
+    {Attr,  gen_socket:protocol(Proto)};
+nl_dec_nl_attr(_Type, Attr, inet, false, << A:8, B:8, C:8, D:8 >>) ->
+    {Attr, {A, B, C, D}};
+nl_dec_nl_attr(_Type, Attr, inet6, false, <<A:16, B:16, C:16, D:16, E:16, F:16, G:16, H:16>>) ->
+    {Attr, {A,B,C,D,E,F,G,H}};
+nl_dec_nl_attr(Type, Attr, _NestedType, true, Data) ->
+    { Attr, nl_dec_nla(Type, Data) };
+nl_dec_nl_attr(Type, Attr, DType, _NestedType, Data) ->
+    io:format("nl_dec_nl_attr (wildcard): ~p ~p ~p~n", [Type, Attr, DType]),
     {Type, Data}.
 
 pad_len(Block, Size) ->
     (Block - (Size rem Block)) rem Block.
 
-nl_dec_nla(F, << Len:16/native-integer, Type:16/native-integer, Rest/binary >>, Acc) ->
+nl_dec_nla(Type0, << Len:16/native-integer, NlaType:16/native-integer, Rest/binary >>, Acc) ->
     PLen = Len - 4,
     Padding = pad_len(4, PLen),
-    << Data:PLen/bytes, Pad:Padding/bytes, NewRest/binary >> = Rest,
-    nl_dec_nla(F, NewRest, [F(Type band 16#7FFF, (Type band 16#8000) /= 0, Data) | Acc]);
-nl_dec_nla(_F, << >>, Acc) ->
+    << Data:PLen/bytes, _Pad:Padding/bytes, NewRest/binary >> = Rest,
+
+    Nested = (NlaType band 16#8000) /= 0,
+    {NewAttr, DType} = dec_netlink(Type0, NlaType band 16#7FFF),
+    NewType = case Nested of
+                  true  -> erlang:append_element(Type0, DType);
+                  false -> erlang:append_element(Type0, NewAttr)
+              end,
+    H = nl_dec_nl_attr(NewType, NewAttr, DType, Nested, Data),
+
+    nl_dec_nla(Type0, NewRest, [H | Acc]);
+
+nl_dec_nla(_Type, << >>, Acc) ->
     Acc.
 
-nl_dec_payload(ctnetlink, _MsgType, << Family:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
-    { gen_socket:family(Family), Version, ResId, nl_dec_nla(fun(T, N, D) -> nl_dec_ct_attr(dec_cta_type(T), N, D) end, Data, []) };
+nl_dec_nla(Type, Data) ->
+    nl_dec_nla(Type, Data, []).
 
-nl_dec_payload(_SubSys, _MsgType, Data) ->
+nl_dec_payload({ctnetlink} = Type, << Family:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
+    { gen_socket:family(Family), Version, ResId, nl_dec_nla(Type, Data) };
+
+nl_dec_payload(_SubSys, Data) ->
     Data.
 
 nlmsg_ok(DataLen, MsgLen) ->
     (DataLen >= 16) and (MsgLen >= 16) and (MsgLen =< DataLen).
 
-nl_dec(<< _Junk:5/bytes, Len:32/native-integer, Type:16/native-integer, Flags:16/native-integer, Seq:32/native-integer, Pid:32/native-integer, Data/binary >> = Msg) ->
+nl_ct_dec(<< _IpHdr:5/bytes, Len:32/native-integer, Type:16/native-integer, Flags:16/native-integer, Seq:32/native-integer, Pid:32/native-integer, Data/binary >> = Msg) ->
     case nlmsg_ok(size(Msg) - 5, Len) of
         true -> 
             SubSys = dec_nfnl_subsys(Type bsr 8),
             MsgType = Type band 16#00FF,
-            { SubSys, MsgType, Flags, Seq, Pid, nl_dec_payload(SubSys, MsgType, Data) };
+            { SubSys, MsgType, Flags, Seq, Pid, nl_dec_payload({SubSys}, Data) };
         _ ->
             { error, format }
     end.
@@ -308,6 +360,6 @@ nl_dec(<< _Junk:5/bytes, Len:32/native-integer, Type:16/native-integer, Flags:16
 loop(Socket) ->
     receive
         {udp, _S, _IP, _Port, Data} ->
-            io:format("got: ~p~ndec: ~p~n", [Data, nl_dec(Data)])
+            io:format("got: ~p~ndec: ~p~n", [Data, nl_ct_dec(Data)])
     end,
     loop(Socket).

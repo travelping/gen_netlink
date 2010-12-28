@@ -7,7 +7,8 @@
         packet,
         mktmp,
         icmp,
-        echo
+        echo,
+	netlink
             ]},
     {registered, []},
     {applications, [

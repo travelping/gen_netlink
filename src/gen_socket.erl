@@ -38,22 +38,36 @@
 -include("gen_socket.hrl").
 
 -export([
-        init/0,
-        socket/3,
-        listen/1,listen/2,
-        connect/2,
-        accept/1,accept/2,
-        close/1,
-        recv/2,recvfrom/2,recvfrom/4,
-        sendto/4,
-        bind/2,
-        ioctl/3,
-        setsockopt/4
+         init/0,
+         socket/3,
+         listen/1, listen/2,
+         connect/2,
+         accept/1, accept/2,
+         close/1,
+         recv/2, recvfrom/2, recvfrom/4,
+         sendto/4,
+         bind/2,
+         ioctl/3,
+         setsockopt/4,
+         setsockoption/4
     ]).
 -export([progname/0]).
+-export([family/1, type/1, protocol/1]).
 
 -on_load(on_load/0).
 
+%%
+%% grep define include/gen_socket.hrl | awk -F"[(,]" '{ printf "enc_opt(%s)%*s ?%s;\n", tolower($2), 32 - length($2), "->", $2 }
+%%
+enc_opt(sol_socket)                    -> ?SOL_SOCKET;
+enc_opt(so_debug)                      -> ?SO_DEBUG;
+enc_opt(so_reuseaddr)                  -> ?SO_REUSEADDR;
+enc_opt(so_type)                       -> ?SO_TYPE;
+enc_opt(so_error)                      -> ?SO_ERROR;
+enc_opt(so_dontroute)                  -> ?SO_DONTROUTE;
+enc_opt(so_broadcast)                  -> ?SO_BROADCAST;
+enc_opt(so_sndbuf)                     -> ?SO_SNDBUF;
+enc_opt(so_rcvbuf)                     -> ?SO_RCVBUF.
 
 init() ->
     on_load().
@@ -100,7 +114,10 @@ socket(Family, Type, Protocol) when is_atom(Type) ->
     socket(Family, type(Type), Protocol);
 socket(Family, Type, Protocol) when is_atom(Protocol) ->
     socket(Family, Type, protocol(Protocol));
-socket(_,_,_) ->
+socket(Family, Type, Protocol) when is_integer(Family); is_integer(Type); is_integer(Protocol) ->
+    socket3(Family, Type, Protocol).
+
+socket3(_,_,_) ->
     erlang:error(not_implemented).
 
 ioctl(_,_,_) ->
@@ -111,6 +128,15 @@ sendto(_,_,_,_) ->
 
 setsockopt(_,_,_,_) ->
     erlang:error(not_implemented).
+
+setsockoption(Socket, Level, OptName, Val) when is_atom(Level) ->
+    setsockoption(Socket, enc_opt(Level), OptName, Val);
+setsockoption(Socket, Level, OptName, Val) when is_atom(OptName) ->
+    setsockoption(Socket, Level, enc_opt(OptName), Val);
+setsockoption(Socket, Level, OptName, Val) when is_atom(Val) ->
+    setsockoption(Socket, Level, OptName, enc_opt(Val));
+setsockoption(Socket, Level, OptName, Val) when is_integer(Val) ->
+    setsockopt(Socket, Level, OptName, << Val:32/native >>).
 
 progname() ->
     filename:join([

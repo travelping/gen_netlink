@@ -286,7 +286,7 @@ protocol(103) -> pim;
 protocol(108) -> comp;
 protocol(132) -> sctp;
 protocol(136) -> udplite;
-protocol(255) -> raw.
-
+protocol(255) -> raw;
+protocol(X) -> X.
 
 

@@ -496,8 +496,8 @@ define_consts() ->
      {{rtnetlink, link, linkinfo}, [
                                     {unspec, none},
                                     {kind, string},
-                                    {data, none},
-                                    {xstats, none}
+                                    {data, binary},
+                                    {xstats, binary}
                                     ]},
      {{rtnetlink, link, protinfo, inet6}, [
                                             {unspec, none},
@@ -606,6 +606,8 @@ nl_dec_nl_attr(_Family, Type, Attr, hflag, false, << Flag:32/native-integer >>) 
 nl_dec_nl_attr(_Family, Type, Attr, atom, false, << Val:8 >>) ->
     {Atom, _} = dec_netlink(Type, Val),
     {Attr, Atom};
+nl_dec_nl_attr(_Family, _Type, Attr, binary, _Nested, Val) ->
+    {Attr, Val};
 nl_dec_nl_attr(_Family, _Type, Attr, string, false, Val) ->
     {Attr, binary_to_list(binary:part(Val, 0, size(Val) - 1))};
 nl_dec_nl_attr(_Family, _Type, Attr, uint8, false, << Val:8 >>) ->

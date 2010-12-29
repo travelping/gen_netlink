@@ -378,7 +378,7 @@ define_consts() ->
                            {unspec, none},
                            {dst, addr},
                            {lladdr, mac},
-                           {cacheinfo, none},
+                           {cacheinfo, huint32_array},
                            {probes, huint32}
                  ]},
      {{rtnetlink, route}, [
@@ -394,7 +394,7 @@ define_consts() ->
                            {multipath, none},
                            {protoinfo, none},
                            {flow, huint32},
-                           {cacheinfo, none},
+                           {cacheinfo, huint32_array},
                            {session, none},
                            {mp_algo, none},
                            {table, huint32}
@@ -423,7 +423,7 @@ define_consts() ->
                                 {label, string},
                                 {broadcast, addr},
                                 {anycast, addr},
-                                {cacheinfo, none},
+                                {cacheinfo, huint32_array},
                                 {multicast, addr}
                                ]},
      {{rtnetlink, link}, [
@@ -434,7 +434,7 @@ define_consts() ->
                           {mtu, huint32},
                           {link, none},
                           {qdisc, string},
-                          {stats, if_stats},
+                          {stats, huint32_array},
                           {cost, none},
                           {priority, none},
                           {master, none},
@@ -450,7 +450,7 @@ define_consts() ->
                           {ifalias, none},
                           {num_vf, none},
                           {vfinfo_list, none},
-                          {stats64, if_stats64},
+                          {stats64, huint64_array},
                           {vf_ports, none}
                          ]},
      {{rtnetlink, link, operstate}, [
@@ -563,13 +563,13 @@ nl_dec_nl_attr(Family, Type, Attr, _NestedType, true, Data) ->
 nl_dec_nl_attr(_Family, _Type, Attr, if_map, false, << MemStart:64/native-integer, MemEnd:64/native-integer,
                                               BaseAddr:64/native-integer, Irq:16/native-integer,
                                               Dma:8, Port:8 >>) ->
-    {Attr, {MemStart, MemEnd, BaseAddr, Irq, Dma, Port}};
+    {Attr, MemStart, MemEnd, BaseAddr, Irq, Dma, Port};
 
-nl_dec_nl_attr(_Family, _Type, Attr, if_stats, false, Data) ->
-    {Attr, list_to_tuple([ H || <<H:4/native-integer-unit:8>> <= Data ])};
+nl_dec_nl_attr(_Family, _Type, Attr, huint32_array, false, Data) ->
+    list_to_tuple([Attr | [ H || <<H:4/native-integer-unit:8>> <= Data ]]);
 
-nl_dec_nl_attr(_Family, _Type, Attr, if_stats64, false, Data) ->
-    {Attr, list_to_tuple([ H || <<H:4/native-integer-unit:8>> <= Data ])};
+nl_dec_nl_attr(_Family, _Type, Attr, huint64_array, false, Data) ->
+    list_to_tuple([Attr | [ H || <<H:8/native-integer-unit:8>> <= Data ]]);
 
 nl_dec_nl_attr(_Family, Type, Attr, DType, _NestedType, Data) ->
     io:format("nl_dec_nl_attr (wildcard): ~p ~p ~p~n", [Type, Attr, DType]),
@@ -589,7 +589,6 @@ nl_dec_nla(Family, Type0, << Len:16/native-integer, NlaType:16/native-integer, R
                            {nested, T} -> {true, T};
                            T -> { (NlaType band 16#8000) /= 0, T }
                        end,
-    io:format("nl_dec_nla: ~p, ~p ~p ~p~n", [NlaType, Nested, NewAttr, DType1]),
     NewType = case Nested of
                   true  -> erlang:append_element(Type0, DType1);
                   false -> erlang:append_element(Type0, NewAttr)

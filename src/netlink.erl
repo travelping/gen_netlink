@@ -471,11 +471,11 @@ define_consts() ->
                           {map, if_map},
                           {weight, none},
                           {operstate, atom},
-                          {linkmode, huint32},
+                          {linkmode, atom},
                           {linkinfo, none},
                           {net_ns_pid, none},
                           {ifalias, none},
-                          {num_vf, none},
+                          {num_vf, huint32},
                           {vfinfo_list, none},
                           {stats64, huint64_array},
                           {vf_ports, none}
@@ -488,6 +488,10 @@ define_consts() ->
                                      {testing, atom},
                                      {dormant, atom},
                                      {up, atom}
+                                    ]},
+     {{rtnetlink, link, linkmode}, [
+                                     {default, atom},
+                                     {dormant, atom}
                                     ]},
      {{rtnetlink, link, protinfo, inet6}, [
                                             {unspec, none},
@@ -627,8 +631,8 @@ nl_dec_nl_attr(Family, Type, Attr, _NestedType, true, Data) ->
     { Attr, nl_dec_nla(Family, Type, Data) };
 
 nl_dec_nl_attr(_Family, _Type, Attr, if_map, false, << MemStart:64/native-integer, MemEnd:64/native-integer,
-                                              BaseAddr:64/native-integer, Irq:16/native-integer,
-                                              Dma:8, Port:8 >>) ->
+                                                       BaseAddr:64/native-integer, Irq:16/native-integer,
+                                                       Dma:8, Port:8, _Pad/binary >>) ->
     {Attr, MemStart, MemEnd, BaseAddr, Irq, Dma, Port};
 
 nl_dec_nl_attr(_Family, _Type, Attr, hsint32_array, false, Data) ->
@@ -638,8 +642,8 @@ nl_dec_nl_attr(_Family, _Type, Attr, huint32_array, false, Data) ->
 nl_dec_nl_attr(_Family, _Type, Attr, huint64_array, false, Data) ->
     list_to_tuple([Attr | [ H || <<H:8/native-integer-unit:8>> <= Data ]]);
 
-nl_dec_nl_attr(_Family, Type, Attr, DType, _NestedType, Data) ->
-    io:format("nl_dec_nl_attr (wildcard): ~p ~p ~p~n", [Type, Attr, DType]),
+nl_dec_nl_attr(_Family, Type, Attr, DType, Nested, Data) ->
+    io:format("nl_dec_nl_attr (wildcard): ~p ~p ~p ~p ~p~n", [Type, Attr, DType, Nested, size(Data)]),
     {Type, Data}.
 
 pad_len(Block, Size) ->

@@ -483,7 +483,12 @@ define_consts() ->
                                                   {ra_managed, {flag, 6}},
                                                   {ra_othercon, {flag, 7}},
                                                   {ready, {flag, 31}}
-                                                 ]}
+                                                 ]},
+     {{rtnetlink, prefix}, [
+                            {unspec, none},
+                            {address, addr},
+                            {cacheinfo, huint32_array}
+                           ]}
     ].
 
 
@@ -653,6 +658,11 @@ nl_dec_payload({rtnetlink}, MsgType, << Family:8, _Pad:8, Type:16/native-integer
   when MsgType == newlink; MsgType == dellink ->
     Fam = gen_socket:family(Family),
     { Fam, Type, Index, Flags, Change, nl_dec_nla(Fam, {rtnetlink,link}, Data) };
+
+nl_dec_payload({rtnetlink}, MsgType, << Family:8, _Pad1:8, _Pad2:16, IfIndex:32/native-signed-integer, PfxType:8, PfxLen:8, Flags:8, _Pad3:8, Data/binary >>)
+  when MsgType == newprefix; MsgType == delprefix ->
+    Fam = gen_socket:family(Family),
+    { Fam, IfIndex, PfxType, PfxLen, Flags, nl_dec_nla(Fam, {rtnetlink,prefix}, Data) };
 
 nl_dec_payload(_SubSys, _MsgType, Data) ->
     Data.

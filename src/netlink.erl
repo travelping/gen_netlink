@@ -472,7 +472,7 @@ define_consts() ->
                           {weight, none},
                           {operstate, atom},
                           {linkmode, atom},
-                          {linkinfo, none},
+                          {linkinfo, {nested, linkinfo}},
                           {net_ns_pid, none},
                           {ifalias, none},
                           {num_vf, huint32},
@@ -492,6 +492,12 @@ define_consts() ->
      {{rtnetlink, link, linkmode}, [
                                      {default, atom},
                                      {dormant, atom}
+                                    ]},
+     {{rtnetlink, link, linkinfo}, [
+                                    {unspec, none},
+                                    {kind, string},
+                                    {data, none},
+                                    {xstats, none}
                                     ]},
      {{rtnetlink, link, protinfo, inet6}, [
                                             {unspec, none},
@@ -669,7 +675,7 @@ nl_dec_nla(Family, Type0, << Len:16/native-integer, NlaType:16/native-integer, R
     nl_dec_nla(Family, Type0, NewRest, [H | Acc]);
 
 nl_dec_nla(_Family, _Type, << >>, Acc) ->
-    Acc.
+    lists:reverse(Acc).
 
 nl_dec_nla(Family, Type, Data) ->
     nl_dec_nla(Family, Type, Data, []).

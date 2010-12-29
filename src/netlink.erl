@@ -286,7 +286,28 @@ gen_const([]) ->
     ok.
 
 define_consts() ->
-    [{{ctnetlink}, [
+    [{{iff_flags}, [
+                    {up, flag},
+                    {broadcast, flag},
+                    {debug, flag},
+                    {loopback, flag},
+                    {pointopoint, flag},
+                    {notrailers, flag},
+                    {running, flag},
+                    {noarp, flag},
+                    {promisc, flag},
+                    {allmulti, flag},
+                    {master, flag},
+                    {slave, flag},
+                    {multicast, flag},
+                    {portsel, flag},
+                    {automedia, flag},
+                    {dynamic, flag},
+                    {lower_up, flag},
+                    {dormant, flag},
+                    {echo, flag}
+                 ]},
+     {{ctnetlink}, [
                     {unspec, none},
                     {tuple_orig, tuple},
                     {tuple_reply, tuple},
@@ -470,7 +491,7 @@ define_consts() ->
                                     ]},
      {{rtnetlink, link, protinfo, inet6}, [
                                             {unspec, none},
-                                            {flags, flag},
+                                            {flags, hflag},
                                             {conf, hsint32_array},
                                             {stats, huint64_array},
                                             {mcast, none},
@@ -547,17 +568,31 @@ start() ->
 
     loop(undef, Rt).
 
-dec_flag(Type, << F:1/bits, R/bits >>, Cnt, Acc) ->
-    case F of
-        <<1:1>> -> {Flag, _} = dec_netlink(Type, Cnt),
-                   dec_flag(Type, R, Cnt - 1, [Flag | Acc]);
-        _ -> dec_flag(Type, R, Cnt - 1, Acc)
-    end;
-dec_flag(_Type, << >>, _Cnt, Acc) ->
-    Acc.
+dec_flag(_Type, 0, _Cnt, Acc) ->
+    Acc;
+dec_flag(Type, F, Cnt, Acc) ->
+    case F rem 2 of
+        1 -> {Flag, _} = dec_netlink(Type, Cnt),
+             dec_flag(Type, F bsr 1, Cnt + 1, [Flag | Acc]);
+        _ -> dec_flag(Type, F bsr 1, Cnt + 1, Acc)
+    end.
+
+dec_iff_flags(Flag) ->
+     dec_flag({iff_flags}, Flag, 0, []).
                      
-nl_dec_nl_attr(_Family, Type, Attr, flag, false, << Val/binary >>) ->
-    {Attr, dec_flag(Type, Val, bit_size(Val) - 1, [])};
+nl_dec_nl_attr(_Family, Type, Attr, flag, false, << Flag:8 >>) ->
+    {Attr, dec_flag(Type, Flag, 0, [])};
+nl_dec_nl_attr(_Family, Type, Attr, flag, false, << Flag:16 >>) ->
+    {Attr, dec_flag(Type, Flag, 0, [])};
+nl_dec_nl_attr(_Family, Type, Attr, flag, false, << Flag:32 >>) ->
+    {Attr, dec_flag(Type, Flag, 0, [])};
+nl_dec_nl_attr(_Family, Type, Attr, hflag, false, << Flag:8 >>) ->
+    {Attr, dec_flag(Type, Flag, 0, [])};
+nl_dec_nl_attr(_Family, Type, Attr, hflag, false, << Flag:16/native-integer >>) ->
+    {Attr, dec_flag(Type, Flag, 0, [])};
+nl_dec_nl_attr(_Family, Type, Attr, hflag, false, << Flag:32/native-integer >>) ->
+    {Attr, dec_flag(Type, Flag, 0, [])};
+
 nl_dec_nl_attr(_Family, Type, Attr, atom, false, << Val:8 >>) ->
     {Atom, _} = dec_netlink(Type, Val),
     {Attr, Atom};
@@ -657,7 +692,7 @@ nl_dec_payload({rtnetlink}, MsgType, << Family:8, PrefixLen:8, Flags:8, Scope:8,
 nl_dec_payload({rtnetlink}, MsgType, << Family:8, _Pad:8, Type:16/native-integer, Index:32/native-integer, Flags:32/native-integer, Change:32/native-integer, Data/binary >>) 
   when MsgType == newlink; MsgType == dellink ->
     Fam = gen_socket:family(Family),
-    { Fam, Type, Index, Flags, Change, nl_dec_nla(Fam, {rtnetlink,link}, Data) };
+    { Fam, Type, Index, dec_iff_flags(Flags), Change, nl_dec_nla(Fam, {rtnetlink,link}, Data) };
 
 nl_dec_payload({rtnetlink}, MsgType, << Family:8, _Pad1:8, _Pad2:16, IfIndex:32/native-signed-integer, PfxType:8, PfxLen:8, Flags:8, _Pad3:8, Data/binary >>)
   when MsgType == newprefix; MsgType == delprefix ->

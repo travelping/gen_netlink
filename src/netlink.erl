@@ -295,7 +295,7 @@ define_consts() ->
                     {use, none},
                     {id, uint32},
                     {nat_dst, none},
-                    {tuple_master, nested},
+                    {tuple_master, tuple},
                     {nat_seq_adj_orig, none},
                     {nat_seq_adj_reply, none},
                     {secmark, uint32}
@@ -320,10 +320,10 @@ define_consts() ->
                ]},
      {{ctnetlink, tuple, ip}, [
                                {unspec, none},
-                               {v4_src, inet},
-                               {v4_dst, inet},
-                               {v6_src, inet6},
-                               {v6_dst, inet6}
+                               {v4_src, addr},
+                               {v4_dst, addr},
+                               {v6_src, addr},
+                               {v6_dst, addr}
                               ]},
      {{ctnetlink, tuple, proto}, [
                                   {unspec, none},
@@ -374,76 +374,58 @@ define_consts() ->
                               {packets32, uint32},
                               {bytes32, uint32}
                              ]},
-     {{rtnetlink, neigh, inet}, [
-                                 {unspec, none},
-                                 {dst, inet},
-                                 {lladdr, mac},
-                                 {cacheinfo, none},
-                                 {probes, uint32}
+     {{rtnetlink, neigh}, [
+                           {unspec, none},
+                           {dst, addr},
+                           {lladdr, mac},
+                           {cacheinfo, none},
+                           {probes, huint32}
                  ]},
-     {{rtnetlink, neigh, inet6}, [
-                                 {unspec, none},
-                                 {dst, inet6},
-                                 {lladdr, mac},
-                                 {cacheinfo, none},
-                                 {probes, uint32}
-                 ]},
-     {{rtnetlink, route, inet}, [
-                                 {unspec, none},
-                                 {dst, inet},
-                                 {src, inet},
-                                 {iif, huint32},
-                                 {oif, huint32},
-                                 {gateway, inet},
-                                 {priority, huint32},
-                                 {prefsrc, inet},
-                                 {metrics, none},
-                                 {multipath, none},
-                                 {protoinfo, none},
-                                 {flow, huint32},
-                                 {cacheinfo, none},
-                                 {session, none},
-                                 {mp_algo, none},
-                                 {table, huint32}
-                                ]},
-     {{rtnetlink, route, inet6}, [
-                                 {unspec, none},
-                                 {dst, inet6},
-                                 {src, inet6},
-                                 {iif, huint32},
-                                 {oif, huint32},
-                                 {gateway, inet6},
-                                 {priority, huint32},
-                                 {prefsrc, inet6},
-                                 {metrics, none},
-                                 {multipath, none},
-                                 {protoinfo, none},
-                                 {flow, huint32},
-                                 {cacheinfo, none},
-                                 {session, none},
-                                 {mp_algo, none},
-                                 {table, huint32}
-                                ]},
-     {{rtnetlink, addr, inet}, [
+     {{rtnetlink, route}, [
+                           {unspec, none},
+                           {dst, addr},
+                           {src, addr},
+                           {iif, huint32},
+                           {oif, huint32},
+                           {gateway, addr},
+                           {priority, huint32},
+                           {prefsrc, addr},
+                           {metrics, {nested, metrics}},
+                           {multipath, none},
+                           {protoinfo, none},
+                           {flow, huint32},
+                           {cacheinfo, none},
+                           {session, none},
+                           {mp_algo, none},
+                           {table, huint32}
+                          ]},
+     {{rtnetlink, route, metrics}, [
+                                    {rtax_unspec, huint32},
+                                    {rtax_lock, huint32},
+                                    {rtax_mtu, huint32},
+                                    {rtax_window, huint32},
+                                    {rtax_rtt, huint32},
+                                    {rtax_rttvar, huint32},
+                                    {rtax_ssthresh, huint32},
+                                    {rtax_cwnd, huint32},
+                                    {rtax_advmss, huint32},
+                                    {rtax_reordering, huint32},
+                                    {rtax_hoplimit, huint32},
+                                    {rtax_initcwnd, huint32},
+                                    {rtax_features, huint32},
+                                    {rtax_rto_min, huint32},
+                                    {rtax_initrwnd, huint32}
+                          ]},
+     {{rtnetlink, addr}, [
                                 {unspec, none},
-                                {address, inet},
-                                {local, inet},
+                                {address, addr},
+                                {local, addr},
                                 {label, string},
-                                {broadcast, inet},
-                                {anycast, inet},
+                                {broadcast, addr},
+                                {anycast, addr},
                                 {cacheinfo, none},
-                                {multicast, inet}
+                                {multicast, addr}
                                ]},
-     {{rtnetlink, addr, inet6}, [
-                                {unspec, none},
-                                {address, inet6},
-                                {local, inet6},
-                                {label, string},
-                                {broadcast, inet6},
-                                {anycast, inet6},
-                                {cacheinfo, none},
-                                {multicast, inet6}
-                                ]},
      {{rtnetlink, link}, [
                           {unspec, none},
                           {address, mac},
@@ -546,99 +528,105 @@ dec_flag(Type, << F:1/bits, R/bits >>, Cnt, Acc) ->
 dec_flag(_Type, << >>, _Cnt, Acc) ->
     Acc.
                      
-nl_dec_nl_attr(Type, Attr, flag, false, << Val/binary >>) ->
+nl_dec_nl_attr(_Family, Type, Attr, flag, false, << Val/binary >>) ->
     {Attr, dec_flag(Type, Val, bit_size(Val) - 1, [])};
-nl_dec_nl_attr(Type, Attr, atom, false, << Val:8 >>) ->
+nl_dec_nl_attr(_Family, Type, Attr, atom, false, << Val:8 >>) ->
     {Atom, _} = dec_netlink(Type, Val),
     {Attr, Atom};
-nl_dec_nl_attr(_Type, Attr, string, false, Val) ->
+nl_dec_nl_attr(_Family, _Type, Attr, string, false, Val) ->
     {Attr, binary_to_list(binary:part(Val, 0, size(Val) - 1))};
-nl_dec_nl_attr(_Type, Attr, uint8, false, << Val:8 >>) ->
+nl_dec_nl_attr(_Family, _Type, Attr, uint8, false, << Val:8 >>) ->
     {Attr, Val};
-nl_dec_nl_attr(_Type, Attr, uint16, false, << Val:16 >>) ->
+nl_dec_nl_attr(_Family, _Type, Attr, uint16, false, << Val:16 >>) ->
     {Attr, Val};
-nl_dec_nl_attr(_Type, Attr, uint32, false, << Val:32 >>) ->
+nl_dec_nl_attr(_Family, _Type, Attr, uint32, false, << Val:32 >>) ->
     {Attr, Val};
-nl_dec_nl_attr(_Type, Attr, uint64, false, << Val:64 >>) ->
+nl_dec_nl_attr(_Family, _Type, Attr, uint64, false, << Val:64 >>) ->
     {Attr, Val};
-nl_dec_nl_attr(_Type, Attr, huint16, false, << Val:16/native-integer >>) ->
+nl_dec_nl_attr(_Family, _Type, Attr, huint16, false, << Val:16/native-integer >>) ->
     {Attr, Val};
-nl_dec_nl_attr(_Type, Attr, huint32, false, << Val:32/native-integer >>) ->
+nl_dec_nl_attr(_Family, _Type, Attr, huint32, false, << Val:32/native-integer >>) ->
     {Attr, Val};
-nl_dec_nl_attr(_Type, Attr, huint64, false, << Val:64/native-integer >>) ->
+nl_dec_nl_attr(_Family, _Type, Attr, huint64, false, << Val:64/native-integer >>) ->
     {Attr, Val};
-nl_dec_nl_attr(_Type, Attr, protocol, false, << Proto:8 >>) ->
+nl_dec_nl_attr(_Family, _Type, Attr, protocol, false, << Proto:8 >>) ->
     {Attr,  gen_socket:protocol(Proto)};
-nl_dec_nl_attr(_Type, Attr, mac, false, << A:8, B:8, C:8, D:8, E:8, F:8 >>) ->
+nl_dec_nl_attr(_Family, _Type, Attr, mac, false, << A:8, B:8, C:8, D:8, E:8, F:8 >>) ->
     {Attr, {A, B, C, D, E, F}};
-nl_dec_nl_attr(_Type, Attr, inet, false, << A:8, B:8, C:8, D:8 >>) ->
+nl_dec_nl_attr(inet, _Type, Attr, addr, false, << A:8, B:8, C:8, D:8 >>) ->
     {Attr, {A, B, C, D}};
-nl_dec_nl_attr(_Type, Attr, inet6, false, <<A:16, B:16, C:16, D:16, E:16, F:16, G:16, H:16>>) ->
+nl_dec_nl_attr(inet6, _Type, Attr, addr, false, <<A:16, B:16, C:16, D:16, E:16, F:16, G:16, H:16>>) ->
     {Attr, {A,B,C,D,E,F,G,H}};
-nl_dec_nl_attr(Type, Attr, _NestedType, true, Data) ->
-    { Attr, nl_dec_nla(Type, Data) };
+nl_dec_nl_attr(Family, Type, Attr, _NestedType, true, Data) ->
+    { Attr, nl_dec_nla(Family, Type, Data) };
 
-nl_dec_nl_attr(_Type, Attr, if_map, false, << MemStart:64/native-integer, MemEnd:64/native-integer,
+nl_dec_nl_attr(_Family, _Type, Attr, if_map, false, << MemStart:64/native-integer, MemEnd:64/native-integer,
                                               BaseAddr:64/native-integer, Irq:16/native-integer,
                                               Dma:8, Port:8 >>) ->
     {Attr, {MemStart, MemEnd, BaseAddr, Irq, Dma, Port}};
 
-nl_dec_nl_attr(_Type, Attr, if_stats, false, Data) ->
+nl_dec_nl_attr(_Family, _Type, Attr, if_stats, false, Data) ->
     {Attr, list_to_tuple([ H || <<H:4/native-integer-unit:8>> <= Data ])};
 
-nl_dec_nl_attr(_Type, Attr, if_stats64, false, Data) ->
+nl_dec_nl_attr(_Family, _Type, Attr, if_stats64, false, Data) ->
     {Attr, list_to_tuple([ H || <<H:4/native-integer-unit:8>> <= Data ])};
 
-nl_dec_nl_attr(Type, Attr, DType, _NestedType, Data) ->
+nl_dec_nl_attr(_Family, Type, Attr, DType, _NestedType, Data) ->
     io:format("nl_dec_nl_attr (wildcard): ~p ~p ~p~n", [Type, Attr, DType]),
     {Type, Data}.
 
 pad_len(Block, Size) ->
     (Block - (Size rem Block)) rem Block.
 
-nl_dec_nla(Type0, << Len:16/native-integer, NlaType:16/native-integer, Rest/binary >>, Acc) ->
+nl_dec_nla(Family, Type0, << Len:16/native-integer, NlaType:16/native-integer, Rest/binary >>, Acc) ->
     PLen = Len - 4,
     Padding = pad_len(4, PLen),
     << Data:PLen/bytes, _Pad:Padding/bytes, NewRest/binary >> = Rest,
 
-    Nested = (NlaType band 16#8000) /= 0,
     {NewAttr, DType} = dec_netlink(Type0, NlaType band 16#7FFF),
+    
+    {Nested, DType1} = case DType of 
+                           {nested, T} -> {true, T};
+                           T -> { (NlaType band 16#8000) /= 0, T }
+                       end,
+    io:format("nl_dec_nla: ~p, ~p ~p ~p~n", [NlaType, Nested, NewAttr, DType1]),
     NewType = case Nested of
-                  true  -> erlang:append_element(Type0, DType);
+                  true  -> erlang:append_element(Type0, DType1);
                   false -> erlang:append_element(Type0, NewAttr)
               end,
-    H = nl_dec_nl_attr(NewType, NewAttr, DType, Nested, Data),
+    H = nl_dec_nl_attr(Family, NewType, NewAttr, DType, Nested, Data),
 
-    nl_dec_nla(Type0, NewRest, [H | Acc]);
+    nl_dec_nla(Family, Type0, NewRest, [H | Acc]);
 
-nl_dec_nla(_Type, << >>, Acc) ->
+nl_dec_nla(_Family, _Type, << >>, Acc) ->
     Acc.
 
-nl_dec_nla(Type, Data) ->
-    nl_dec_nla(Type, Data, []).
+nl_dec_nla(Family, Type, Data) ->
+    nl_dec_nla(Family, Type, Data, []).
 
 nl_dec_payload({ctnetlink} = Type, _MsgType, << Family:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
-    { gen_socket:family(Family), Version, ResId, nl_dec_nla(Type, Data) };
+    Fam = gen_socket:family(Family),
+    { Fam, Version, ResId, nl_dec_nla(Fam, Type, Data) };
 
 nl_dec_payload({rtnetlink}, MsgType, << Family:8, _Pad1:8, _Pad2:16, IfIndex:32/native-signed-integer, State:16/native-integer, Flags:8, NdmType:8, Data/binary >>) 
   when MsgType == newneigh; MsgType == delneigh ->
     Fam = gen_socket:family(Family),
-    { Fam, IfIndex, State, Flags, NdmType, nl_dec_nla({rtnetlink,neigh,Fam}, Data) };
+    { Fam, IfIndex, State, Flags, NdmType, nl_dec_nla(Fam, {rtnetlink,neigh}, Data) };
 
 nl_dec_payload({rtnetlink}, MsgType, << Family:8, DstLen:8, SrcLen:8, Tos:8, Table:8, Protocol:8, Scope:8, RtmType:8, Flags:32/native-integer, Data/binary >>) 
   when MsgType == newroute; MsgType == delroute ->
     Fam = gen_socket:family(Family),
-    { Fam, DstLen, SrcLen, Tos, Table, gen_socket:protocol(Protocol), Scope, RtmType, Flags, nl_dec_nla({rtnetlink,route,Fam}, Data) };
+    { Fam, DstLen, SrcLen, Tos, Table, gen_socket:protocol(Protocol), Scope, RtmType, Flags, nl_dec_nla(Fam, {rtnetlink,route}, Data) };
 
 nl_dec_payload({rtnetlink}, MsgType, << Family:8, PrefixLen:8, Flags:8, Scope:8, Index:32/native-integer, Data/binary >>) 
   when MsgType == newaddr; MsgType == deladdr ->
     Fam = gen_socket:family(Family),
-    { Fam, PrefixLen, Flags, Scope, Index, nl_dec_nla({rtnetlink,addr,Fam}, Data) };
+    { Fam, PrefixLen, Flags, Scope, Index, nl_dec_nla(Fam, {rtnetlink,addr}, Data) };
 
 nl_dec_payload({rtnetlink}, MsgType, << Family:8, _Pad:8, Type:16/native-integer, Index:32/native-integer, Flags:32/native-integer, Change:32/native-integer, Data/binary >>) 
   when MsgType == newlink; MsgType == dellink ->
     Fam = gen_socket:family(Family),
-    { Fam, Type, Index, Flags, Change, nl_dec_nla({rtnetlink,link}, Data) };
+    { Fam, Type, Index, Flags, Change, nl_dec_nla(Fam, {rtnetlink,link}, Data) };
 
 nl_dec_payload(_SubSys, _MsgType, Data) ->
     Data.
@@ -672,7 +660,7 @@ loop(Ct, Rt) ->
             io:format("got ~p~ndec: ~p~n", [Data, nl_ct_dec(Data)]);
         {udp, Rt, _IP, _Port, Data} ->
             io:format("got ~p~ndec: ~p~n", [Data, nl_rt_dec(Data)]);
-        {udp, S, _IP, _Port, Data} ->
+        {udp, S, _IP, _Port, _Data} ->
             io:format("got on Socket ~p~n", [S])
     end,
     loop(Ct, Rt).

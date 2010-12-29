@@ -692,7 +692,7 @@ nl_dec_payload({rtnetlink}, MsgType, << Family:8, PrefixLen:8, Flags:8, Scope:8,
 nl_dec_payload({rtnetlink}, MsgType, << Family:8, _Pad:8, Type:16/native-integer, Index:32/native-integer, Flags:32/native-integer, Change:32/native-integer, Data/binary >>) 
   when MsgType == newlink; MsgType == dellink ->
     Fam = gen_socket:family(Family),
-    { Fam, Type, Index, dec_iff_flags(Flags), Change, nl_dec_nla(Fam, {rtnetlink,link}, Data) };
+    { Fam, Type, Index, dec_iff_flags(Flags), dec_iff_flags(Change), nl_dec_nla(Fam, {rtnetlink,link}, Data) };
 
 nl_dec_payload({rtnetlink}, MsgType, << Family:8, _Pad1:8, _Pad2:16, IfIndex:32/native-signed-integer, PfxType:8, PfxLen:8, Flags:8, _Pad3:8, Data/binary >>)
   when MsgType == newprefix; MsgType == delprefix ->

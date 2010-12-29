@@ -1,7 +1,7 @@
 -module(netlink).
 
 -export([start/0, nl_ct_dec/1, nl_rt_dec/1, dec_netlink/2, create_table/0, gen_const/1, define_consts/0]).
-
+-export([sockaddr_nl/3, setsockoption/4]).
 -include("gen_socket.hrl").
 -include("netlink.hrl").
 

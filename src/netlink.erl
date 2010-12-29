@@ -265,16 +265,22 @@ dec_rtm_msgtype(?RTM_SETDCB)           -> setdcb.
 create_table() ->
     ets:new(?TAB, [named_table, public]).
 
-emit_enum(Type, Cnt, [{C, DType}|T]) ->
+emit_enum(Type, _Cnt, C, {flag, X}) when is_integer(X) ->
+    ets:insert(?TAB, {{Type, X}, C, flag}),
+    ets:insert(?TAB, {{Type, C}, X, flag});
+emit_enum(Type, Cnt, C, DType) ->
     ets:insert(?TAB, {{Type, Cnt}, C, DType}),
-    ets:insert(?TAB, {{Type, C}, Cnt, DType}),
-    emit_enum(Type, Cnt + 1, T);
-emit_enum(_, _, []) ->
+    ets:insert(?TAB, {{Type, C}, Cnt, DType}).
+
+emit_enums(Type, Cnt, [{C, DType}|T]) ->
+    emit_enum(Type, Cnt, C, DType),
+    emit_enums(Type, Cnt + 1, T);
+emit_enums(_, _, []) ->
     ok.
 
 gen_const([{Type, Consts}|T]) ->
     io:format("insert: ~p ~p~n", [Type, Consts]),
-    emit_enum(Type, 0, Consts),
+    emit_enums(Type, 0, Consts),
     gen_const(T);
 gen_const([]) ->
     ok.
@@ -400,21 +406,21 @@ define_consts() ->
                            {table, huint32}
                           ]},
      {{rtnetlink, route, metrics}, [
-                                    {rtax_unspec, huint32},
-                                    {rtax_lock, huint32},
-                                    {rtax_mtu, huint32},
-                                    {rtax_window, huint32},
-                                    {rtax_rtt, huint32},
-                                    {rtax_rttvar, huint32},
-                                    {rtax_ssthresh, huint32},
-                                    {rtax_cwnd, huint32},
-                                    {rtax_advmss, huint32},
-                                    {rtax_reordering, huint32},
-                                    {rtax_hoplimit, huint32},
-                                    {rtax_initcwnd, huint32},
-                                    {rtax_features, huint32},
-                                    {rtax_rto_min, huint32},
-                                    {rtax_initrwnd, huint32}
+                                    {unspec, none},
+                                    {lock, huint32},
+                                    {mtu, huint32},
+                                    {window, huint32},
+                                    {rtt, huint32},
+                                    {rttvar, huint32},
+                                    {ssthresh, huint32},
+                                    {cwnd, huint32},
+                                    {advmss, huint32},
+                                    {reordering, huint32},
+                                    {hoplimit, huint32},
+                                    {initcwnd, huint32},
+                                    {features, huint32},
+                                    {rto_min, huint32},
+                                    {initrwnd, huint32}
                           ]},
      {{rtnetlink, addr}, [
                                 {unspec, none},
@@ -432,14 +438,14 @@ define_consts() ->
                           {broadcast, mac},
                           {ifname, string},
                           {mtu, huint32},
-                          {link, none},
+                          {link, huint32},
                           {qdisc, string},
                           {stats, huint32_array},
                           {cost, none},
                           {priority, none},
                           {master, none},
                           {wireless, none},
-                          {protinfo, none},
+                          {protinfo, {nested, protinfo}},
                           {txqlen, huint32},
                           {map, if_map},
                           {weight, none},
@@ -461,8 +467,25 @@ define_consts() ->
                                      {testing, atom},
                                      {dormant, atom},
                                      {up, atom}
-                                    ]}
+                                    ]},
+     {{rtnetlink, link, protinfo, inet6}, [
+                                            {unspec, none},
+                                            {flags, flag},
+                                            {conf, hsint32_array},
+                                            {stats, huint64_array},
+                                            {mcast, none},
+                                            {cacheinfo, huint32_array},
+                                            {icmp6stats, huint64_array}
+                                           ]},
+     {{rtnetlink, link, protinfo, inet6, flags}, [
+                                                  {rs_sent, {flag, 4}},
+                                                  {ra_rcvd, {flag, 5}},
+                                                  {ra_managed, {flag, 6}},
+                                                  {ra_othercon, {flag, 7}},
+                                                  {ready, {flag, 31}}
+                                                 ]}
     ].
+
 
 dec_netlink(Type, Attr) ->
     case ets:lookup(?TAB, {Type, Attr}) of
@@ -557,6 +580,9 @@ nl_dec_nl_attr(inet, _Type, Attr, addr, false, << A:8, B:8, C:8, D:8 >>) ->
     {Attr, {A, B, C, D}};
 nl_dec_nl_attr(inet6, _Type, Attr, addr, false, <<A:16, B:16, C:16, D:16, E:16, F:16, G:16, H:16>>) ->
     {Attr, {A,B,C,D,E,F,G,H}};
+
+nl_dec_nl_attr(Family, Type, Attr, protinfo, true, Data) ->
+    { Attr, nl_dec_nla(Family, erlang:append_element(Type, Family), Data) };
 nl_dec_nl_attr(Family, Type, Attr, _NestedType, true, Data) ->
     { Attr, nl_dec_nla(Family, Type, Data) };
 
@@ -565,9 +591,10 @@ nl_dec_nl_attr(_Family, _Type, Attr, if_map, false, << MemStart:64/native-intege
                                               Dma:8, Port:8 >>) ->
     {Attr, MemStart, MemEnd, BaseAddr, Irq, Dma, Port};
 
+nl_dec_nl_attr(_Family, _Type, Attr, hsint32_array, false, Data) ->
+    list_to_tuple([Attr | [ H || <<H:4/native-signed-integer-unit:8>> <= Data ]]);
 nl_dec_nl_attr(_Family, _Type, Attr, huint32_array, false, Data) ->
     list_to_tuple([Attr | [ H || <<H:4/native-integer-unit:8>> <= Data ]]);
-
 nl_dec_nl_attr(_Family, _Type, Attr, huint64_array, false, Data) ->
     list_to_tuple([Attr | [ H || <<H:8/native-integer-unit:8>> <= Data ]]);
 
@@ -593,7 +620,7 @@ nl_dec_nla(Family, Type0, << Len:16/native-integer, NlaType:16/native-integer, R
                   true  -> erlang:append_element(Type0, DType1);
                   false -> erlang:append_element(Type0, NewAttr)
               end,
-    H = nl_dec_nl_attr(Family, NewType, NewAttr, DType, Nested, Data),
+    H = nl_dec_nl_attr(Family, NewType, NewAttr, DType1, Nested, Data),
 
     nl_dec_nla(Family, Type0, NewRest, [H | Acc]);
 

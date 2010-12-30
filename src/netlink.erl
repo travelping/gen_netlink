@@ -4,7 +4,7 @@
 -export([start_link/0]).
 -export([init/1, handle_info/2]).
 
--export([nl_ct_dec/1, nl_rt_dec/1, dec_netlink/2, create_table/0, gen_const/1, define_consts/0]).
+-export([nl_ct_dec/1, nl_rt_dec/1, dec_netlink/2, create_table/0, gen_const/1, define_consts/0, enc_nlmsghdr/5]).
 -export([sockaddr_nl/3, setsockoption/4]).
 
 -include("gen_socket.hrl").
@@ -205,48 +205,6 @@ dec_nfnl_subsys(SubSys) when is_integer(SubSys) -> SubSys.
 -define(RTM_GETDCB, 78).
 -define(RTM_SETDCB, 79).
 
-%% grep "^-define(RTM_" src/netlink.erl | awk -F"[(,]" '{ printf "dec_rtm_msgtype(?%s)%*s %s;\n", $2, 23 - length($2), "->", tolower(substr($2,5)) }'
-dec_rtm_msgtype(?RTM_NEWLINK)          -> newlink;
-dec_rtm_msgtype(?RTM_DELLINK)          -> dellink;
-dec_rtm_msgtype(?RTM_GETLINK)          -> getlink;
-dec_rtm_msgtype(?RTM_SETLINK)          -> setlink;
-dec_rtm_msgtype(?RTM_NEWADDR)          -> newaddr;
-dec_rtm_msgtype(?RTM_DELADDR)          -> deladdr;
-dec_rtm_msgtype(?RTM_GETADDR)          -> getaddr;
-dec_rtm_msgtype(?RTM_NEWROUTE)         -> newroute;
-dec_rtm_msgtype(?RTM_DELROUTE)         -> delroute;
-dec_rtm_msgtype(?RTM_GETROUTE)         -> getroute;
-dec_rtm_msgtype(?RTM_NEWNEIGH)         -> newneigh;
-dec_rtm_msgtype(?RTM_DELNEIGH)         -> delneigh;
-dec_rtm_msgtype(?RTM_GETNEIGH)         -> getneigh;
-dec_rtm_msgtype(?RTM_NEWRULE)          -> newrule;
-dec_rtm_msgtype(?RTM_DELRULE)          -> delrule;
-dec_rtm_msgtype(?RTM_GETRULE)          -> getrule;
-dec_rtm_msgtype(?RTM_NEWQDISC)         -> newqdisc;
-dec_rtm_msgtype(?RTM_DELQDISC)         -> delqdisc;
-dec_rtm_msgtype(?RTM_GETQDISC)         -> getqdisc;
-dec_rtm_msgtype(?RTM_NEWTCLASS)        -> newtclass;
-dec_rtm_msgtype(?RTM_DELTCLASS)        -> deltclass;
-dec_rtm_msgtype(?RTM_GETTCLASS)        -> gettclass;
-dec_rtm_msgtype(?RTM_NEWTFILTER)       -> newtfilter;
-dec_rtm_msgtype(?RTM_DELTFILTER)       -> deltfilter;
-dec_rtm_msgtype(?RTM_GETTFILTER)       -> gettfilter;
-dec_rtm_msgtype(?RTM_NEWACTION)        -> newaction;
-dec_rtm_msgtype(?RTM_DELACTION)        -> delaction;
-dec_rtm_msgtype(?RTM_GETACTION)        -> getaction;
-dec_rtm_msgtype(?RTM_NEWPREFIX)        -> newprefix;
-dec_rtm_msgtype(?RTM_GETMULTICAST)     -> getmulticast;
-dec_rtm_msgtype(?RTM_GETANYCAST)       -> getanycast;
-dec_rtm_msgtype(?RTM_NEWNEIGHTBL)      -> newneightbl;
-dec_rtm_msgtype(?RTM_GETNEIGHTBL)      -> getneightbl;
-dec_rtm_msgtype(?RTM_SETNEIGHTBL)      -> setneightbl;
-dec_rtm_msgtype(?RTM_NEWNDUSEROPT)     -> newnduseropt;
-dec_rtm_msgtype(?RTM_NEWADDRLABEL)     -> newaddrlabel;
-dec_rtm_msgtype(?RTM_DELADDRLABEL)     -> deladdrlabel;
-dec_rtm_msgtype(?RTM_GETADDRLABEL)     -> getaddrlabel;
-dec_rtm_msgtype(?RTM_GETDCB)           -> getdcb;
-dec_rtm_msgtype(?RTM_SETDCB)           -> setdcb.
-
 create_table() ->
     ets:new(?TAB, [named_table, public]).
 
@@ -271,7 +229,74 @@ gen_const([]) ->
     ok.
 
 define_consts() ->
-    [{{iff_flags}, [
+    [{rtm_msgtype, [
+                    {newlink,      {flag, ?RTM_NEWLINK}},
+                    {dellink,      {flag, ?RTM_DELLINK}},
+                    {getlink,      {flag, ?RTM_GETLINK}},
+                    {setlink,      {flag, ?RTM_SETLINK}},
+                    {newaddr,      {flag, ?RTM_NEWADDR}},
+                    {deladdr,      {flag, ?RTM_DELADDR}},
+                    {getaddr,      {flag, ?RTM_GETADDR}},
+                    {newroute,     {flag, ?RTM_NEWROUTE}},
+                    {delroute,     {flag, ?RTM_DELROUTE}},
+                    {getroute,     {flag, ?RTM_GETROUTE}},
+                    {newneigh,     {flag, ?RTM_NEWNEIGH}},
+                    {delneigh,     {flag, ?RTM_DELNEIGH}},
+                    {getneigh,     {flag, ?RTM_GETNEIGH}},
+                    {newrule,      {flag, ?RTM_NEWRULE}},
+                    {delrule,      {flag, ?RTM_DELRULE}},
+                    {getrule,      {flag, ?RTM_GETRULE}},
+                    {newqdisc,     {flag, ?RTM_NEWQDISC}},
+                    {delqdisc,     {flag, ?RTM_DELQDISC}},
+                    {getqdisc,     {flag, ?RTM_GETQDISC}},
+                    {newtclass,    {flag, ?RTM_NEWTCLASS}},
+                    {deltclass,    {flag, ?RTM_DELTCLASS}},
+                    {gettclass,    {flag, ?RTM_GETTCLASS}},
+                    {newtfilter,   {flag, ?RTM_NEWTFILTER}},
+                    {deltfilter,   {flag, ?RTM_DELTFILTER}},
+                    {gettfilter,   {flag, ?RTM_GETTFILTER}},
+                    {newaction,    {flag, ?RTM_NEWACTION}},
+                    {delaction,    {flag, ?RTM_DELACTION}},
+                    {getaction,    {flag, ?RTM_GETACTION}},
+                    {newprefix,    {flag, ?RTM_NEWPREFIX}},
+                    {getmulticast, {flag, ?RTM_GETMULTICAST}},
+                    {getanycast,   {flag, ?RTM_GETANYCAST}},
+                    {newneightbl,  {flag, ?RTM_NEWNEIGHTBL}},
+                    {getneightbl,  {flag, ?RTM_GETNEIGHTBL}},
+                    {setneightbl,  {flag, ?RTM_SETNEIGHTBL}},
+                    {newnduseropt, {flag, ?RTM_NEWNDUSEROPT}},
+                    {newaddrlabel, {flag, ?RTM_NEWADDRLABEL}},
+                    {deladdrlabel, {flag, ?RTM_DELADDRLABEL}},
+                    {getaddrlabel, {flag, ?RTM_GETADDRLABEL}},
+                    {getdcb,       {flag, ?RTM_GETDCB}},
+                    {setdcb,       {flag, ?RTM_SETDCB}}
+                 ]},
+     {nlm_flags, [
+                  {request, {flag,  0}},
+                  {multi,   {flag,  1}},
+                  {ack,     {flag,  2}},
+                  {echo,    {flag,  3}}
+                 ]},
+     {nlm_get_flags, [
+                      {request, {flag,  0}},
+                      {multi,   {flag,  1}},
+                      {ack,     {flag,  2}},
+                      {echo,    {flag,  3}},
+                      {root,    {flag,  8}},
+                      {match,   {flag,  9}},
+                      {atomic,  {flag, 10}}
+                 ]},
+     {nlm_new_flags, [
+                      {request, {flag,  0}},
+                      {multi,   {flag,  1}},
+                      {ack,     {flag,  2}},
+                      {echo,    {flag,  3}},
+                      {replace, {flag,  8}},
+                      {excl,    {flag,  9}},
+                      {create,  {flag, 10}},
+                      {append,  {flag, 11}}
+                 ]},
+     {iff_flags, [
                     {up, flag},
                     {broadcast, flag},
                     {debug, flag},
@@ -514,6 +539,10 @@ dec_netlink(Type, Attr) ->
         _ -> {none, none}
     end.
 
+dec_rtm_msgtype(Type) ->
+    {MsgType, _} = dec_netlink(rtm_msgtype, Type),
+    MsgType.
+
 sockaddr_nl(Family, Pid, Groups) ->
     sockaddr_nl({Family, Pid, Groups}).
 
@@ -543,7 +572,7 @@ dec_flag(Type, F, Cnt, Acc) ->
     end.
 
 dec_iff_flags(Flag) ->
-     dec_flag({iff_flags}, Flag, 0, []).
+     dec_flag(iff_flags, Flag, 0, []).
                      
 nl_dec_nl_attr(_Family, Type, Attr, flag, false, << Flag:8 >>) ->
     {Attr, dec_flag(Type, Flag, 0, [])};
@@ -690,6 +719,39 @@ nl_rt_dec(<< _IpHdr:5/bytes, Len:32/native-integer, Type:16/native-integer, Flag
         _ ->
             { error, format }
     end.
+
+enc_flags(Type, [F|T], Ret) ->
+    V = case dec_netlink(Type, F) of
+            {X, _} when is_integer(X) -> 1 bsl X;
+            _ -> 0
+        end,
+    enc_flags(Type, T, V bor Ret);
+enc_flags(_Type, [], Ret) ->
+    Ret.
+
+enc_nlmsghdr_flags(Type, Flags) when 
+      Type == getlink; Type == getaddr; Type == getroute; Type == getneigh;
+      Type == getrule; Type == getqdisc; Type == gettclass; Type == gettfilter;
+      Type == getaction; Type == getmulticast; Type == getanycast; Type == getneightbl;
+      Type == getaddrlabel; Type == getdcb ->
+    enc_flags(nlm_get_flags, Flags, 0);
+enc_nlmsghdr_flags(Type, Flags) when
+      Type == newlink; Type == newaddr; Type == newroute; Type == newneigh;
+      Type == newrule; Type == newqdisc; Type == newtclass; Type == newtfilter;
+      Type == newaction; Type == newprefix; Type == newneightbl; Type == newnduseropt;
+      Type == newaddrlabel ->
+    enc_flags(nlm_new_flags, Flags, 0);
+enc_nlmsghdr_flags(_Type, Flags) ->
+    enc_flags(nlm_flags, Flags, 0).
+
+enc_nlmsghdr(Type, Flags, Pid, Seq, Req) when is_atom(Type), is_list(Flags) ->
+    enc_nlmsghdr(Type, enc_nlmsghdr_flags(Type, Flags), Pid, Seq, Req);
+enc_nlmsghdr(Type, Flags, Pid, Seq, Req) when is_atom(Type) ->
+    {NumType, _} =  dec_netlink(rtm_msgtype, Type),
+    enc_nlmsghdr(NumType, Flags, Pid, Seq, Req);
+enc_nlmsghdr(Type, Flags, Pid, Seq, Req) when is_integer(Flags), is_binary(Req) ->
+    Len = 16 + byte_size(Req),
+    << Len:32/native-integer, Type:16/native-integer, Flags:16/native-integer, Seq:32/native-integer, Pid:32/native-integer, Req/binary >>.
 
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).

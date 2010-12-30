@@ -164,6 +164,11 @@ dec_nfnl_subsys(?NFNL_SUBSYS_ULOG)              -> ulog;
 dec_nfnl_subsys(?NFNL_SUBSYS_COUNT)             -> count;
 dec_nfnl_subsys(SubSys) when is_integer(SubSys) -> SubSys.
 
+-define(NLMSG_NOOP, 1).
+-define(NLMSG_ERROR, 2).
+-define(NLMSG_DONE, 3).
+-define(NLMSG_OVERRUN, 4).
+
 -define(RTM_NEWLINK, 16).
 -define(RTM_DELLINK, 17).
 -define(RTM_GETLINK, 18).
@@ -230,6 +235,10 @@ gen_const([]) ->
 
 define_consts() ->
     [{rtm_msgtype, [
+                    {noop,         {flag, ?NLMSG_NOOP}},
+                    {error,        {flag, ?NLMSG_ERROR}},
+                    {done,         {flag, ?NLMSG_DONE}},
+                    {overrun,      {flag, ?NLMSG_OVERRUN}},
                     {newlink,      {flag, ?RTM_NEWLINK}},
                     {dellink,      {flag, ?RTM_DELLINK}},
                     {getlink,      {flag, ?RTM_GETLINK}},
@@ -571,21 +580,24 @@ dec_flag(Type, F, Cnt, Acc) ->
         _ -> dec_flag(Type, F bsr 1, Cnt + 1, Acc)
     end.
 
+dec_flags(Type, Flag) ->
+     dec_flag(Type, Flag, 0, []).
+
 dec_iff_flags(Flag) ->
-     dec_flag(iff_flags, Flag, 0, []).
+     dec_flags(iff_flags, Flag).
                      
 nl_dec_nl_attr(_Family, Type, Attr, flag, false, << Flag:8 >>) ->
-    {Attr, dec_flag(Type, Flag, 0, [])};
+    {Attr, dec_flags(Type, Flag)};
 nl_dec_nl_attr(_Family, Type, Attr, flag, false, << Flag:16 >>) ->
-    {Attr, dec_flag(Type, Flag, 0, [])};
+    {Attr, dec_flags(Type, Flag)};
 nl_dec_nl_attr(_Family, Type, Attr, flag, false, << Flag:32 >>) ->
-    {Attr, dec_flag(Type, Flag, 0, [])};
+    {Attr, dec_flags(Type, Flag)};
 nl_dec_nl_attr(_Family, Type, Attr, hflag, false, << Flag:8 >>) ->
-    {Attr, dec_flag(Type, Flag, 0, [])};
+    {Attr, dec_flags(Type, Flag)};
 nl_dec_nl_attr(_Family, Type, Attr, hflag, false, << Flag:16/native-integer >>) ->
-    {Attr, dec_flag(Type, Flag, 0, [])};
+    {Attr, dec_flags(Type, Flag)};
 nl_dec_nl_attr(_Family, Type, Attr, hflag, false, << Flag:32/native-integer >>) ->
-    {Attr, dec_flag(Type, Flag, 0, [])};
+    {Attr, dec_flags(Type, Flag)};
 
 nl_dec_nl_attr(_Family, Type, Attr, atom, false, << Val:8 >>) ->
     {Atom, _} = dec_netlink(Type, Val),
@@ -733,7 +745,7 @@ nl_rt_dec(<< Len:32/native-integer, Type:16/native-integer, Flags:16/native-inte
                                  PayLoadLen = Len - 16,
                                  << PayLoad:PayLoadLen/bytes, NextMsg/binary >> = Data, 
                                  MsgType = dec_rtm_msgtype(Type),
-                                 {{ rtnetlink, MsgType, Flags, Seq, Pid, nl_dec_payload({rtnetlink}, MsgType, PayLoad) }, NextMsg};
+                                 {{ rtnetlink, MsgType, dec_flags(nlm_flags, Flags), Seq, Pid, nl_dec_payload({rtnetlink}, MsgType, PayLoad) }, NextMsg};
                              _ ->
                                  {{ error, format }, << >>}
                  end,

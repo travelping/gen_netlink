@@ -1,11 +1,13 @@
 debughelper:start().   
 debughelper:trace(gen_socket).
 debughelper:trace(netlink).      
-erlang:spawn(netlink, start, []).
 
+%% manual testing
 netlink:create_table().
 netlink:gen_const(netlink:define_consts()).
-netlink:start().
+
+%% gen_server operations
+netlink:start_link().
 
 %% request all interfaces:
 netlink:send(netlink:rtnl_wilddump(packet, getlink)).

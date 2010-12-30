@@ -1,6 +1,10 @@
 -module(netlink).
 
--export([start/0, nl_ct_dec/1, nl_rt_dec/1, dec_netlink/2, create_table/0, gen_const/1, define_consts/0]).
+-behaviour(gen_server).
+-export([start_link/0]).
+-export([init/1, handle_info/2]).
+
+-export([nl_ct_dec/1, nl_rt_dec/1, dec_netlink/2, create_table/0, gen_const/1, define_consts/0]).
 
 -include("gen_socket.hrl").
 
@@ -474,7 +478,7 @@ define_consts() ->
                           {linkmode, atom},
                           {linkinfo, {nested, linkinfo}},
                           {net_ns_pid, none},
-                          {ifalias, none},
+                          {ifalias, string},
                           {num_vf, huint32},
                           {vfinfo_list, none},
                           {stats64, huint64_array},
@@ -547,36 +551,6 @@ setsockoption(Socket, Level, OptName, Val) when is_atom(Val) ->
     setsockoption(Socket, Level, OptName, enc_opt(Val));
 setsockoption(Socket, Level, OptName, Val) when is_integer(Val) ->
     gen_socket:setsockoption(Socket, Level, OptName, Val).
-
-start() ->
-    %% {ok, CtNl} = gen_socket:socket(netlink, raw, ?NETLINK_NETFILTER),
-    %% ok = gen_socket:bind(CtNl, sockaddr_nl(netlink, 0, -1)),
-
-    %% ok = gen_socket:setsockoption(CtNl, sol_socket, so_sndbuf, 32768),
-    %% ok = gen_socket:setsockoption(CtNl, sol_socket, so_rcvbuf, 32768),
-
-    %% ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_new),
-    %% ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_update),
-    %% ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_destroy),
-
-    %% %% UDP is close enough (connection less, datagram oriented), so we can use the driver from it
-    %% {ok, Ct} = gen_udp:open(0, [binary, {fd, CtNl}]),
-
-    {ok, RtNl} = gen_socket:socket(netlink, raw, ?NETLINK_ROUTE),
-    ok = gen_socket:bind(RtNl, sockaddr_nl(netlink, 0, -1)),
-
-    ok = gen_socket:setsockoption(RtNl, sol_socket, so_sndbuf, 32768),
-    ok = gen_socket:setsockoption(RtNl, sol_socket, so_rcvbuf, 32768),
-
-    ok = setsockoption(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_link),
-    ok = setsockoption(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_notify),
-    ok = setsockoption(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_ipv4_ifaddr),
-    ok = setsockoption(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_ipv4_route),
-
-    %% UDP is close enough (connection less, datagram oriented), so we can use the driver from it
-    {ok, Rt} = gen_udp:open(0, [binary, {fd, RtNl}]),
-
-    loop(undef, Rt).
 
 dec_flag(_Type, 0, _Cnt, Acc) ->
     Acc;
@@ -736,14 +710,50 @@ nl_rt_dec(<< _IpHdr:5/bytes, Len:32/native-integer, Type:16/native-integer, Flag
             { error, format }
     end.
 
-% Echo back whatever data we receive on Socket.
-loop(Ct, Rt) ->
-    receive
-        {udp, Ct, _IP, _port, Data} ->
-            io:format("got ~p~ndec: ~p~n", [Data, nl_ct_dec(Data)]);
-        {udp, Rt, _IP, _Port, Data} ->
-            io:format("got ~p~ndec: ~p~n", [Data, nl_rt_dec(Data)]);
-        {udp, S, _IP, _Port, _Data} ->
-            io:format("got on Socket ~p~n", [S])
-    end,
-    loop(Ct, Rt).
+start_link() ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+init(_Args) ->
+    create_table(),
+    gen_const(define_consts()),
+
+    %% {ok, CtNl} = gen_socket:socket(netlink, raw, ?NETLINK_NETFILTER),
+    %% ok = gen_socket:bind(CtNl, sockaddr_nl(netlink, 0, -1)),
+
+    %% ok = gen_socket:setsockoption(CtNl, sol_socket, so_sndbuf, 32768),
+    %% ok = gen_socket:setsockoption(CtNl, sol_socket, so_rcvbuf, 32768),
+
+    %% ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_new),
+    %% ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_update),
+    %% ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_destroy),
+
+    %% %% UDP is close enough (connection less, datagram oriented), so we can use the driver from it
+    %% {ok, Ct} = gen_udp:open(0, [binary, {fd, CtNl}]),
+    Ct = undef,
+
+    {ok, RtNl} = gen_socket:socket(netlink, raw, ?NETLINK_ROUTE),
+    ok = gen_socket:bind(RtNl, sockaddr_nl(netlink, 0, -1)),
+
+    ok = gen_socket:setsockoption(RtNl, sol_socket, so_sndbuf, 32768),
+    ok = gen_socket:setsockoption(RtNl, sol_socket, so_rcvbuf, 32768),
+
+    ok = setsockoption(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_link),
+    ok = setsockoption(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_notify),
+    ok = setsockoption(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_ipv4_ifaddr),
+    ok = setsockoption(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_ipv4_route),
+
+    %% UDP is close enough (connection less, datagram oriented), so we can use the driver from it
+    {ok, Rt} = gen_udp:open(0, [binary, {fd, RtNl}]),
+
+    {ok, {Ct, Rt}}.
+
+handle_info({udp, Ct, _IP, _port, Data}, {Ct, _Rt} = State) ->
+    io:format("got ~p~ndec: ~p~n", [Data, nl_ct_dec(Data)]),
+    {noreply, State};
+handle_info({udp, Rt, _IP, _Port, Data}, {_Ct, Rt} = State) ->
+    io:format("got ~p~ndec: ~p~n", [Data, nl_rt_dec(Data)]),
+    {noreply, State};
+handle_info({udp, S, _IP, _Port, _Data}, {_Ct, _Rt} = State) ->
+    io:format("got on Socket ~p~n", [S]),
+    {noreply, State}.
+ 

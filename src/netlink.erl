@@ -2,9 +2,9 @@
 
 -behaviour(gen_server).
 -export([start_link/0]).
--export([init/1, handle_info/2]).
+-export([init/1, handle_info/2, handle_cast/2]).
 
--export([nl_ct_dec/1, nl_rt_dec/1, dec_netlink/2, create_table/0, gen_const/1, define_consts/0, enc_nlmsghdr/5]).
+-export([nl_ct_dec/1, nl_rt_dec/1, dec_netlink/2, create_table/0, gen_const/1, define_consts/0, enc_nlmsghdr/5, rtnl_wilddump/2, send/1]).
 -export([sockaddr_nl/3, setsockoption/4]).
 
 -include("gen_socket.hrl").
@@ -638,6 +638,16 @@ nl_dec_nl_attr(_Family, Type, Attr, DType, Nested, Data) ->
     io:format("nl_dec_nl_attr (wildcard): ~p ~p ~p ~p ~p~n", [Type, Attr, DType, Nested, size(Data)]),
     {Type, Data}.
 
+%%
+%% pad binary to specific length
+%%   -> http://www.erlang.org/pipermail/erlang-questions/2008-December/040709.html
+%%
+pad_to(Width, Binary) ->
+     case (Width - size(Binary) rem Width) rem Width of
+         0 -> Binary;
+         N -> <<Binary/binary, 0:(N*8)>>
+     end.
+
 pad_len(Block, Size) ->
     (Block - (Size rem Block)) rem Block.
 
@@ -711,14 +721,26 @@ nl_ct_dec(<< _IpHdr:5/bytes, Len:32/native-integer, Type:16/native-integer, Flag
             { error, format }
     end.
 
-nl_rt_dec(<< _IpHdr:5/bytes, Len:32/native-integer, Type:16/native-integer, Flags:16/native-integer, Seq:32/native-integer, Pid:32/native-integer, Data/binary >> = Msg) ->
-    case nlmsg_ok(size(Msg) - 5, Len) of
-        true -> 
-            MsgType = dec_rtm_msgtype(Type),
-            { rtnetlink, MsgType, Flags, Seq, Pid, nl_dec_payload({rtnetlink}, MsgType, Data) };
-        _ ->
-            { error, format }
-    end.
+nl_rt_dec_udp(<< _IpHdr:5/bytes, Data/binary >>) ->
+    nl_rt_dec(Data).
+
+nl_rt_dec(Msg) ->
+    nl_rt_dec(Msg, []).
+
+nl_rt_dec(<< Len:32/native-integer, Type:16/native-integer, Flags:16/native-integer, Seq:32/native-integer, Pid:32/native-integer, Data/binary >> = Msg, Acc) ->
+    {DecodedMsg, Next} = case nlmsg_ok(size(Msg), Len) of
+                             true -> 
+                                 PayLoadLen = Len - 16,
+                                 << PayLoad:PayLoadLen/bytes, NextMsg/binary >> = Data, 
+                                 MsgType = dec_rtm_msgtype(Type),
+                                 {{ rtnetlink, MsgType, Flags, Seq, Pid, nl_dec_payload({rtnetlink}, MsgType, PayLoad) }, NextMsg};
+                             _ ->
+                                 {{ error, format }, << >>}
+                 end,
+    nl_rt_dec(Next, [DecodedMsg | Acc]);
+
+nl_rt_dec(<< >>, Acc) ->
+    lists:reverse(Acc).
 
 enc_flags(Type, [F|T], Ret) ->
     V = case dec_netlink(Type, F) of
@@ -750,8 +772,13 @@ enc_nlmsghdr(Type, Flags, Pid, Seq, Req) when is_atom(Type) ->
     {NumType, _} =  dec_netlink(rtm_msgtype, Type),
     enc_nlmsghdr(NumType, Flags, Pid, Seq, Req);
 enc_nlmsghdr(Type, Flags, Pid, Seq, Req) when is_integer(Flags), is_binary(Req) ->
-    Len = 16 + byte_size(Req),
-    << Len:32/native-integer, Type:16/native-integer, Flags:16/native-integer, Seq:32/native-integer, Pid:32/native-integer, Req/binary >>.
+    Payload = pad_to(4, Req),
+    Len = 16 + byte_size(Payload),
+    << Len:32/native-integer, Type:16/native-integer, Flags:16/native-integer, Seq:32/native-integer, Pid:32/native-integer, Payload/binary >>.
+
+rtnl_wilddump(Family, Type) ->
+    NumFamily = gen_socket:family(Family),
+    enc_nlmsghdr(Type, [root, match, request], 0, 0, << NumFamily:8 >>).
 
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
@@ -790,13 +817,27 @@ init(_Args) ->
 
     {ok, {Ct, Rt}}.
 
+send(Msg) ->
+    gen_server:cast(?MODULE, {send, Msg}).
+
+handle_cast({send, Msg}, {_Ct, Rt} = State) ->
+    R = case inet:getfd(Rt) of
+            {ok, Fd} -> gen_socket:send(Fd, Msg, 0);
+            _ -> {error, invalid}
+        end,
+    io:format("Send: ~p~n", [R]),
+    {noreply, State}.
+
 handle_info({udp, Ct, _IP, _port, Data}, {Ct, _Rt} = State) ->
     io:format("got ~p~ndec: ~p~n", [Data, nl_ct_dec(Data)]),
     {noreply, State};
 handle_info({udp, Rt, _IP, _Port, Data}, {_Ct, Rt} = State) ->
-    io:format("got ~p~ndec: ~p~n", [Data, nl_rt_dec(Data)]),
+    io:format("got ~p~ndec: ~p~n", [Data, nl_rt_dec_udp(Data)]),
     {noreply, State};
 handle_info({udp, S, _IP, _Port, _Data}, {_Ct, _Rt} = State) ->
     io:format("got on Socket ~p~n", [S]),
+    {noreply, State};
+handle_info(Msg, {_Ct, _Rt} = State) ->
+    io:format("got Message ~p~n", [Msg]),
     {noreply, State}.
  

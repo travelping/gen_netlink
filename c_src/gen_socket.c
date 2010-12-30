@@ -252,6 +252,29 @@ nif_sendto(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     return atom_ok;
 }
 
+/* 0: socket, 1: buffer, 2: flags */
+static ERL_NIF_TERM
+nif_send(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    int sockfd = -1;
+    int flags = 0;
+
+    ErlNifBinary buf;
+
+    if (!enif_get_int(env, argv[0], &sockfd))
+        return enif_make_badarg(env);
+
+    if (!enif_inspect_binary(env, argv[1], &buf))
+        return enif_make_badarg(env);
+    
+    if (!enif_get_int(env, argv[2], &flags))
+        return enif_make_badarg(env);
+
+    if (send(sockfd, buf.data, buf.size, flags) == -1)
+        return error_tuple(env, errno);
+
+    return atom_ok;
+}
 
 /* 0: socket descriptor, 1: struct sockaddr */
 static ERL_NIF_TERM
@@ -375,6 +398,7 @@ static ErlNifFunc nif_funcs[] = {
     {"ioctl", 3, nif_ioctl},
     {"socket3", 3, nif_socket},
     {"recvfrom", 4, nif_recvfrom},
+    {"send", 3, nif_send},
     {"sendto", 4, nif_sendto},
     {"setsockopt", 4, nif_setsockopt}
 };

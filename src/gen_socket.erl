@@ -45,7 +45,7 @@
          accept/1, accept/2,
          close/1,
          recv/2, recvfrom/2, recvfrom/4,
-         sendto/4,
+         send/3, sendto/4,
          bind/2,
          ioctl/3,
          setsockopt/4,
@@ -124,6 +124,9 @@ ioctl(_,_,_) ->
     erlang:error(not_implemented).
 
 sendto(_,_,_,_) ->
+    erlang:error(not_implemented).
+
+send(_,_,_) ->
     erlang:error(not_implemented).
 
 setsockopt(_,_,_,_) ->

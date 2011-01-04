@@ -216,6 +216,68 @@ dec_nfnl_subsys(SubSys) when is_integer(SubSys) -> SubSys.
 -define(RTM_GETDCB, 78).
 -define(RTM_SETDCB, 79).
 
+dec_ifi_type(?ARPHRD_NETROM)                 -> arphrd_netrom;
+dec_ifi_type(?ARPHRD_ETHER )                 -> arphrd_ether ;
+dec_ifi_type(?ARPHRD_EETHER)                 -> arphrd_eether;
+dec_ifi_type(?ARPHRD_AX25)                   -> arphrd_ax25;
+dec_ifi_type(?ARPHRD_PRONET)                 -> arphrd_pronet;
+dec_ifi_type(?ARPHRD_CHAOS)                  -> arphrd_chaos;
+dec_ifi_type(?ARPHRD_IEEE802)                -> arphrd_ieee802;
+dec_ifi_type(?ARPHRD_ARCNET)                 -> arphrd_arcnet;
+dec_ifi_type(?ARPHRD_APPLETLK)               -> arphrd_appletlk;
+dec_ifi_type(?ARPHRD_DLCI)                   -> arphrd_dlci;
+dec_ifi_type(?ARPHRD_ATM)                    -> arphrd_atm;
+dec_ifi_type(?ARPHRD_METRICOM)               -> arphrd_metricom;
+dec_ifi_type(?ARPHRD_IEEE1394)               -> arphrd_ieee1394;
+dec_ifi_type(?ARPHRD_EUI64)                  -> arphrd_eui64;
+dec_ifi_type(?ARPHRD_INFINIBAND)             -> arphrd_infiniband;
+dec_ifi_type(?ARPHRD_SLIP)                   -> arphrd_slip;
+dec_ifi_type(?ARPHRD_CSLIP)                  -> arphrd_cslip;
+dec_ifi_type(?ARPHRD_SLIP6)                  -> arphrd_slip6;
+dec_ifi_type(?ARPHRD_CSLIP6)                 -> arphrd_cslip6;
+dec_ifi_type(?ARPHRD_RSRVD)                  -> arphrd_rsrvd;
+dec_ifi_type(?ARPHRD_ADAPT)                  -> arphrd_adapt;
+dec_ifi_type(?ARPHRD_ROSE)                   -> arphrd_rose;
+dec_ifi_type(?ARPHRD_X25)                    -> arphrd_x25;
+dec_ifi_type(?ARPHRD_HWX25)                  -> arphrd_hwx25;
+dec_ifi_type(?ARPHRD_CAN)                    -> arphrd_can;
+dec_ifi_type(?ARPHRD_PPP)                    -> arphrd_ppp;
+dec_ifi_type(?ARPHRD_CISCO)                  -> arphrd_cisco;
+dec_ifi_type(?ARPHRD_HDLC)                   -> arphrd_hdlc;
+dec_ifi_type(?ARPHRD_LAPB)                   -> arphrd_lapb;
+dec_ifi_type(?ARPHRD_DDCMP)                  -> arphrd_ddcmp;
+dec_ifi_type(?ARPHRD_RAWHDLC)                -> arphrd_rawhdlc;
+dec_ifi_type(?ARPHRD_TUNNEL)                 -> arphrd_tunnel;
+dec_ifi_type(?ARPHRD_TUNNEL6)                -> arphrd_tunnel6;
+dec_ifi_type(?ARPHRD_FRAD)                   -> arphrd_frad;
+dec_ifi_type(?ARPHRD_SKIP)                   -> arphrd_skip;
+dec_ifi_type(?ARPHRD_LOOPBACK)               -> arphrd_loopback;
+dec_ifi_type(?ARPHRD_LOCALTLK)               -> arphrd_localtlk;
+dec_ifi_type(?ARPHRD_FDDI)                   -> arphrd_fddi;
+dec_ifi_type(?ARPHRD_BIF)                    -> arphrd_bif;
+dec_ifi_type(?ARPHRD_SIT)                    -> arphrd_sit;
+dec_ifi_type(?ARPHRD_IPDDP)                  -> arphrd_ipddp;
+dec_ifi_type(?ARPHRD_IPGRE)                  -> arphrd_ipgre;
+dec_ifi_type(?ARPHRD_PIMREG)                 -> arphrd_pimreg;
+dec_ifi_type(?ARPHRD_HIPPI)                  -> arphrd_hippi;
+dec_ifi_type(?ARPHRD_ASH)                    -> arphrd_ash;
+dec_ifi_type(?ARPHRD_ECONET)                 -> arphrd_econet;
+dec_ifi_type(?ARPHRD_IRDA)                   -> arphrd_irda;
+dec_ifi_type(?ARPHRD_FCPP)                   -> arphrd_fcpp;
+dec_ifi_type(?ARPHRD_FCAL)                   -> arphrd_fcal;
+dec_ifi_type(?ARPHRD_FCPL)                   -> arphrd_fcpl;
+dec_ifi_type(?ARPHRD_FCFABRIC)               -> arphrd_fcfabric;
+dec_ifi_type(?ARPHRD_IEEE802_TR)             -> arphrd_ieee802_tr;
+dec_ifi_type(?ARPHRD_IEEE80211)              -> arphrd_ieee80211;
+dec_ifi_type(?ARPHRD_IEEE80211_PRISM)        -> arphrd_ieee80211_prism;
+dec_ifi_type(?ARPHRD_IEEE80211_RADIOTAP)     -> arphrd_ieee80211_radiotap;
+dec_ifi_type(?ARPHRD_IEEE802154)             -> arphrd_ieee802154;
+dec_ifi_type(?ARPHRD_PHONET)                 -> arphrd_phonet;
+dec_ifi_type(?ARPHRD_PHONET_PIPE)            -> arphrd_phonet_pipe;
+dec_ifi_type(?ARPHRD_CAIF)                   -> arphrd_caif;
+dec_ifi_type(?ARPHRD_VOID)                   -> arphrd_void;
+dec_ifi_type(?ARPHRD_NONE)                   -> arphrd_none.
+
 create_table() ->
     ets:new(?TAB, [named_table, public]).
 
@@ -591,7 +653,7 @@ dec_flags(Type, Flag) ->
 
 dec_iff_flags(Flag) ->
      dec_flags(iff_flags, Flag).
-                     
+
 nl_dec_nl_attr(_Family, Type, Attr, flag, false, << Flag:8 >>) ->
     {Attr, dec_flags(Type, Flag)};
 nl_dec_nl_attr(_Family, Type, Attr, flag, false, << Flag:16 >>) ->
@@ -675,8 +737,8 @@ nl_dec_nla(Family, Type0, << Len:16/native-integer, NlaType:16/native-integer, R
     << Data:PLen/bytes, _Pad:Padding/bytes, NewRest/binary >> = Rest,
 
     {NewAttr, DType} = dec_netlink(Type0, NlaType band 16#7FFF),
-    
-    {Nested, DType1} = case DType of 
+
+    {Nested, DType1} = case DType of
                            {nested, T} -> {true, T};
                            T -> { (NlaType band 16#8000) /= 0, T }
                        end,
@@ -698,25 +760,25 @@ nl_dec_payload({ctnetlink} = Type, _MsgType, << Family:8, Version:8, ResId:16/na
     Fam = gen_socket:family(Family),
     { Fam, Version, ResId, nl_dec_nla(Fam, Type, Data) };
 
-nl_dec_payload({rtnetlink}, MsgType, << Family:8, _Pad1:8, _Pad2:16, IfIndex:32/native-signed-integer, State:16/native-integer, Flags:8, NdmType:8, Data/binary >>) 
+nl_dec_payload({rtnetlink}, MsgType, << Family:8, _Pad1:8, _Pad2:16, IfIndex:32/native-signed-integer, State:16/native-integer, Flags:8, NdmType:8, Data/binary >>)
   when MsgType == newneigh; MsgType == delneigh ->
     Fam = gen_socket:family(Family),
     { Fam, IfIndex, State, Flags, NdmType, nl_dec_nla(Fam, {rtnetlink,neigh}, Data) };
 
-nl_dec_payload({rtnetlink}, MsgType, << Family:8, DstLen:8, SrcLen:8, Tos:8, Table:8, Protocol:8, Scope:8, RtmType:8, Flags:32/native-integer, Data/binary >>) 
+nl_dec_payload({rtnetlink}, MsgType, << Family:8, DstLen:8, SrcLen:8, Tos:8, Table:8, Protocol:8, Scope:8, RtmType:8, Flags:32/native-integer, Data/binary >>)
   when MsgType == newroute; MsgType == delroute ->
     Fam = gen_socket:family(Family),
     { Fam, DstLen, SrcLen, Tos, Table, gen_socket:protocol(Protocol), Scope, RtmType, Flags, nl_dec_nla(Fam, {rtnetlink,route}, Data) };
 
-nl_dec_payload({rtnetlink}, MsgType, << Family:8, PrefixLen:8, Flags:8, Scope:8, Index:32/native-integer, Data/binary >>) 
+nl_dec_payload({rtnetlink}, MsgType, << Family:8, PrefixLen:8, Flags:8, Scope:8, Index:32/native-integer, Data/binary >>)
   when MsgType == newaddr; MsgType == deladdr ->
     Fam = gen_socket:family(Family),
     { Fam, PrefixLen, Flags, Scope, Index, nl_dec_nla(Fam, {rtnetlink,addr}, Data) };
 
-nl_dec_payload({rtnetlink}, MsgType, << Family:8, _Pad:8, Type:16/native-integer, Index:32/native-integer, Flags:32/native-integer, Change:32/native-integer, Data/binary >>) 
+nl_dec_payload({rtnetlink}, MsgType, << Family:8, _Pad:8, Type:16/native-integer, Index:32/native-integer, Flags:32/native-integer, Change:32/native-integer, Data/binary >>)
   when MsgType == newlink; MsgType == dellink ->
     Fam = gen_socket:family(Family),
-    { Fam, Type, Index, dec_iff_flags(Flags), dec_iff_flags(Change), nl_dec_nla(Fam, {rtnetlink,link}, Data) };
+    { Fam, dec_ifi_type(Type), Index, dec_iff_flags(Flags), dec_iff_flags(Change), nl_dec_nla(Fam, {rtnetlink,link}, Data) };
 
 nl_dec_payload({rtnetlink}, MsgType, << Family:8, _Pad1:8, _Pad2:16, IfIndex:32/native-signed-integer, PfxType:8, PfxLen:8, Flags:8, _Pad3:8, Data/binary >>)
   when MsgType == newprefix; MsgType == delprefix ->
@@ -731,7 +793,7 @@ nlmsg_ok(DataLen, MsgLen) ->
 
 nl_ct_dec(<< _IpHdr:5/bytes, Len:32/native-integer, Type:16/native-integer, Flags:16/native-integer, Seq:32/native-integer, Pid:32/native-integer, Data/binary >> = Msg) ->
     case nlmsg_ok(size(Msg) - 5, Len) of
-        true -> 
+        true ->
             SubSys = dec_nfnl_subsys(Type bsr 8),
             MsgType = Type band 16#00FF,
             { SubSys, MsgType, Flags, Seq, Pid, nl_dec_payload({SubSys}, MsgType, Data) };
@@ -747,9 +809,9 @@ nl_rt_dec(Msg) ->
 
 nl_rt_dec(<< Len:32/native-integer, Type:16/native-integer, Flags:16/native-integer, Seq:32/native-integer, Pid:32/native-integer, Data/binary >> = Msg, Acc) ->
     {DecodedMsg, Next} = case nlmsg_ok(size(Msg), Len) of
-                             true -> 
+                             true ->
                                  PayLoadLen = Len - 16,
-                                 << PayLoad:PayLoadLen/bytes, NextMsg/binary >> = Data, 
+                                 << PayLoad:PayLoadLen/bytes, NextMsg/binary >> = Data,
                                  MsgType = dec_rtm_msgtype(Type),
                                  {{ rtnetlink, MsgType, dec_flags(nlm_flags, Flags), Seq, Pid, nl_dec_payload({rtnetlink}, MsgType, PayLoad) }, NextMsg};
                              _ ->
@@ -769,7 +831,7 @@ enc_flags(Type, [F|T], Ret) ->
 enc_flags(_Type, [], Ret) ->
     Ret.
 
-enc_nlmsghdr_flags(Type, Flags) when 
+enc_nlmsghdr_flags(Type, Flags) when
       Type == getlink; Type == getaddr; Type == getroute; Type == getneigh;
       Type == getrule; Type == getqdisc; Type == gettclass; Type == gettfilter;
       Type == getaction; Type == getmulticast; Type == getanycast; Type == getneightbl;

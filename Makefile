@@ -1,23 +1,35 @@
+#    __                        __      _
+#   / /__________ __   _____  / /___  (_)___  ____ _
+#  / __/ ___/ __ `/ | / / _ \/ / __ \/ / __ \/ __ `/
+# / /_/ /  / /_/ /| |/ /  __/ / /_/ / / / / / /_/ /
+# \__/_/   \__,_/ |___/\___/_/ .___/_/_/ /_/\__, /
+#                           /_/            /____/
+#
+# Copyright (c) Travelping GmbH <info@travelping.com>
 
-REBAR=$(shell which rebar || echo ./rebar)
+ERL  = erl
+ERLC = erlc
 
-all: dirs compile
+APPLICATION = tp_json_rpc
+SRC_DIR     = $(CURDIR)/src
+EBIN_DIR    = $(CURDIR)/ebin
+INCLUDE_DIR = $(CURDIR)/include
+TEST_DIR     = $(CURDIR)/test
+TEST_LOG_DIR = $(CURDIR)/test-log
 
-./rebar:
-	erl -noshell -s inets start \
-		-eval 'httpc:request(get, {"http://hg.basho.com/rebar/downloads/rebar", []}, [], [{stream, "./rebar"}])' \
-		-s init stop
-	chmod +x ./rebar
+.PHONY: all clean shell
 
-dirs:
-	@mkdir -p priv/tmp
+all:
+	$(MAKE) -C c_src
+	$(ERL) -pa $(EBIN_DIR) -noinput \
+	-eval "case make:all() of up_to_date -> halt(0); error -> halt(1) end."
 
-compile: $(REBAR)
-	@$(REBAR) compile
+clean:
+	$(MAKE) -C c_src clean
+	rm -f $(EBIN_DIR)/*.beam
+	rm -fr ${TEST_DIR}/*.beam
+	rm -f doc/edoc-info doc/*.html doc/*.css doc/*.png
+	rm -fr ${TEST_LOG_DIR}/*
 
-clean: $(REBAR)
-	@$(REBAR) clean
-
-deps: $(REBAR)
-	@$(REBAR) get-deps
-
+shell: all
+	$(ERL) -pa $(EBIN_DIR)

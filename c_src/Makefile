@@ -7,4 +7,5 @@ clean:
 	rm -f *.o
 
 ../priv/gen_socket.so: gen_socket.o
+	(test -d ../priv || mkdir ../priv)
 	$(CC) $(LDFLAGS) -fPIC -shared -lei -lerl_interface gen_socket.o -o ../priv/gen_socket.so

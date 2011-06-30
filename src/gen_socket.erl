@@ -318,7 +318,6 @@ arphdr(?ARPHRD_X25)                    -> arphrd_x25;
 arphdr(?ARPHRD_HWX25)                  -> arphrd_hwx25;
 arphdr(?ARPHRD_CAN)                    -> arphrd_can;
 arphdr(?ARPHRD_PPP)                    -> arphrd_ppp;
-arphdr(?ARPHRD_CISCO)                  -> arphrd_cisco;
 arphdr(?ARPHRD_HDLC)                   -> arphrd_hdlc;
 arphdr(?ARPHRD_LAPB)                   -> arphrd_lapb;
 arphdr(?ARPHRD_DDCMP)                  -> arphrd_ddcmp;

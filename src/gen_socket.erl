@@ -146,6 +146,7 @@ progname() ->
         filename:dirname(code:which(?MODULE)),
         "..",
         "priv",
+        "lib",
         ?MODULE
     ]).
 

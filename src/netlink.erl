@@ -216,68 +216,6 @@ dec_nfnl_subsys(SubSys) when is_integer(SubSys) -> SubSys.
 -define(RTM_GETDCB, 78).
 -define(RTM_SETDCB, 79).
 
-dec_ifi_type(?ARPHRD_NETROM)                 -> arphrd_netrom;
-dec_ifi_type(?ARPHRD_ETHER )                 -> arphrd_ether ;
-dec_ifi_type(?ARPHRD_EETHER)                 -> arphrd_eether;
-dec_ifi_type(?ARPHRD_AX25)                   -> arphrd_ax25;
-dec_ifi_type(?ARPHRD_PRONET)                 -> arphrd_pronet;
-dec_ifi_type(?ARPHRD_CHAOS)                  -> arphrd_chaos;
-dec_ifi_type(?ARPHRD_IEEE802)                -> arphrd_ieee802;
-dec_ifi_type(?ARPHRD_ARCNET)                 -> arphrd_arcnet;
-dec_ifi_type(?ARPHRD_APPLETLK)               -> arphrd_appletlk;
-dec_ifi_type(?ARPHRD_DLCI)                   -> arphrd_dlci;
-dec_ifi_type(?ARPHRD_ATM)                    -> arphrd_atm;
-dec_ifi_type(?ARPHRD_METRICOM)               -> arphrd_metricom;
-dec_ifi_type(?ARPHRD_IEEE1394)               -> arphrd_ieee1394;
-dec_ifi_type(?ARPHRD_EUI64)                  -> arphrd_eui64;
-dec_ifi_type(?ARPHRD_INFINIBAND)             -> arphrd_infiniband;
-dec_ifi_type(?ARPHRD_SLIP)                   -> arphrd_slip;
-dec_ifi_type(?ARPHRD_CSLIP)                  -> arphrd_cslip;
-dec_ifi_type(?ARPHRD_SLIP6)                  -> arphrd_slip6;
-dec_ifi_type(?ARPHRD_CSLIP6)                 -> arphrd_cslip6;
-dec_ifi_type(?ARPHRD_RSRVD)                  -> arphrd_rsrvd;
-dec_ifi_type(?ARPHRD_ADAPT)                  -> arphrd_adapt;
-dec_ifi_type(?ARPHRD_ROSE)                   -> arphrd_rose;
-dec_ifi_type(?ARPHRD_X25)                    -> arphrd_x25;
-dec_ifi_type(?ARPHRD_HWX25)                  -> arphrd_hwx25;
-dec_ifi_type(?ARPHRD_CAN)                    -> arphrd_can;
-dec_ifi_type(?ARPHRD_PPP)                    -> arphrd_ppp;
-dec_ifi_type(?ARPHRD_CISCO)                  -> arphrd_cisco;
-dec_ifi_type(?ARPHRD_HDLC)                   -> arphrd_hdlc;
-dec_ifi_type(?ARPHRD_LAPB)                   -> arphrd_lapb;
-dec_ifi_type(?ARPHRD_DDCMP)                  -> arphrd_ddcmp;
-dec_ifi_type(?ARPHRD_RAWHDLC)                -> arphrd_rawhdlc;
-dec_ifi_type(?ARPHRD_TUNNEL)                 -> arphrd_tunnel;
-dec_ifi_type(?ARPHRD_TUNNEL6)                -> arphrd_tunnel6;
-dec_ifi_type(?ARPHRD_FRAD)                   -> arphrd_frad;
-dec_ifi_type(?ARPHRD_SKIP)                   -> arphrd_skip;
-dec_ifi_type(?ARPHRD_LOOPBACK)               -> arphrd_loopback;
-dec_ifi_type(?ARPHRD_LOCALTLK)               -> arphrd_localtlk;
-dec_ifi_type(?ARPHRD_FDDI)                   -> arphrd_fddi;
-dec_ifi_type(?ARPHRD_BIF)                    -> arphrd_bif;
-dec_ifi_type(?ARPHRD_SIT)                    -> arphrd_sit;
-dec_ifi_type(?ARPHRD_IPDDP)                  -> arphrd_ipddp;
-dec_ifi_type(?ARPHRD_IPGRE)                  -> arphrd_ipgre;
-dec_ifi_type(?ARPHRD_PIMREG)                 -> arphrd_pimreg;
-dec_ifi_type(?ARPHRD_HIPPI)                  -> arphrd_hippi;
-dec_ifi_type(?ARPHRD_ASH)                    -> arphrd_ash;
-dec_ifi_type(?ARPHRD_ECONET)                 -> arphrd_econet;
-dec_ifi_type(?ARPHRD_IRDA)                   -> arphrd_irda;
-dec_ifi_type(?ARPHRD_FCPP)                   -> arphrd_fcpp;
-dec_ifi_type(?ARPHRD_FCAL)                   -> arphrd_fcal;
-dec_ifi_type(?ARPHRD_FCPL)                   -> arphrd_fcpl;
-dec_ifi_type(?ARPHRD_FCFABRIC)               -> arphrd_fcfabric;
-dec_ifi_type(?ARPHRD_IEEE802_TR)             -> arphrd_ieee802_tr;
-dec_ifi_type(?ARPHRD_IEEE80211)              -> arphrd_ieee80211;
-dec_ifi_type(?ARPHRD_IEEE80211_PRISM)        -> arphrd_ieee80211_prism;
-dec_ifi_type(?ARPHRD_IEEE80211_RADIOTAP)     -> arphrd_ieee80211_radiotap;
-dec_ifi_type(?ARPHRD_IEEE802154)             -> arphrd_ieee802154;
-dec_ifi_type(?ARPHRD_PHONET)                 -> arphrd_phonet;
-dec_ifi_type(?ARPHRD_PHONET_PIPE)            -> arphrd_phonet_pipe;
-dec_ifi_type(?ARPHRD_CAIF)                   -> arphrd_caif;
-dec_ifi_type(?ARPHRD_VOID)                   -> arphrd_void;
-dec_ifi_type(?ARPHRD_NONE)                   -> arphrd_none.
-
 create_table() ->
     ets:new(?TAB, [named_table, public]).
 
@@ -778,7 +716,7 @@ nl_dec_payload({rtnetlink}, MsgType, << Family:8, PrefixLen:8, Flags:8, Scope:8,
 nl_dec_payload({rtnetlink}, MsgType, << Family:8, _Pad:8, Type:16/native-integer, Index:32/native-integer, Flags:32/native-integer, Change:32/native-integer, Data/binary >>)
   when MsgType == newlink; MsgType == dellink ->
     Fam = gen_socket:family(Family),
-    { Fam, dec_ifi_type(Type), Index, dec_iff_flags(Flags), dec_iff_flags(Change), nl_dec_nla(Fam, {rtnetlink,link}, Data) };
+    { Fam, gen_socket:arphdr(Type), Index, dec_iff_flags(Flags), dec_iff_flags(Change), nl_dec_nla(Fam, {rtnetlink,link}, Data) };
 
 nl_dec_payload({rtnetlink}, MsgType, << Family:8, _Pad1:8, _Pad2:16, IfIndex:32/native-signed-integer, PfxType:8, PfxLen:8, Flags:8, _Pad3:8, Data/binary >>)
   when MsgType == newprefix; MsgType == delprefix ->

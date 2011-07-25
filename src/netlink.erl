@@ -1,10 +1,13 @@
 -module(netlink).
 
 -behaviour(gen_server).
--export([start_link/0]).
+-export([start/0, start_link/0, stop/0]).
 -export([init/1, handle_info/2, handle_cast/2, handle_call/3, terminate/2, code_change/3]).
 
--export([nl_ct_dec/1, nl_rt_dec/1, dec_netlink/2, create_table/0, gen_const/1, define_consts/0, enc_nlmsghdr/5, rtnl_wilddump/2, send/1]).
+-export([nl_ct_dec_udp/1, nl_ct_dec/1, nl_rt_dec_udp/1, nl_rt_dec/1,
+		 nl_rt_enc/1, nl_ct_enc/1,
+		 dec_netlink/2,
+		 create_table/0, gen_const/1, define_consts/0, enc_nlmsghdr/5, rtnl_wilddump/2, send/1]).
 -export([sockaddr_nl/3, setsockoption/4]).
 -export([subscribe/2, notify/3]).
 
@@ -161,14 +164,21 @@ enc_opt(rtnlgrp_phonet_route)          -> ?RTNLGRP_PHONET_ROUTE.
 -define(NFNL_SUBSYS_ULOG,4).
 -define(NFNL_SUBSYS_COUNT,5).
 
-%% grep "^-define(NFNL_SUB" src/netlink.erl | awk -F"[(,]" '{ printf "dec_nfnl_subsys(?%s)%*s %s;\n", $2, 32 - length($2), "->", tolower(substr($2,13)) }'
-dec_nfnl_subsys(?NFNL_SUBSYS_NONE)              -> none;
-dec_nfnl_subsys(?NFNL_SUBSYS_CTNETLINK)         -> ctnetlink;
-dec_nfnl_subsys(?NFNL_SUBSYS_CTNETLINK_EXP)     -> ctnetlink_exp;
-dec_nfnl_subsys(?NFNL_SUBSYS_QUEUE)             -> queue;
-dec_nfnl_subsys(?NFNL_SUBSYS_ULOG)              -> ulog;
-dec_nfnl_subsys(?NFNL_SUBSYS_COUNT)             -> count;
-dec_nfnl_subsys(SubSys) when is_integer(SubSys) -> SubSys.
+%% grep "^-define(NFNL_SUB" src/netlink.erl | awk -F"[(,]" '{ printf "nfnl_subsys(?%s)%*s %s;\n", $2, 32 - length($2), "->", tolower(substr($2,13)) }'
+nfnl_subsys(?NFNL_SUBSYS_NONE)              -> none;
+nfnl_subsys(?NFNL_SUBSYS_CTNETLINK)         -> ctnetlink;
+nfnl_subsys(?NFNL_SUBSYS_CTNETLINK_EXP)     -> ctnetlink_exp;
+nfnl_subsys(?NFNL_SUBSYS_QUEUE)             -> queue;
+nfnl_subsys(?NFNL_SUBSYS_ULOG)              -> ulog;
+nfnl_subsys(?NFNL_SUBSYS_COUNT)             -> count;
+nfnl_subsys(SubSys) when is_integer(SubSys) -> SubSys;
+
+nfnl_subsys(none)              -> ?NFNL_SUBSYS_NONE;
+nfnl_subsys(ctnetlink)         -> ?NFNL_SUBSYS_CTNETLINK;
+nfnl_subsys(ctnetlink_exp)     -> ?NFNL_SUBSYS_CTNETLINK_EXP;
+nfnl_subsys(queue)             -> ?NFNL_SUBSYS_QUEUE;
+nfnl_subsys(ulog)              -> ?NFNL_SUBSYS_ULOG;
+nfnl_subsys(count)             -> ?NFNL_SUBSYS_COUNT.
 
 -define(NLMSG_NOOP, 1).
 -define(NLMSG_ERROR, 2).
@@ -215,6 +225,35 @@ dec_nfnl_subsys(SubSys) when is_integer(SubSys) -> SubSys.
 -define(RTM_GETADDRLABEL, 74).
 -define(RTM_GETDCB, 78).
 -define(RTM_SETDCB, 79).
+
+-define(IPCTNL_MSG_CT_NEW, 0).
+-define(IPCTNL_MSG_CT_GET, 1).
+-define(IPCTNL_MSG_CT_DELETE, 2).
+-define(IPCTNL_MSG_CT_GET_CTRZERO, 3).
+
+ipctnl_msg(?IPCTNL_MSG_CT_NEW)         -> new;
+ipctnl_msg(?IPCTNL_MSG_CT_GET)         -> get;
+ipctnl_msg(?IPCTNL_MSG_CT_DELETE)      -> delete;
+ipctnl_msg(?IPCTNL_MSG_CT_GET_CTRZERO) -> get_ctrzero;
+ipctnl_msg(X) when is_integer(X)       -> X;
+
+ipctnl_msg(new)         -> ?IPCTNL_MSG_CT_NEW;
+ipctnl_msg(get)         -> ?IPCTNL_MSG_CT_GET;
+ipctnl_msg(delete)      -> ?IPCTNL_MSG_CT_DELETE;
+ipctnl_msg(get_ctrzero) -> ?IPCTNL_MSG_CT_GET_CTRZERO.
+
+-define(IPCTNL_MSG_EXP_NEW, 0).
+-define(IPCTNL_MSG_EXP_GET, 1).
+-define(IPCTNL_MSG_EXP_DELETE, 2).
+
+%% ipctnl_msg_exp(?IPCTNL_MSG_EXP_NEW)    -> new;
+%% ipctnl_msg_exp(?IPCTNL_MSG_EXP_GET)    -> get;
+%% ipctnl_msg_exp(?IPCTNL_MSG_EXP_DELETE) -> delete;
+%% ipctnl_msg_exp(X) when is_integer(X)   -> X;
+
+%% ipctnl_msg_exp(new)    -> ?IPCTNL_MSG_EXP_NEW;
+%% ipctnl_msg_exp(get)    -> ?IPCTNL_MSG_EXP_GET;
+%% ipctnl_msg_exp(delete) -> ?IPCTNL_MSG_EXP_DELETE.
 
 create_table() ->
     ets:new(?TAB, [named_table, public]).
@@ -336,7 +375,7 @@ define_consts() ->
                     {unspec, none},
                     {tuple_orig, tuple},
                     {tuple_reply, tuple},
-                    {status, flag},
+                    {status, flag32},
                     {protoinfo, protoinfo},
                     {help, none},
                     {nat_src, none},
@@ -382,9 +421,9 @@ define_consts() ->
                                   {num, protocol},
                                   {src_port, uint16},
                                   {dst_port, uint16},
-                                  {icmp_id, none},
-                                  {icmp_type, none},
-                                  {icmp_code, none},
+                                  {icmp_id, uint16},
+                                  {icmp_type, uint8},
+                                  {icmp_code, uint8},
                                   {icmpv6_id, none},
                                   {icmpv6_type, none},
                                   {icmpv6_code, none}
@@ -526,7 +565,7 @@ define_consts() ->
                                     ]},
      {{rtnetlink, link, protinfo, inet6}, [
                                             {unspec, none},
-                                            {flags, hflag},
+                                            {flags, hflag32},
                                             {conf, hsint32_array},
                                             {stats, huint64_array},
                                             {mcast, none},
@@ -577,6 +616,14 @@ setsockoption(Socket, Level, OptName, Val) when is_atom(Val) ->
 setsockoption(Socket, Level, OptName, Val) when is_integer(Val) ->
     gen_socket:setsockoption(Socket, Level, OptName, Val).
 
+enc_flags(Type, Flags) ->
+	lists:foldl(fun(Flag, R) ->
+						{Val,flag} = dec_netlink(Type, Flag),
+						R + (1 bsl Val)
+				end, 0, Flags).
+enc_iff_flags(Flags) ->
+	enc_flags(iff_flags, Flags).
+
 dec_flag(_Type, 0, _Cnt, Acc) ->
     Acc;
 dec_flag(Type, F, Cnt, Acc) ->
@@ -592,17 +639,96 @@ dec_flags(Type, Flag) ->
 dec_iff_flags(Flag) ->
      dec_flags(iff_flags, Flag).
 
-nl_dec_nl_attr(_Family, Type, Attr, flag, false, << Flag:8 >>) ->
+enc_nla(NlaType, Data) ->
+	pad_to(4, <<(size(Data)+4):16/native-integer, NlaType:16/native-integer, Data/binary>>).
+enc_nla_nested(NlaType, Data) ->
+	pad_to(4, <<(size(Data)+4):16/native-integer, (NlaType bor 16#8000):16/native-integer, Data/binary>>).
+
+nl_enc_nl_attr(_Family, Type, NlaType, flag8, false, {_, Flag}) ->
+	enc_nla(NlaType, <<(enc_flags(Type, Flag)):8>>);
+nl_enc_nl_attr(_Family, Type, NlaType, flag16, false, {_, Flag}) ->
+	enc_nla(NlaType, <<(enc_flags(Type, Flag)):16>>);
+nl_enc_nl_attr(_Family, Type, NlaType, flag32, false, {_, Flag}) ->
+	enc_nla(NlaType, <<(enc_flags(Type, Flag)):32>>);
+nl_enc_nl_attr(_Family, Type, NlaType, hflag8, false, {_, Flag}) ->
+	enc_nla(NlaType, <<(enc_flags(Type, Flag)):8>>);
+nl_enc_nl_attr(_Family, Type, NlaType, hflag16, false, {_, Flag}) ->
+	enc_nla(NlaType, <<(enc_flags(Type, Flag)):16/native-integer>>);
+nl_enc_nl_attr(_Family, Type, NlaType, hflag32, false, {_, Flag}) ->
+	enc_nla(NlaType, <<(enc_flags(Type, Flag)):32/native-integer>>);
+
+nl_enc_nl_attr(_Family, Type, NlaType, atom, false, {_, Atom}) ->
+	{Val, _} = dec_netlink(Type, Atom),
+	enc_nla(NlaType, <<Val:8>>);
+nl_enc_nl_attr(_Family, _Type, NlaType, binary, _Nested, {_, Data}) ->
+	enc_nla(NlaType, Data);
+nl_enc_nl_attr(_Family, _Type, NlaType, string, false, {_, String}) ->
+	enc_nla(NlaType, <<(list_to_binary(String))/binary, 0>>);
+nl_enc_nl_attr(_Family, _Type, NlaType, uint8, false, {_, Val}) ->
+	enc_nla(NlaType, <<Val:8>>);
+nl_enc_nl_attr(_Family, _Type, NlaType, uint16, false, {_, Val}) ->
+	enc_nla(NlaType, <<Val:16>>);
+nl_enc_nl_attr(_Family, _Type, NlaType, uint32, false, {_, Val}) ->
+	enc_nla(NlaType, <<Val:32>>);
+nl_enc_nl_attr(_Family, _Type, NlaType, uint64, false, {_, Val}) ->
+	enc_nla(NlaType, <<Val:64>>);
+nl_enc_nl_attr(_Family, _Type, NlaType, huint16, false, {_, Val}) ->
+	enc_nla(NlaType, <<Val:16/native-integer>>);
+nl_enc_nl_attr(_Family, _Type, NlaType, huint32, false, {_, Val}) ->
+	enc_nla(NlaType, <<Val:32/native-integer>>);
+nl_enc_nl_attr(_Family, _Type, NlaType, huint64, false, {_, Val}) ->
+	enc_nla(NlaType, <<Val:64/native-integer>>);
+
+nl_enc_nl_attr(_Family, _Type, NlaType, protocol, false, {_, Proto}) ->
+	enc_nla(NlaType, <<(gen_socket:protocol(Proto)):8>>);
+nl_enc_nl_attr(_Family, _Type, NlaType, mac, false, {_, {A, B, C, D, E, F}}) ->
+	enc_nla(NlaType, << A:8, B:8, C:8, D:8, E:8, F:8 >>);
+nl_enc_nl_attr(inet, _Type, NlaType, addr, false, {_, {A, B, C, D}}) ->
+	enc_nla(NlaType, << A:8, B:8, C:8, D:8 >>);
+nl_enc_nl_attr(inet6, _Type, NlaType, addr, false, {_, {A,B,C,D,E,F,G,H}}) ->
+	enc_nla(NlaType, <<A:16, B:16, C:16, D:16, E:16, F:16, G:16, H:16>>);
+
+nl_enc_nl_attr(Family, Type, NlaType, protinfo, true, {_, Req}) ->
+	io:format("nl_enc_nl_attr (protinfo): ~w ~w ~w~n", [Type, NlaType, Req]),
+	enc_nla(NlaType, nl_enc_nla(Family, erlang:append_element(Type, Family), Req));
+nl_enc_nl_attr(Family, Type, NlaType, NestedType, true, {_, Req}) ->
+	NewType = setelement(size(Type), Type, NestedType),
+    io:format("nl_enc_nl_attr (nested #1): ~w ~w ~w ~w ~w~n", [Type, NewType, NlaType, NestedType, Req]),
+	enc_nla(NlaType, nl_enc_nla(Family, NewType, Req));
+
+nl_enc_nl_attr(_Family, _Type, NlaType, if_map, false, {_, MemStart, MemEnd, BaseAddr, Irq, Dma, Port}) ->
+	%% WARNING: THIS might be broken, compiler specific aligment must be take into consideration
+	enc_nla(NlaType, << MemStart:64/native-integer, MemEnd:64/native-integer,
+						BaseAddr:64/native-integer, Irq:16/native-integer,
+						Dma:8, Port:8, 0:32 >>);
+
+nl_enc_nl_attr(_Family, _Type, NlaType, hsint32_array, false, Req) ->
+	enc_nla(NlaType, << <<H:4/native-signed-integer-unit:8>> || H <- tl(tuple_to_list(Req)) >>);
+nl_enc_nl_attr(_Family, _Type, NlaType, huint32_array, false, Req) ->
+	enc_nla(NlaType, << <<H:4/native-integer-unit:8>> || H <- tl(tuple_to_list(Req)) >>);
+nl_enc_nl_attr(_Family, _Type, NlaType, huint64_array, false, Req) ->
+	enc_nla(NlaType, << <<H:8/native-integer-unit:8>> || H <- tl(tuple_to_list(Req)) >>);
+
+nl_enc_nl_attr(Family, Type, NlaType, NestedType, Nested, {NType, Req})
+  when is_list(Req) ->
+	NewType = setelement(size(Type), Type, NestedType),
+    io:format("nl_enc_nl_attr (nested #2): ~w ~w ~w ~w ~w ~w~n", [NewType, NlaType, NestedType, Nested, NType, Req]),
+	enc_nla_nested(NlaType, nl_enc_nla(Family, NewType, Req));
+nl_enc_nl_attr(Family, Type, NlaType, DType, Nested, Data) ->
+    io:format("nl_enc_nl_attr (wildcard): ~w, ~w, ~w, ~w, ~w, ~w~n", [Family, Type, NlaType, DType, Nested, Data]),
+    {Type, Data}.
+
+nl_dec_nl_attr(_Family, Type, Attr, flag8, false, << Flag:8 >>) ->
     {Attr, dec_flags(Type, Flag)};
-nl_dec_nl_attr(_Family, Type, Attr, flag, false, << Flag:16 >>) ->
+nl_dec_nl_attr(_Family, Type, Attr, flag16, false, << Flag:16 >>) ->
     {Attr, dec_flags(Type, Flag)};
-nl_dec_nl_attr(_Family, Type, Attr, flag, false, << Flag:32 >>) ->
+nl_dec_nl_attr(_Family, Type, Attr, flag32, false, << Flag:32 >>) ->
     {Attr, dec_flags(Type, Flag)};
-nl_dec_nl_attr(_Family, Type, Attr, hflag, false, << Flag:8 >>) ->
+nl_dec_nl_attr(_Family, Type, Attr, hflag8, false, << Flag:8 >>) ->
     {Attr, dec_flags(Type, Flag)};
-nl_dec_nl_attr(_Family, Type, Attr, hflag, false, << Flag:16/native-integer >>) ->
+nl_dec_nl_attr(_Family, Type, Attr, hflag16, false, << Flag:16/native-integer >>) ->
     {Attr, dec_flags(Type, Flag)};
-nl_dec_nl_attr(_Family, Type, Attr, hflag, false, << Flag:32/native-integer >>) ->
+nl_dec_nl_attr(_Family, Type, Attr, hflag32, false, << Flag:32/native-integer >>) ->
     {Attr, dec_flags(Type, Flag)};
 
 nl_dec_nl_attr(_Family, Type, Attr, atom, false, << Val:8 >>) ->
@@ -642,7 +768,9 @@ nl_dec_nl_attr(Family, Type, Attr, _NestedType, true, Data) ->
 
 nl_dec_nl_attr(_Family, _Type, Attr, if_map, false, << MemStart:64/native-integer, MemEnd:64/native-integer,
                                                        BaseAddr:64/native-integer, Irq:16/native-integer,
-                                                       Dma:8, Port:8, _Pad/binary >>) ->
+                                                       Dma:8, Port:8, _Pad/binary >> = D) ->
+	io:format("map: ~w~n", [D]),
+	%% WARNING: THIS might be broken, compiler specific aligment must be take into consideration
     {Attr, MemStart, MemEnd, BaseAddr, Irq, Dma, Port};
 
 nl_dec_nl_attr(_Family, _Type, Attr, hsint32_array, false, Data) ->
@@ -694,6 +822,70 @@ nl_dec_nla(_Family, _Type, << >>, Acc) ->
 nl_dec_nla(Family, Type, Data) ->
     nl_dec_nla(Family, Type, Data, []).
 
+nl_enc_nla(_Family, _Type, [], Acc) ->
+    list_to_binary(lists:reverse(Acc));
+
+nl_enc_nla(Family, Type, [Head|Rest], Acc) ->
+	io:format("nl_enc_nla: ~w, ~w, ~w~n", [Family, Type, Head]),
+
+	{AttrId, DType} = netlink:dec_netlink(Type, element(1, Head)),
+    {Nested, DType1} = case DType of
+                           {nested, T} -> {true, T};
+                           T -> {false, T}
+                       end,
+
+    NewType = erlang:append_element(Type, element(1, Head)),
+	io:format("AttrId: ~w, DType: ~w, Nested: ~w, DType1: ~w, NewType: ~w~n", [AttrId, DType, Nested, DType1, NewType]),
+    H = nl_enc_nl_attr(Family, NewType, AttrId, DType1, Nested, Head),
+
+	nl_enc_nla(Family, Type, Rest, [H |Acc]).
+
+nl_enc_nla(Family, Type, Req) ->
+    nl_enc_nla(Family, Type, Req, []).
+
+nl_enc_payload({ctnetlink} = Type, _MsgType, {Family, Version, ResId, Req}) ->
+    Fam = gen_socket:family(Family),
+	Data = nl_enc_nla(Family, Type, Req),
+	<< Fam:8, Version:8, ResId:16/native-integer, Data/binary >>;
+
+nl_enc_payload({rtnetlink}, MsgType, {Family, IfIndex, State, Flags, NdmType, Req})
+  when MsgType == newneigh; MsgType == delneigh ->
+    Fam = gen_socket:family(Family),
+	Data = nl_enc_nla(Family, {rtnetlink,neigh}, Req),
+	<< Fam:8, 0:8, 0:16, IfIndex:32/native-signed-integer, State:16/native-integer, Flags:8, NdmType:8, Data/binary >>;
+
+nl_enc_payload({rtnetlink}, MsgType, {Family, PrefixLen, Flags, Scope, Index, Req})
+  when MsgType == newaddr; MsgType == deladdr ->
+    Fam = gen_socket:family(Family),
+    Data = nl_enc_nla(Family, {rtnetlink,addr}, Req),
+	<< Fam:8, PrefixLen:8, Flags:8, Scope:8, Index:32/native-integer, Data/binary >>;
+
+nl_enc_payload({rtnetlink}, MsgType, {Family, DstLen, SrcLen, Tos, Table, Protocol, Scope, RtmType, Flags, Req})
+  when MsgType == newroute; MsgType == delroute ->
+    Fam = gen_socket:family(Family),
+	Proto = gen_socket:protocol(Protocol),
+	Data = nl_enc_nla(Family, {rtnetlink,route}, Req),
+	<< Fam:8, DstLen:8, SrcLen:8, Tos:8, Table:8, Proto:8, Scope:8, RtmType:8, Flags:32/native-integer, Data/binary >>;
+
+nl_enc_payload({rtnetlink}, MsgType, {Family, Type, Index, Flags, Change, Req})
+  when MsgType == newlink; MsgType == dellink ->
+	Fam = gen_socket:family(Family),
+	Type0 = gen_socket:arphdr(Type),
+	Flags0 = enc_iff_flags(Flags),
+	Change0 = enc_iff_flags(Change),
+	Data = nl_enc_nla(Family, {rtnetlink,link}, Req),
+	<<Fam:8, 0:8, Type0:16/native-integer, Index:32/native-integer, Flags0:32/native-integer, Change0:32/native-integer, Data/binary >>;
+
+nl_enc_payload({rtnetlink}, MsgType,{Family, IfIndex, PfxType, PfxLen, Flags, Req})
+  when MsgType == newprefix; MsgType == delprefix ->
+    Fam = gen_socket:family(Family),
+	Data = nl_enc_nla(Family, {rtnetlink,prefix}, Req),
+	<< Fam:8, 0:8, 0:16, IfIndex:32/native-signed-integer, PfxType:8, PfxLen:8, Flags:8, 0:8, Data/binary >>;
+
+nl_enc_payload(_, _, Data)
+  when is_binary(Data) ->
+	Data.
+
 nl_dec_payload({ctnetlink} = Type, _MsgType, << Family:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
     Fam = gen_socket:family(Family),
     { Fam, Version, ResId, nl_dec_nla(Fam, Type, Data) };
@@ -729,12 +921,19 @@ nl_dec_payload(_SubSys, _MsgType, Data) ->
 nlmsg_ok(DataLen, MsgLen) ->
     (DataLen >= 16) and (MsgLen >= 16) and (MsgLen =< DataLen).
 
-nl_ct_dec(<< _IpHdr:5/bytes, Len:32/native-integer, Type:16/native-integer, Flags:16/native-integer, Seq:32/native-integer, Pid:32/native-integer, Data/binary >> = Msg) ->
-    case nlmsg_ok(size(Msg) - 5, Len) of
+nl_ct_dec_udp(<< _IpHdr:5/bytes, Data/binary >>) ->
+	nl_ct_dec(Data).
+
+nl_ct_dec(<< Len:32/native-integer, Type:16/native-integer, Flags:16/native-integer, Seq:32/native-integer, Pid:32/native-integer, Data/binary >> = Msg) ->
+    case nlmsg_ok(size(Msg), Len) of
         true ->
-            SubSys = dec_nfnl_subsys(Type bsr 8),
-            MsgType = Type band 16#00FF,
-            { SubSys, MsgType, Flags, Seq, Pid, nl_dec_payload({SubSys}, MsgType, Data) };
+            SubSys = nfnl_subsys(Type bsr 8),
+            MsgType = ipctnl_msg(Type band 16#00FF),
+			Flags0 = case MsgType of
+						 new -> dec_flags(nlm_new_flags, Flags);
+						 _ -> Flags
+					 end,
+            { SubSys, MsgType, Flags0, Seq, Pid, nl_dec_payload({SubSys}, MsgType, Data) };
         _ ->
             { error, format }
     end.
@@ -784,40 +983,65 @@ enc_nlmsghdr_flags(Type, Flags) when
 enc_nlmsghdr_flags(_Type, Flags) ->
     enc_flags(nlm_flags, Flags, 0).
 
-enc_nlmsghdr(Type, Flags, Pid, Seq, Req) when is_atom(Type), is_list(Flags) ->
-    enc_nlmsghdr(Type, enc_nlmsghdr_flags(Type, Flags), Pid, Seq, Req);
-enc_nlmsghdr(Type, Flags, Pid, Seq, Req) when is_atom(Type) ->
-    {NumType, _} =  dec_netlink(rtm_msgtype, Type),
-    enc_nlmsghdr(NumType, Flags, Pid, Seq, Req);
-enc_nlmsghdr(Type, Flags, Pid, Seq, Req) when is_integer(Flags), is_binary(Req) ->
+enc_nlmsghdr(Type, Flags, Seq, Pid, Req) when is_list(Flags) ->
+    enc_nlmsghdr(Type, enc_nlmsghdr_flags(Type, Flags), Seq, Pid, Req);
+enc_nlmsghdr(Type, Flags, Seq, Pid, Req) when is_atom(Type) ->
+    {NumType, _} = dec_netlink(rtm_msgtype, Type),
+    enc_nlmsghdr(NumType, Flags, Seq, Pid, Req);
+enc_nlmsghdr(Type, Flags, Seq, Pid, Req) when is_integer(Flags), is_binary(Req) ->
     Payload = pad_to(4, Req),
     Len = 16 + byte_size(Payload),
     << Len:32/native-integer, Type:16/native-integer, Flags:16/native-integer, Seq:32/native-integer, Pid:32/native-integer, Payload/binary >>.
+
+nl_rt_enc({rtnetlink, MsgType, Flags, Seq, Pid, PayLoad}) ->
+	Data = nl_enc_payload({rtnetlink}, MsgType, PayLoad),
+	enc_nlmsghdr(MsgType, Flags, Seq, Pid, Data);
+nl_rt_enc(Msg)
+  when is_list(Msg) ->
+	nl_rt_enc(Msg, []).
+
+nl_rt_enc([], Acc) ->
+	list_to_binary(lists:reverse(Acc));
+nl_rt_enc([Head|Rest], Acc) ->
+	nl_rt_enc(Rest, [nl_rt_enc(Head)|Acc]).
+
+nl_ct_enc({SubSys, MsgType, Flags, Seq, Pid, PayLoad}) ->
+	Data = nl_enc_payload({SubSys}, MsgType, PayLoad),
+	io:format("nl_ct_enc: ~w ~w~n", [nfnl_subsys(SubSys), ipctnl_msg(MsgType)]),
+
+	Type = (nfnl_subsys(SubSys) bsl 8) bor ipctnl_msg(MsgType),
+
+	enc_nlmsghdr(Type, Flags, Seq, Pid, Data).
 
 rtnl_wilddump(Family, Type) ->
     NumFamily = gen_socket:family(Family),
     enc_nlmsghdr(Type, [root, match, request], 0, 0, << NumFamily:8 >>).
 
+start() ->
+    gen_server:start({local, ?MODULE}, ?MODULE, [], []).
+
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+stop() ->
+    gen_server:cast(?MODULE, stop).
 
 init(_Args) ->
     create_table(),
     gen_const(define_consts()),
 
-    %% {ok, CtNl} = gen_socket:socket(netlink, raw, ?NETLINK_NETFILTER),
-    %% ok = gen_socket:bind(CtNl, sockaddr_nl(netlink, 0, -1)),
+    {ok, CtNl} = gen_socket:socket(netlink, raw, ?NETLINK_NETFILTER),
+    ok = gen_socket:bind(CtNl, sockaddr_nl(netlink, 0, -1)),
 
-    %% ok = gen_socket:setsockoption(CtNl, sol_socket, so_sndbuf, 32768),
-    %% ok = gen_socket:setsockoption(CtNl, sol_socket, so_rcvbuf, 32768),
+    ok = gen_socket:setsockoption(CtNl, sol_socket, so_sndbuf, 32768),
+    ok = gen_socket:setsockoption(CtNl, sol_socket, so_rcvbuf, 32768),
 
-    %% ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_new),
-    %% ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_update),
-    %% ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_destroy),
+    ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_new),
+    ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_update),
+    ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_destroy),
 
-    %% %% UDP is close enough (connection less, datagram oriented), so we can use the driver from it
-    %% {ok, Ct} = gen_udp:open(0, [binary, {fd, CtNl}]),
-    Ct = undef,
+    %% UDP is close enough (connection less, datagram oriented), so we can use the driver from it
+    {ok, Ct} = gen_udp:open(0, [binary, {fd, CtNl}]),
 
     {ok, RtNl} = gen_socket:socket(netlink, raw, ?NETLINK_ROUTE),
     ok = gen_socket:bind(RtNl, sockaddr_nl(netlink, 0, -1)),
@@ -858,7 +1082,10 @@ handle_cast({send, Msg}, #state{rt = Rt} = State) ->
             _ -> {error, invalid}
         end,
     io:format("Send: ~p~n", [R]),
-    {noreply, State}.
+    {noreply, State};
+
+handle_cast(stop, State) ->
+	{stop, stopped, State}.
 
 handle_info({udp, Ct, _IP, _port, Data}, #state{ct = Ct, rt = _Rt, subscribers = Sub} = State) ->
     %% io:format("got ~p~ndec: ~p~n", [Data, nl_ct_dec(Data)]),

@@ -21,3 +21,11 @@
 -define(NETLINK_GENERIC, 16).
 -define(NETLINK_SCSITRANSPORT, 18).
 -define(NETLINK_ECRYPTFS, 19).
+
+-record(ctnetlink, {
+		  type,
+		  flags,
+		  seq,
+		  pid,
+		  msg
+		 }).

@@ -924,19 +924,29 @@ nlmsg_ok(DataLen, MsgLen) ->
 nl_ct_dec_udp(<< _IpHdr:5/bytes, Data/binary >>) ->
 	nl_ct_dec(Data).
 
-nl_ct_dec(<< Len:32/native-integer, Type:16/native-integer, Flags:16/native-integer, Seq:32/native-integer, Pid:32/native-integer, Data/binary >> = Msg) ->
-    case nlmsg_ok(size(Msg), Len) of
-        true ->
-            SubSys = nfnl_subsys(Type bsr 8),
-            MsgType = ipctnl_msg(Type band 16#00FF),
-			Flags0 = case MsgType of
-						 new -> dec_flags(nlm_new_flags, Flags);
-						 _   -> dec_flags(nlm_get_flags, Flags)
-					 end,
-            { SubSys, MsgType, Flags0, Seq, Pid, nl_dec_payload({SubSys}, MsgType, Data) };
-        _ ->
-            { error, format }
-    end.
+nl_ct_dec(Msg) ->
+    nl_ct_dec(Msg, []).
+
+nl_ct_dec(<< Len:32/native-integer, Type:16/native-integer, Flags:16/native-integer, Seq:32/native-integer, Pid:32/native-integer, Data/binary >> = Msg, Acc) ->
+    {DecodedMsg, Next} = case nlmsg_ok(size(Msg), Len) of
+							 true ->
+                                 PayLoadLen = Len - 16,
+                                 << PayLoad:PayLoadLen/bytes, NextMsg/binary >> = Data,
+
+								 SubSys = nfnl_subsys(Type bsr 8),
+								 MsgType = ipctnl_msg(Type band 16#00FF),
+								 Flags0 = case MsgType of
+											  new -> dec_flags(nlm_new_flags, Flags);
+											  _   -> dec_flags(nlm_get_flags, Flags)
+										  end,
+								 {{ SubSys, MsgType, Flags0, Seq, Pid, nl_dec_payload({SubSys}, MsgType, PayLoad) }, NextMsg};
+							 _ ->
+								 {{ error, format }, << >>}
+						 end,
+    nl_ct_dec(Next, [DecodedMsg | Acc]);
+
+nl_ct_dec(<< >>, Acc) ->
+    lists:reverse(Acc).
 
 nl_rt_dec_udp(<< _IpHdr:5/bytes, Data/binary >>) ->
     nl_rt_dec(Data).
@@ -1004,6 +1014,15 @@ nl_rt_enc([], Acc) ->
 	list_to_binary(lists:reverse(Acc));
 nl_rt_enc([Head|Rest], Acc) ->
 	nl_rt_enc(Rest, [nl_rt_enc(Head)|Acc]).
+
+nl_ct_enc([], Acc) ->
+	list_to_binary(lists:reverse(Acc));
+nl_ct_enc([Head|Rest], Acc) ->
+	nl_ct_enc(Rest, [nl_ct_enc(Head)|Acc]).
+
+nl_ct_enc(Msg)
+  when is_list(Msg) ->
+	nl_ct_enc(Msg, []);
 
 nl_ct_enc({SubSys, MsgType, Flags, Seq, Pid, PayLoad}) ->
 	Data = nl_enc_payload({SubSys}, MsgType, PayLoad),
@@ -1135,9 +1154,9 @@ terminate(Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-notify(ct, Pids, Msg) ->
-    [Pid#subscription.pid ! Msg || Pid <- Pids];
-notify(rt, Pids, Msg) ->
-    [Pid#subscription.pid ! Msg || Pid <- Pids];
-notify(s, Pids, Msg) ->
-    [Pid#subscription.pid ! Msg || Pid <- Pids].
+notify(SubSys, Pids, Msgs)
+  when is_list(Msgs) ->
+	lists:foreach(fun(Msg) -> notify(SubSys, Pids, Msg) end, Msgs);
+notify(_, Pids, Msg) ->
+	lists:foreach(fun(Pid) -> Pid#subscription.pid ! Msg end, Pids).
+

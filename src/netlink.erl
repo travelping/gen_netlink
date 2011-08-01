@@ -7,7 +7,7 @@
 -export([nl_ct_dec_udp/1, nl_ct_dec/1, nl_rt_dec_udp/1, nl_rt_dec/1,
 		 nl_rt_enc/1, nl_ct_enc/1,
 		 dec_netlink/2,
-		 create_table/0, gen_const/1, define_consts/0, enc_nlmsghdr/5, rtnl_wilddump/2, send/1]).
+		 create_table/0, gen_const/1, define_consts/0, enc_nlmsghdr/5, rtnl_wilddump/2, send/2]).
 -export([sockaddr_nl/3, setsockoption/4]).
 -export([subscribe/2, notify/3]).
 
@@ -383,7 +383,7 @@ define_consts() ->
                     {mark, uint32},
                     {counters_orig, counters},
                     {counters_reply, counters},
-                    {use, none},
+                    {use, uint32},
                     {id, uint32},
                     {nat_dst, none},
                     {tuple_master, tuple},
@@ -931,7 +931,7 @@ nl_ct_dec(<< Len:32/native-integer, Type:16/native-integer, Flags:16/native-inte
             MsgType = ipctnl_msg(Type band 16#00FF),
 			Flags0 = case MsgType of
 						 new -> dec_flags(nlm_new_flags, Flags);
-						 _ -> Flags
+						 _   -> dec_flags(nlm_get_flags, Flags)
 					 end,
             { SubSys, MsgType, Flags0, Seq, Pid, nl_dec_payload({SubSys}, MsgType, Data) };
         _ ->
@@ -1010,8 +1010,11 @@ nl_ct_enc({SubSys, MsgType, Flags, Seq, Pid, PayLoad}) ->
 	io:format("nl_ct_enc: ~w ~w~n", [nfnl_subsys(SubSys), ipctnl_msg(MsgType)]),
 
 	Type = (nfnl_subsys(SubSys) bsl 8) bor ipctnl_msg(MsgType),
-
-	enc_nlmsghdr(Type, Flags, Seq, Pid, Data).
+	Flags0 = case MsgType of
+				 new -> enc_flags(nlm_new_flags, Flags);
+				 _ ->   enc_flags(nlm_get_flags, Flags)
+			 end,
+	enc_nlmsghdr(Type, Flags0, Seq, Pid, Data).
 
 rtnl_wilddump(Family, Type) ->
     NumFamily = gen_socket:family(Family),
@@ -1059,8 +1062,8 @@ init(_Args) ->
 
     {ok, #state{ct = Ct, rt = Rt, subscribers = []}}.
 
-send(Msg) ->
-    gen_server:cast(?MODULE, {send, Msg}).
+send(SubSys, Msg) ->
+    gen_server:cast(?MODULE, {send, SubSys, Msg}).
 
 subscribe(Pid, Types) ->
     gen_server:call(?MODULE, {subscribe, #subscription{pid = Pid, types = Types}}).
@@ -1076,8 +1079,16 @@ handle_call({subscribe, #subscription{pid = Pid} = Subscription}, _From, #state{
             {reply, ok, State#state{subscribers = [Subscription|Sub]}}
     end.
 
-handle_cast({send, Msg}, #state{rt = Rt} = State) ->
+handle_cast({send, rt, Msg}, #state{rt = Rt} = State) ->
     R = case inet:getfd(Rt) of
+            {ok, Fd} -> gen_socket:send(Fd, Msg, 0);
+            _ -> {error, invalid}
+        end,
+    io:format("Send: ~p~n", [R]),
+    {noreply, State};
+
+handle_cast({send, ct, Msg}, #state{ct = Ct} = State) ->
+    R = case inet:getfd(Ct) of
             {ok, Fd} -> gen_socket:send(Fd, Msg, 0);
             _ -> {error, invalid}
         end,
@@ -1088,11 +1099,11 @@ handle_cast(stop, State) ->
 	{stop, stopped, State}.
 
 handle_info({udp, Ct, _IP, _port, Data}, #state{ct = Ct, rt = _Rt, subscribers = Sub} = State) ->
-    %% io:format("got ~p~ndec: ~p~n", [Data, nl_ct_dec(Data)]),
+    %% io:format("got ~p~ndec: ~p~n", [Data, nl_ct_dec_udp(Data)]),
     Subs = lists:filter(fun(Elem) ->
                                 lists:member(ct, Elem#subscription.types)
                         end, Sub),
-    spawn(?MODULE, notify, [ct, Subs, nl_ct_dec(Data)]),
+    spawn(?MODULE, notify, [ct, Subs, nl_ct_dec_udp(Data)]),
     {noreply, State};
 handle_info({udp, Rt, _IP, _Port, Data}, #state{rt = Rt, ct = _Ct, subscribers = Sub} = State) ->
     %% io:format("got ~p~ndec: ~p~n", [Data, nl_rt_dec_udp(Data)]),

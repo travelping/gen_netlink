@@ -1227,6 +1227,9 @@ code_change(_OldVsn, State, _Extra) ->
 notify(SubSys, Pids, Msgs)
   when is_list(Msgs) ->
 	lists:foreach(fun(Msg) -> notify(SubSys, Pids, Msg) end, Msgs);
+notify(_, _Pids, Msg)
+  when is_tuple(Msg), element(2, Msg) == done ->
+	ok;
 notify(_, Pids, Msg) ->
 	lists:foreach(fun(Pid) -> Pid#subscription.pid ! Msg end, Pids).
 

@@ -384,8 +384,8 @@ define_consts() ->
                     {id, uint32},
                     {nat_dst, none},
                     {tuple_master, tuple},
-                    {nat_seq_adj_orig, none},
-                    {nat_seq_adj_reply, none},
+                    {nat_seq_adj_orig, nat_seq_adj},
+                    {nat_seq_adj_reply, nat_seq_adj},
                     {secmark, uint32},                    %% obsolete sine 2.6.36....?
 					{zone, uint16},
 					{secctx, none},
@@ -428,6 +428,12 @@ define_consts() ->
                                   {icmpv6_type, none},
                                   {icmpv6_code, none}
                               ]},
+	 {{ctnetlink, nat_seq_adj}, [
+								 {unspec, none},
+								 {correction_pos, uint32},
+								 {offset_before, uint32},
+								 {offset_after, uint32}
+								]},
      {{ctnetlink, protoinfo}, [
                                {unspec, none},
                                {tcp, tcp},

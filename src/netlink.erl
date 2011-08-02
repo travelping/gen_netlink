@@ -231,29 +231,9 @@ nfnl_subsys(count)             -> ?NFNL_SUBSYS_COUNT.
 -define(IPCTNL_MSG_CT_DELETE, 2).
 -define(IPCTNL_MSG_CT_GET_CTRZERO, 3).
 
-ipctnl_msg(?IPCTNL_MSG_CT_NEW)         -> new;
-ipctnl_msg(?IPCTNL_MSG_CT_GET)         -> get;
-ipctnl_msg(?IPCTNL_MSG_CT_DELETE)      -> delete;
-ipctnl_msg(?IPCTNL_MSG_CT_GET_CTRZERO) -> get_ctrzero;
-ipctnl_msg(X) when is_integer(X)       -> X;
-
-ipctnl_msg(new)         -> ?IPCTNL_MSG_CT_NEW;
-ipctnl_msg(get)         -> ?IPCTNL_MSG_CT_GET;
-ipctnl_msg(delete)      -> ?IPCTNL_MSG_CT_DELETE;
-ipctnl_msg(get_ctrzero) -> ?IPCTNL_MSG_CT_GET_CTRZERO.
-
 -define(IPCTNL_MSG_EXP_NEW, 0).
 -define(IPCTNL_MSG_EXP_GET, 1).
 -define(IPCTNL_MSG_EXP_DELETE, 2).
-
-%% ipctnl_msg_exp(?IPCTNL_MSG_EXP_NEW)    -> new;
-%% ipctnl_msg_exp(?IPCTNL_MSG_EXP_GET)    -> get;
-%% ipctnl_msg_exp(?IPCTNL_MSG_EXP_DELETE) -> delete;
-%% ipctnl_msg_exp(X) when is_integer(X)   -> X;
-
-%% ipctnl_msg_exp(new)    -> ?IPCTNL_MSG_EXP_NEW;
-%% ipctnl_msg_exp(get)    -> ?IPCTNL_MSG_EXP_GET;
-%% ipctnl_msg_exp(delete) -> ?IPCTNL_MSG_EXP_DELETE.
 
 create_table() ->
     ets:new(?TAB, [named_table, public]).
@@ -371,13 +351,30 @@ define_consts() ->
                     {dormant, flag},
                     {echo, flag}
                  ]},
+	 {{ctm_msgtype, none}, [
+							{noop,         {flag, ?NLMSG_NOOP}},
+							{error,        {flag, ?NLMSG_ERROR}},
+							{done,         {flag, ?NLMSG_DONE}},
+							{overrun,      {flag, ?NLMSG_OVERRUN}}
+						   ]},
+	 {{ctm_msgtype, ctnetlink}, [
+								 {new,         {flag, ?IPCTNL_MSG_CT_NEW}},
+								 {get,         {flag, ?IPCTNL_MSG_CT_GET}},
+								 {delete,      {flag, ?IPCTNL_MSG_CT_DELETE}},
+								 {get_ctrzero, {flag, ?IPCTNL_MSG_CT_GET_CTRZERO}}
+								]},
+	 {{ctm_msgtype, ctnetlink_exp}, [
+									 {new,         {flag, ?IPCTNL_MSG_EXP_NEW}},
+									 {get,         {flag, ?IPCTNL_MSG_EXP_GET}},
+									 {delete,      {flag, ?IPCTNL_MSG_EXP_DELETE}}
+									]},
      {{ctnetlink}, [
                     {unspec, none},
                     {tuple_orig, tuple},
                     {tuple_reply, tuple},
                     {status, flag32},
                     {protoinfo, protoinfo},
-                    {help, none},
+                    {help, help},
                     {nat_src, none},
                     {timeout, uint32},
                     {mark, uint32},
@@ -389,7 +386,10 @@ define_consts() ->
                     {tuple_master, tuple},
                     {nat_seq_adj_orig, none},
                     {nat_seq_adj_reply, none},
-                    {secmark, uint32}
+                    {secmark, uint32},                    %% obsolete sine 2.6.36....?
+					{zone, uint16},
+					{secctx, none},
+					{timestamp, timestamp}
                  ]},
      {{ctnetlink, status}, [
                             {expected, flag},
@@ -458,6 +458,10 @@ define_consts() ->
                                            {max, atom},
                                            {ignore, atom}
                                           ]},
+     {{ctnetlink, help}, [
+						  {unspec, none},
+						  {name, string}
+						 ]},
      {{ctnetlink, counters}, [
                               {unspec, none},
                               {packets, uint64},
@@ -465,7 +469,52 @@ define_consts() ->
                               {packets32, uint32},
                               {bytes32, uint32}
                              ]},
-     {{rtnetlink, neigh}, [
+     {{ctnetlink, timestamp}, [
+						  {unspec, none},
+						  {start, uint64},
+						  {stop, uint64}
+						 ]},
+     {{ctnetlink_exp}, [
+						{unspec, none},
+						{master, tuple},
+						{tuple, tuple},
+						{mask, tuple},
+						{timeout, uint32},
+						{id, uint32},
+						{help_name, string},
+						{zone, uint16},
+						{flags, flag32}
+					   ]},
+     {{ctnetlink_exp, tuple}, [
+                {unspec, none},
+                {ip, ip},
+                {proto, proto}
+               ]},
+     {{ctnetlink_exp, tuple, ip}, [
+                               {unspec, none},
+                               {v4_src, addr},
+                               {v4_dst, addr},
+                               {v6_src, addr},
+                               {v6_dst, addr}
+                              ]},
+     {{ctnetlink_exp, tuple, proto}, [
+                                  {unspec, none},
+                                  {num, protocol},
+                                  {src_port, uint16},
+                                  {dst_port, uint16},
+                                  {icmp_id, uint16},
+                                  {icmp_type, uint8},
+                                  {icmp_code, uint8},
+                                  {icmpv6_id, none},
+                                  {icmpv6_type, none},
+                                  {icmpv6_code, none}
+                              ]},
+     {{ctnetlink_exp, flags}, [
+                            {permanent, flag},
+                            {inactive, flag},
+                            {userspace, flag}
+                          ]},
+      {{rtnetlink, neigh}, [
                            {unspec, none},
                            {dst, addr},
                            {lladdr, mac},
@@ -595,6 +644,10 @@ dec_netlink(Type, Attr) ->
 
 dec_rtm_msgtype(Type) ->
     {MsgType, _} = dec_netlink(rtm_msgtype, Type),
+    MsgType.
+
+ipctnl_msg(SubSys, Type) ->
+	{MsgType, _} = dec_netlink({ctm_msgtype, SubSys}, Type),
     MsgType.
 
 sockaddr_nl(Family, Pid, Groups) ->
@@ -843,7 +896,8 @@ nl_enc_nla(Family, Type, [Head|Rest], Acc) ->
 nl_enc_nla(Family, Type, Req) ->
     nl_enc_nla(Family, Type, Req, []).
 
-nl_enc_payload({ctnetlink} = Type, _MsgType, {Family, Version, ResId, Req}) ->
+nl_enc_payload(Type, _MsgType, {Family, Version, ResId, Req})
+  when Type == {ctnetlink}; Type == {ctnetlink_exp} ->
     Fam = gen_socket:family(Family),
 	Data = nl_enc_nla(Family, Type, Req),
 	<< Fam:8, Version:8, ResId:16/native-integer, Data/binary >>;
@@ -886,7 +940,11 @@ nl_enc_payload(_, _, Data)
   when is_binary(Data) ->
 	Data.
 
-nl_dec_payload({ctnetlink} = Type, _MsgType, << Family:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
+nl_dec_payload(_Type, done, << Length:32/native-integer >>) ->
+	Length;
+
+nl_dec_payload(Type, _MsgType, << Family:8, Version:8, ResId:16/native-integer, Data/binary >>)
+  when Type == {ctnetlink}; Type == {ctnetlink_exp} ->
     Fam = gen_socket:family(Family),
     { Fam, Version, ResId, nl_dec_nla(Fam, Type, Data) };
 
@@ -934,7 +992,7 @@ nl_ct_dec(<< Len:32/native-integer, Type:16/native-integer, Flags:16/native-inte
                                  << PayLoad:PayLoadLen/bytes, NextMsg/binary >> = Data,
 
 								 SubSys = nfnl_subsys(Type bsr 8),
-								 MsgType = ipctnl_msg(Type band 16#00FF),
+								 MsgType = ipctnl_msg(SubSys, Type band 16#00FF),
 								 Flags0 = case MsgType of
 											  new -> dec_flags(nlm_new_flags, Flags);
 											  _   -> dec_flags(nlm_get_flags, Flags)
@@ -1024,11 +1082,14 @@ nl_ct_enc(Msg)
   when is_list(Msg) ->
 	nl_ct_enc(Msg, []);
 
-nl_ct_enc({SubSys, MsgType, Flags, Seq, Pid, PayLoad}) ->
-	Data = nl_enc_payload({SubSys}, MsgType, PayLoad),
-	io:format("nl_ct_enc: ~w ~w~n", [nfnl_subsys(SubSys), ipctnl_msg(MsgType)]),
+nl_ct_enc({SubSys, MsgType, Flags, Seq, Pid, PayLoad})
+  when is_atom(SubSys), is_atom(MsgType) ->
+	nl_ct_enc({SubSys, ipctnl_msg(SubSys, MsgType), Flags, Seq, Pid, PayLoad});
 
-	Type = (nfnl_subsys(SubSys) bsl 8) bor ipctnl_msg(MsgType),
+nl_ct_enc({SubSys, MsgType, Flags, Seq, Pid, PayLoad})
+  when is_atom(SubSys), is_integer(MsgType) ->
+	Data = nl_enc_payload({SubSys}, MsgType, PayLoad),
+	Type = (nfnl_subsys(SubSys) bsl 8) bor MsgType,
 	Flags0 = case MsgType of
 				 new -> enc_flags(nlm_new_flags, Flags);
 				 _ ->   enc_flags(nlm_get_flags, Flags)
@@ -1061,6 +1122,9 @@ init(_Args) ->
     ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_new),
     ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_update),
     ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_destroy),
+    ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_exp_new),
+    ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_exp_update),
+    ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_exp_destroy),
 
     %% UDP is close enough (connection less, datagram oriented), so we can use the driver from it
     {ok, Ct} = gen_udp:open(0, [binary, {fd, CtNl}]),

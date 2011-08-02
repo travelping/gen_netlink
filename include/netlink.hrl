@@ -29,3 +29,11 @@
 		  pid,
 		  msg
 		 }).
+
+-record(ctnetlink_exp, {
+		  type,
+		  flags,
+		  seq,
+		  pid,
+		  msg
+		 }).

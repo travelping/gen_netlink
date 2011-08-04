@@ -659,6 +659,8 @@ ipctnl_msg(SubSys, Type) ->
 sockaddr_nl(Family, Pid, Groups) ->
     sockaddr_nl({Family, Pid, Groups}).
 
+-spec sockaddr_nl({atom()|integer(),integer(),integer()}) -> binary();
+				 (binary()) -> {atom()|integer(),integer(),integer()}.
 sockaddr_nl({Family, Pid, Groups}) when is_atom(Family) ->
     sockaddr_nl({gen_socket:family(Family), Pid, Groups});
 sockaddr_nl({Family, Pid, Groups}) ->
@@ -988,6 +990,7 @@ nlmsg_ok(DataLen, MsgLen) ->
 nl_ct_dec_udp(<< _IpHdr:5/bytes, Data/binary >>) ->
 	nl_ct_dec(Data).
 
+-spec nl_ct_dec(binary()) -> [{'error',_} | #ctnetlink{} | #ctnetlink_exp{}].
 nl_ct_dec(Msg) ->
     nl_ct_dec(Msg, []).
 
@@ -1015,6 +1018,7 @@ nl_ct_dec(<< >>, Acc) ->
 nl_rt_dec_udp(<< _IpHdr:5/bytes, Data/binary >>) ->
     nl_rt_dec(Data).
 
+-spec nl_rt_dec(binary()) -> [{'error',_} | #rtnetlink{}].
 nl_rt_dec(Msg) ->
     nl_rt_dec(Msg, []).
 
@@ -1096,7 +1100,7 @@ nl_ct_enc({SubSys, MsgType, Flags, Seq, Pid, PayLoad})
   when is_atom(SubSys), is_integer(MsgType) ->
 	Data = nl_enc_payload({SubSys}, MsgType, PayLoad),
 	Type = (nfnl_subsys(SubSys) bsl 8) bor MsgType,
-	Flags0 = case MsgType of
+	Flags0 = case ipctnl_msg(SubSys, MsgType) of
 				 new -> enc_flags(nlm_new_flags, Flags);
 				 _ ->   enc_flags(nlm_get_flags, Flags)
 			 end,

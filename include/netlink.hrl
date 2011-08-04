@@ -22,18 +22,41 @@
 -define(NETLINK_SCSITRANSPORT, 18).
 -define(NETLINK_ECRYPTFS, 19).
 
+-type flags() :: list(atom()).
+-type family() :: atom().
+-type protocol() :: atom().
+-type arphdr() :: atom().
+-type ifindex() :: non_neg_integer().
+-type resid() :: non_neg_integer().
+-type nla() :: list({atom(),term()}).
+-type ctnetlink_msg() :: {family(),non_neg_integer(),non_neg_integer(),list()}.
+-type rtnetlink_neigh() :: {family(),ifindex(),non_neg_integer(),flags(),non_neg_integer(),nla()}.
+-type rtnetlink_route() :: {family(),non_neg_integer(),non_neg_integer(),non_neg_integer(),non_neg_integer(),protocol(),non_neg_integer(),non_neg_integer(),flags(),nla()}.
+-type rtnetlink_addr() :: {family(),non_neg_integer(),flags(),non_neg_integer(),non_neg_integer(),nla()}.
+-type rtnetlink_link() :: {family(),arphdr(),non_neg_integer(),flags(),flags(),nla()}.
+-type rtnetlink_prefix() :: {family(),ifindex(),non_neg_integer(),non_neg_integer(),flags(),nla()}.
+-type rtnetlink_msg() :: rtnetlink_neigh() | rtnetlink_route() | rtnetlink_addr() | rtnetlink_link() | rtnetlink_prefix().
+
+-record(rtnetlink, {
+		  type          ::atom(),
+		  flags         ::list(atom()),
+		  seq           ::non_neg_integer(),
+		  pid           ::non_neg_integer(),
+		  msg           ::rtnetlink_msg()
+		 }).
+
 -record(ctnetlink, {
-		  type,
-		  flags,
-		  seq,
-		  pid,
-		  msg
+		  type          ::'new'|'get'|'delete'|'get_ctrzero',
+		  flags         ::flags(),
+		  seq           ::non_neg_integer(),
+		  pid           ::non_neg_integer(),
+		  msg           ::ctnetlink_msg()
 		 }).
 
 -record(ctnetlink_exp, {
-		  type,
-		  flags,
-		  seq,
-		  pid,
-		  msg
+		  type          ::'new'|'get'|'delete'|'get_ctrzero',
+		  flags         ::flags(),
+		  seq           ::non_neg_integer(),
+		  pid           ::non_neg_integer(),
+		  msg           ::ctnetlink_msg()
 		 }).

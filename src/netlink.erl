@@ -252,7 +252,6 @@ emit_enums(_, _, []) ->
     ok.
 
 gen_const([{Type, Consts}|T]) ->
-    io:format("insert: ~p ~p~n", [Type, Consts]),
     emit_enums(Type, 0, Consts),
     gen_const(T);
 gen_const([]) ->

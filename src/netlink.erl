@@ -664,7 +664,7 @@ sockaddr_nl({Family, Pid, Groups}) when is_atom(Family) ->
     sockaddr_nl({gen_socket:family(Family), Pid, Groups});
 sockaddr_nl({Family, Pid, Groups}) ->
     << Family:8, 0:8, Pid:32, Groups:32 >>;
-sockaddr_nl(<< Family:8, _Pad:8, Pid:32, Groups:32 >> = Bin) when is_binary(Bin) ->
+sockaddr_nl(<< Family:8, _Pad:8, Pid:32, Groups:32 >>) ->
     {gen_socket:family(Family), Pid, Groups}.
 
 setsockoption(Socket, Level, OptName, Val) when is_atom(Level) ->

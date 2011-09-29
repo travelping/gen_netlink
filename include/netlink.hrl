@@ -37,9 +37,18 @@
 -type rtnetlink_prefix() :: {family(),ifindex(),non_neg_integer(),non_neg_integer(),nl_flags(),nla()}.
 -type rtnetlink_msg() :: rtnetlink_neigh() | rtnetlink_route() | rtnetlink_addr() | rtnetlink_link() | rtnetlink_prefix().
 
+%% no subsystem
+-record(netlink, {
+          type          :: noop | error | done | overrun,
+          flags         :: nl_flags(),
+          seq           :: non_neg_integer(),
+          pid           :: non_neg_integer(),
+          msg
+        }).
+
 -record(rtnetlink, {
 		  type          ::atom(),
-		  flags         ::list(atom()),
+		  flags         ::nl_flags(),
 		  seq           ::non_neg_integer(),
 		  pid           ::non_neg_integer(),
 		  msg           ::rtnetlink_msg()
@@ -60,3 +69,11 @@
 		  pid           ::non_neg_integer(),
 		  msg           ::ctnetlink_msg()
 		 }).
+
+-type ctnetlink_ev() :: {ctnetlink, [#ctnetlink{} | #ctnetlink_exp{} | #netlink{}, ...]}.
+                     %% type of messages sent to `ct' subscriber
+-type rtnetlink_ev() :: {rtnetlink, [#rtnetlink{}, ...]}.
+                     %% type of messages sent to `rt' subscriber
+                     %% messages with no subsystem are decoded as #rtnetlink!
+                     %% multipart messages are terminates by #rtnetlink{type = done}
+

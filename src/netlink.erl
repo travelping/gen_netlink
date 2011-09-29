@@ -165,7 +165,7 @@ enc_opt(rtnlgrp_phonet_route)          -> ?RTNLGRP_PHONET_ROUTE.
 -define(NFNL_SUBSYS_COUNT,5).
 
 %% grep "^-define(NFNL_SUB" src/netlink.erl | awk -F"[(,]" '{ printf "nfnl_subsys(?%s)%*s %s;\n", $2, 32 - length($2), "->", tolower(substr($2,13)) }'
-nfnl_subsys(?NFNL_SUBSYS_NONE)              -> none;
+nfnl_subsys(?NFNL_SUBSYS_NONE)              -> netlink;
 nfnl_subsys(?NFNL_SUBSYS_CTNETLINK)         -> ctnetlink;
 nfnl_subsys(?NFNL_SUBSYS_CTNETLINK_EXP)     -> ctnetlink_exp;
 nfnl_subsys(?NFNL_SUBSYS_QUEUE)             -> queue;
@@ -173,7 +173,7 @@ nfnl_subsys(?NFNL_SUBSYS_ULOG)              -> ulog;
 nfnl_subsys(?NFNL_SUBSYS_COUNT)             -> count;
 nfnl_subsys(SubSys) when is_integer(SubSys) -> SubSys;
 
-nfnl_subsys(none)              -> ?NFNL_SUBSYS_NONE;
+nfnl_subsys(netlink)           -> ?NFNL_SUBSYS_NONE;
 nfnl_subsys(ctnetlink)         -> ?NFNL_SUBSYS_CTNETLINK;
 nfnl_subsys(ctnetlink_exp)     -> ?NFNL_SUBSYS_CTNETLINK_EXP;
 nfnl_subsys(queue)             -> ?NFNL_SUBSYS_QUEUE;
@@ -350,7 +350,7 @@ define_consts() ->
                     {dormant, flag},
                     {echo, flag}
                  ]},
-	 {{ctm_msgtype, none}, [
+	 {{ctm_msgtype, netlink}, [
 							{noop,         {flag, ?NLMSG_NOOP}},
 							{error,        {flag, ?NLMSG_ERROR}},
 							{done,         {flag, ?NLMSG_DONE}},
@@ -1161,9 +1161,9 @@ subscribe(Pid, Types) ->
     gen_server:call(?MODULE, {subscribe, #subscription{pid = Pid, types = Types}}).
 
 handle_call({subscribe, #subscription{pid = Pid} = Subscription}, _From, #state{subscribers = Sub} = State) ->
-    case lists:keymember(Pid, 2, Sub) of
+    case lists:keymember(Pid, #subscription.pid, Sub) of
         true ->
-            NewSub = lists:keyreplace(Pid, 2, Sub, Subscription),
+            NewSub = lists:keyreplace(Pid, #subscription.pid, Sub, Subscription),
             {reply, ok, State#state{subscribers = NewSub}};
         false ->
             io:format("~p:Subscribe ~p~n", [?MODULE, Pid]),
@@ -1195,14 +1195,14 @@ handle_info({udp, Ct, _IP, _port, Data}, #state{ct = Ct, rt = _Rt, subscribers =
     Subs = lists:filter(fun(Elem) ->
                                 lists:member(ct, Elem#subscription.types)
                         end, Sub),
-    spawn(?MODULE, notify, [ct, Subs, nl_ct_dec_udp(Data)]),
+    spawn(?MODULE, notify, [ctnetlink, Subs, nl_ct_dec_udp(Data)]),
     {noreply, State};
 handle_info({udp, Rt, _IP, _Port, Data}, #state{rt = Rt, ct = _Ct, subscribers = Sub} = State) ->
     %% io:format("got ~p~ndec: ~p~n", [Data, nl_rt_dec_udp(Data)]),
     Subs = lists:filter(fun(Elem) ->
                                 lists:member(rt, Elem#subscription.types)
                         end, Sub),
-    spawn(?MODULE, notify, [rt, Subs, nl_rt_dec_udp(Data)]),
+    spawn(?MODULE, notify, [rtnetlink, Subs, nl_rt_dec_udp(Data)]),
     {noreply, State};
 handle_info({udp, S, _IP, _Port, _Data}, #state{subscribers = Sub} = State) ->
     %% io:format("got on Socket ~p~n", [S]),
@@ -1227,12 +1227,6 @@ terminate(Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-notify(SubSys, Pids, Msgs)
-  when is_list(Msgs) ->
-	lists:foreach(fun(Msg) -> notify(SubSys, Pids, Msg) end, Msgs);
-notify(_, _Pids, Msg)
-  when is_tuple(Msg), element(2, Msg) == done ->
-	ok;
-notify(_, Pids, Msg) ->
-	lists:foreach(fun(Pid) -> Pid#subscription.pid ! Msg end, Pids).
+notify(SubSys, Pids, Msgs) ->
+    lists:foreach(fun(Pid) -> Pid#subscription.pid ! {SubSys, Msgs} end, Pids).
 

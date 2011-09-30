@@ -70,10 +70,12 @@
 		  msg           ::ctnetlink_msg()
 		 }).
 
--type ctnetlink_ev() :: {ctnetlink, [#ctnetlink{} | #ctnetlink_exp{} | #netlink{}, ...]}.
-                     %% type of messages sent to `ct' subscriber
+-type netlink_record() :: #rtnetlink{} | #ctnetlink{} | #ctnetlink_exp{}.
+
+-type ctnetlink_ev() :: {ctnetlink, MsgGrp :: [#ctnetlink{} | #ctnetlink_exp{}, ...]}.
+                     %% netlink event message sent to `ct' subscriber
+                     %% `MsgGrp' is a single-part netlink message or a complete
+                     %% multipart netlink message.
 -type rtnetlink_ev() :: {rtnetlink, [#rtnetlink{}, ...]}.
-                     %% type of messages sent to `rt' subscriber
-                     %% messages with no subsystem are decoded as #rtnetlink!
-                     %% multipart messages are terminates by #rtnetlink{type = done}
+                     %% netlink event message sent to `rt' subscriber
 

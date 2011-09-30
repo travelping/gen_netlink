@@ -450,18 +450,18 @@ define_consts() ->
                                    ]},
 
      {{ctnetlink, protoinfo, tcp, state}, [
-                                           {none, atom},
-                                           {syn_sent, atom},
-                                           {syn_recv, atom},
-                                           {established, atom},
-                                           {fin_wait, atom},
-                                           {close_wait, atom},
-                                           {last_ack, atom},
-                                           {time_wait, atom},
-                                           {close, atom},
-                                           {listen, atom},
-                                           {max, atom},
-                                           {ignore, atom}
+                                           {none, flag},
+                                           {syn_sent, flag},
+                                           {syn_recv, flag},
+                                           {established, flag},
+                                           {fin_wait, flag},
+                                           {close_wait, flag},
+                                           {last_ack, flag},
+                                           {time_wait, flag},
+                                           {close, flag},
+                                           {listen, flag},
+                                           {max, flag},
+                                           {ignore, flag}
                                           ]},
      {{ctnetlink, help}, [
 						  {unspec, none},
@@ -526,6 +526,56 @@ define_consts() ->
                            {cacheinfo, huint32_array},
                            {probes, huint32}
                  ]},
+     {{rtnetlink, rtm_type}, [
+							  {unspec,      flag},
+							  {unicast,     flag},
+							  {local,       flag},
+							  {broadcast,   flag},
+							  {anycast,     flag},
+							  {multicast,   flag},
+							  {blackhole,   flag},
+							  {unreachable, flag},
+							  {prohibit,    flag},
+							  {throw,       flag},
+							  {nat,         flag},
+							  {xresolve,    flag}
+							 ]},
+	 {{rtnetlink, rtm_protocol}, [
+								  {unspec,   {flag, 0}},
+								  {redirect, {flag, 1}},
+								  {kernel,   {flag, 2}},
+								  {boot,     {flag, 3}},
+								  {static,   {flag, 4}},
+								  {gated,    {flag, 8}},
+								  {ra,       {flag, 9}},
+								  {mrt,      {flag, 10}},
+								  {zebra,    {flag, 11}},
+								  {bird,     {flag, 12}},
+								  {dnrouted, {flag, 13}},
+								  {xorp,     {flag, 14}},
+								  {ntk,      {flag, 15}},
+								  {dhcp,     {flag, 16}}
+							 ]},
+	 {{rtnetlink, rtm_scope}, [
+							   {universe, {flag, 0}},
+							   {site,     {flag, 200}},
+							   {link,     {flag, 253}},
+							   {host,     {flag, 254}},
+							   {nowhere,  {flag, 255}}
+							  ]},
+	 {{rtnetlink, rtm_flags}, [
+							   {notify,   {flag, 16#100}},
+							   {cloned,   {flag, 16#200}},
+							   {equalize, {flag, 16#400}},
+							   {prefix,   {flag, 16#800}}
+							  ]},
+	 {{rtnetlink, rtm_table}, [
+							   {unspec,  {flag, 0}},
+							   {compat,  {flag, 252}},
+							   {default, {flag, 253}},
+							   {main,    {flag, 254}},
+							   {local,   {flag, 255}}
+							 ]},
      {{rtnetlink, route}, [
                            {unspec, none},
                            {dst, addr},
@@ -650,6 +700,28 @@ dec_netlink(Type, Attr) ->
 dec_rtm_msgtype(Type) ->
     {MsgType, _} = dec_netlink(rtm_msgtype, Type),
     MsgType.
+
+dec_rtm_type(RtmType) ->
+    {Type, _} = dec_netlink({rtnetlink, rtm_type}, RtmType),
+    Type.
+
+dec_rtm_protocol(RtmProto) ->
+    case dec_netlink({rtnetlink, rtm_protocol}, RtmProto) of
+		{Proto, flag} -> Proto;
+		_ -> RtmProto
+	end.
+
+dec_rtm_scope(RtmScope) ->
+    case dec_netlink({rtnetlink, rtm_scope}, RtmScope) of
+		{Scope, flag} -> Scope;
+		_ -> RtmScope
+	end.
+
+dec_rtm_table(RtmTable) ->
+    case dec_netlink({rtnetlink, rtm_table}, RtmTable) of
+		{Table, flag} -> Table;
+		_ -> RtmTable
+	end.
 
 ipctnl_msg(SubSys, Type) ->
 	{MsgType, _} = dec_netlink({ctm_msgtype, SubSys}, Type),
@@ -922,7 +994,7 @@ nl_enc_payload({rtnetlink}, MsgType, {Family, PrefixLen, Flags, Scope, Index, Re
 	<< Fam:8, PrefixLen:8, Flags:8, Scope:8, Index:32/native-integer, Data/binary >>;
 
 nl_enc_payload({rtnetlink}, MsgType, {Family, DstLen, SrcLen, Tos, Table, Protocol, Scope, RtmType, Flags, Req})
-  when MsgType == newroute; MsgType == delroute ->
+  when MsgType == newroute; MsgType == delroute ; MsgType == getroute ->
     Fam = gen_socket:family(Family),
 	Proto = gen_socket:protocol(Protocol),
 	Data = nl_enc_nla(Family, {rtnetlink,route}, Req),
@@ -963,7 +1035,7 @@ nl_dec_payload({rtnetlink}, MsgType, << Family:8, _Pad1:8, _Pad2:16, IfIndex:32/
 nl_dec_payload({rtnetlink}, MsgType, << Family:8, DstLen:8, SrcLen:8, Tos:8, Table:8, Protocol:8, Scope:8, RtmType:8, Flags:32/native-integer, Data/binary >>)
   when MsgType == newroute; MsgType == delroute ->
     Fam = gen_socket:family(Family),
-    { Fam, DstLen, SrcLen, Tos, Table, gen_socket:protocol(Protocol), Scope, RtmType, Flags, nl_dec_nla(Fam, {rtnetlink,route}, Data) };
+    { Fam, DstLen, SrcLen, Tos, dec_rtm_table(Table), dec_rtm_protocol(Protocol), dec_rtm_scope(Scope), dec_rtm_type(RtmType), dec_flags({rtnetlink, rtm_flags}, Flags), nl_dec_nla(Fam, {rtnetlink,route}, Data) };
 
 nl_dec_payload({rtnetlink}, MsgType, << Family:8, PrefixLen:8, Flags:8, Scope:8, Index:32/native-integer, Data/binary >>)
   when MsgType == newaddr; MsgType == deladdr ->
@@ -1188,7 +1260,7 @@ handle_cast({send, ct, Msg}, #state{ct = Ct} = State) ->
     {noreply, State};
 
 handle_cast(stop, State) ->
-	{stop, stopped, State}.
+	{stop, normal, State}.
 
 handle_info({udp, Ct, _IP, _port, Data}, #state{ct = Ct, rt = _Rt, subscribers = Sub} = State) ->
     %% io:format("got ~p~ndec: ~p~n", [Data, nl_ct_dec_udp(Data)]),

@@ -1,6 +1,6 @@
 {application, gen_netlink, [
     {description, "Netlink socket toolkit"},
-    {vsn, "0.02"},
+    {vsn, "0.3"},
     {modules, []},
     {registered, []},
     {applications, [kernel, stdlib, gen_socket]},

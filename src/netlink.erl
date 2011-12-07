@@ -13,7 +13,7 @@
 -export([sockaddr_nl/3, setsockoption/4]).
 -export([notify/3]).
 
--include("gen_socket.hrl").
+-include_lib("gen_socket/include/gen_socket.hrl").
 -include("netlink.hrl").
 
 -define(TAB, ?MODULE).

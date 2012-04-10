@@ -45,8 +45,8 @@
 
 -record(state, {
     subscribers = []    :: [#subscription{}],
-    ct                  :: gen_udp:socket(),
-    rt                  :: gen_udp:socket(),
+    ct                  :: port(),
+    rt                  :: port(),
 
     msgbuf = []         :: [netlink_record()],
     curseq = 16#FF      :: non_neg_integer(),

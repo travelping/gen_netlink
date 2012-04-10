@@ -1241,6 +1241,8 @@ init(_Args) ->
     create_table(),
     gen_const(define_consts()),
 
+    process_flag(trap_exit, true),
+
     {ok, CtNl} = gen_socket:socket(netlink, raw, ?NETLINK_NETFILTER),
     ok = gen_socket:bind(CtNl, sockaddr_nl(netlink, 0, -1)),
 
@@ -1345,8 +1347,12 @@ handle_info(Msg, {_Ct, _Rt} = State) ->
     io:format("got Message ~p~n", [Msg]),
     {noreply, State}.
 
-terminate(Reason, _State) ->
+terminate(Reason, #state{ct = Ct, rt = Rt, ctnl = CtNl, rtnl = RtNl}) ->
     io:format("~p terminate:~p~n", [?MODULE, Reason]),
+    catch erlang:port_close(Ct),
+    catch erlang:port_close(Rt),
+    gen_socket:close(CtNl),
+    gen_socket:close(RtNl),
     ok.
 
 code_change(_OldVsn, State, _Extra) ->

@@ -47,6 +47,8 @@
     subscribers = []    :: [#subscription{}],
     ct                  :: port(),
     rt                  :: port(),
+    ctnl                :: non_neg_integer(),
+    rtnl                :: non_neg_integer(),
 
     msgbuf = []         :: [netlink_record()],
     curseq = 16#FF      :: non_neg_integer(),
@@ -1269,6 +1271,7 @@ init(_Args) ->
 
     {ok, #state{
         ct = Ct, rt = Rt,
+        ctnl = CtNl, rtnl = RtNl,
         requests = gb_trees:empty()
     }}.
 
@@ -1283,41 +1286,25 @@ handle_call({subscribe, #subscription{pid = Pid} = Subscription}, _From, #state{
             {reply, ok, State#state{subscribers = [Subscription|Sub]}}
     end;
 
-handle_call({request, rt, Msg}, From, #state{rt = Rt, curseq = Seq} = State) ->
+handle_call({request, rt, Msg}, From, #state{rtnl = Fd, curseq = Seq} = State) ->
     Req = nl_rt_enc(prepare_request(Msg, Seq)),
-    case inet:getfd(Rt) of
-        {ok, Fd} ->
-            NewState = register_request(Seq, From, State),
-            gen_socket:send(Fd, Req, 0),
-            {noreply, NewState};
-        _ ->
-            {reply, {error, socket}, State}
-    end;
+    NewState = register_request(Seq, From, State),
+    gen_socket:send(Fd, Req, 0),
+    {noreply, NewState};
 
-handle_call({request, ct, Msg}, From, #state{ct = Ct, curseq = Seq} = State) ->
+handle_call({request, ct, Msg}, From, #state{ctnl = Fd, curseq = Seq} = State) ->
     Req = nl_ct_enc(prepare_request(Msg, Seq)),
-    case inet:getfd(Ct) of
-        {ok, Fd} ->
-            NewState = register_request(Seq, From, State),
-            gen_socket:send(Fd, Req, 0),
-            {noreply, NewState};
-        _ ->
-            {reply, {error, socket}, State}
-    end.
+    NewState = register_request(Seq, From, State),
+    gen_socket:send(Fd, Req, 0),
+    {noreply, NewState}.
 
-handle_cast({send, rt, Msg}, #state{rt = Rt} = State) ->
-    R = case inet:getfd(Rt) of
-            {ok, Fd} -> gen_socket:send(Fd, Msg, 0);
-            _ -> {error, invalid}
-        end,
+handle_cast({send, rt, Msg}, #state{rtnl = Fd} = State) ->
+    R = gen_socket:send(Fd, Msg, 0),
     io:format("Send: ~p~n", [R]),
     {noreply, State};
 
-handle_cast({send, ct, Msg}, #state{ct = Ct} = State) ->
-    R = case inet:getfd(Ct) of
-            {ok, Fd} -> gen_socket:send(Fd, Msg, 0);
-            _ -> {error, invalid}
-        end,
+handle_cast({send, ct, Msg}, #state{ctnl = Fd} = State) ->
+    R = gen_socket:send(Fd, Msg, 0),
     io:format("Send: ~p~n", [R]),
     {noreply, State};
 

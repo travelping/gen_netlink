@@ -261,7 +261,7 @@ all() ->
 	 test_rt_linkinfo_1, test_rt_linkinfo_complex].
 
 init_per_suite(Config) ->
-	R = netlink:start(),
+	{ok, _R} = netlink:start(),
 	Config.
 
 end_per_suite(_Config) ->

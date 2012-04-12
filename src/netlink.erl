@@ -26,7 +26,7 @@
 
 -export([init/1, handle_info/2, handle_cast/2, handle_call/3, terminate/2, code_change/3]).
 
--export([nl_ct_dec_udp/1, nl_ct_dec/1, nl_rt_dec_udp/1, nl_rt_dec/1,
+-export([nl_ct_dec/1, nl_rt_dec/1,
 		 nl_rt_enc/1, nl_ct_enc/1,
 		 dec_netlink/2,
 		 create_table/0, gen_const/1, define_consts/0, enc_nlmsghdr/5, rtnl_wilddump/2]).
@@ -46,8 +46,10 @@
 
 -record(state, {
     subscribers = []    :: [#subscription{}],
-    ct                  :: gen_udp:socket(),
-    rt                  :: gen_udp:socket(),
+    ct                  :: port(),
+    rt                  :: port(),
+    ctnl                :: non_neg_integer(),
+    rtnl                :: non_neg_integer(),
 
     msgbuf = []         :: [netlink_record()],
     curseq = 16#FF      :: non_neg_integer(),
@@ -1097,9 +1099,6 @@ nl_dec_payload(_SubSys, _MsgType, Data) ->
 nlmsg_ok(DataLen, MsgLen) ->
     (DataLen >= 16) and (MsgLen >= 16) and (MsgLen =< DataLen).
 
-nl_ct_dec_udp(<< _IpHdr:5/bytes, Data/binary >>) ->
-	nl_ct_dec(Data).
-
 -spec nl_ct_dec(binary()) -> [{'error',_} | #ctnetlink{} | #ctnetlink_exp{}].
 nl_ct_dec(Msg) ->
     nl_ct_dec(Msg, []).
@@ -1124,9 +1123,6 @@ nl_ct_dec(<< Len:32/native-integer, Type:16/native-integer, Flags:16/native-inte
 
 nl_ct_dec(<< >>, Acc) ->
     lists:reverse(Acc).
-
-nl_rt_dec_udp(<< _IpHdr:5/bytes, Data/binary >>) ->
-    nl_rt_dec(Data).
 
 -spec nl_rt_dec(binary()) -> [{'error',_} | #rtnetlink{}].
 nl_rt_dec(Msg) ->
@@ -1252,6 +1248,8 @@ init(_Args) ->
     create_table(),
     gen_const(define_consts()),
 
+    process_flag(trap_exit, true),
+
     {ok, CtNl} = gen_socket:socket(netlink, raw, ?NETLINK_NETFILTER),
     ok = gen_socket:bind(CtNl, sockaddr_nl(netlink, 0, -1)),
 
@@ -1265,8 +1263,7 @@ init(_Args) ->
     ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_exp_update),
     ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_exp_destroy),
 
-    %% UDP is close enough (connection less, datagram oriented), so we can use the driver from it
-    {ok, Ct} = gen_udp:open(0, [binary, {fd, CtNl}]),
+    Ct = erlang:open_port({fd, CtNl, CtNl}, [binary, stream]),
 
     {ok, RtNl} = gen_socket:socket(netlink, raw, ?NETLINK_ROUTE),
     ok = gen_socket:bind(RtNl, sockaddr_nl(netlink, 0, -1)),
@@ -1279,11 +1276,11 @@ init(_Args) ->
     ok = setsockoption(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_ipv4_ifaddr),
     ok = setsockoption(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_ipv4_route),
 
-    %% UDP is close enough (connection less, datagram oriented), so we can use the driver from it
-    {ok, Rt} = gen_udp:open(0, [binary, {fd, RtNl}]),
+    Rt = erlang:open_port({fd, RtNl, RtNl}, [binary, stream]),
 
     {ok, #state{
         ct = Ct, rt = Rt,
+        ctnl = CtNl, rtnl = RtNl,
         requests = gb_trees:empty()
     }}.
 
@@ -1298,66 +1295,50 @@ handle_call({subscribe, #subscription{pid = Pid} = Subscription}, _From, #state{
             {reply, ok, State#state{subscribers = [Subscription|Sub]}}
     end;
 
-handle_call({request, rt, Msg}, From, #state{rt = Rt, curseq = Seq} = State) ->
+handle_call({request, rt, Msg}, From, #state{rtnl = Fd, curseq = Seq} = State) ->
     Req = nl_rt_enc(prepare_request(Msg, Seq)),
-    case inet:getfd(Rt) of
-        {ok, Fd} ->
-            NewState = register_request(Seq, From, State),
-            gen_socket:send(Fd, Req, 0),
-            {noreply, NewState};
-        _ ->
-            {reply, {error, socket}, State}
-    end;
+    NewState = register_request(Seq, From, State),
+    gen_socket:send(Fd, Req, 0),
+    {noreply, NewState};
 
-handle_call({request, ct, Msg}, From, #state{ct = Ct, curseq = Seq} = State) ->
+handle_call({request, ct, Msg}, From, #state{ctnl = Fd, curseq = Seq} = State) ->
     Req = nl_ct_enc(prepare_request(Msg, Seq)),
-    case inet:getfd(Ct) of
-        {ok, Fd} ->
-            NewState = register_request(Seq, From, State),
-            gen_socket:send(Fd, Req, 0),
-            {noreply, NewState};
-        _ ->
-            {reply, {error, socket}, State}
-    end.
+    NewState = register_request(Seq, From, State),
+    gen_socket:send(Fd, Req, 0),
+    {noreply, NewState}.
 
-handle_cast({send, rt, Msg}, #state{rt = Rt} = State) ->
-    R = case inet:getfd(Rt) of
-            {ok, Fd} -> gen_socket:send(Fd, Msg, 0);
-            _ -> {error, invalid}
-        end,
+handle_cast({send, rt, Msg}, #state{rtnl = Fd} = State) ->
+    R = gen_socket:send(Fd, Msg, 0),
     io:format("Send: ~p~n", [R]),
     {noreply, State};
 
-handle_cast({send, ct, Msg}, #state{ct = Ct} = State) ->
-    R = case inet:getfd(Ct) of
-            {ok, Fd} -> gen_socket:send(Fd, Msg, 0);
-            _ -> {error, invalid}
-        end,
+handle_cast({send, ct, Msg}, #state{ctnl = Fd} = State) ->
+    R = gen_socket:send(Fd, Msg, 0),
     io:format("Send: ~p~n", [R]),
     {noreply, State};
 
 handle_cast(stop, State) ->
 	{stop, normal, State}.
 
-handle_info({udp, Ct, _IP, _port, Data}, #state{ct = Ct, rt = _Rt, subscribers = Sub} = State) ->
-    %% io:format("got ~p~ndec: ~p~n", [Data, nl_ct_dec_udp(Data)]),
+handle_info({Ct, {data, Data}}, #state{ct = Ct, rt = _Rt, subscribers = Sub} = State) ->
+    %% io:format("got ~p~ndec: ~p~n", [Data, nl_ct_dec(Data)]),
     Subs = lists:filter(fun(Elem) ->
                                 lists:member(ct, Elem#subscription.types)
                         end, Sub),
-    NewState = handle_messages(ctnetlink, nl_ct_dec_udp(Data), Subs, State),
+    NewState = handle_messages(ctnetlink, nl_ct_dec(Data), Subs, State),
 
     {noreply, NewState};
 
-handle_info({udp, Rt, _IP, _Port, Data}, #state{rt = Rt, ct = _Ct, subscribers = Sub} = State) ->
-    %% io:format("got ~p~ndec: ~p~n", [Data, nl_rt_dec_udp(Data)]),
+handle_info({Rt, {data, Data}}, #state{rt = Rt, ct = _Ct, subscribers = Sub} = State) ->
+    %% io:format("got ~p~ndec: ~p~n", [Data, nl_rt_dec(Data)]),
     Subs = lists:filter(fun(Elem) ->
                                 lists:member(rt, Elem#subscription.types)
                         end, Sub),
-    NewState = handle_messages(rtnetlink, nl_rt_dec_udp(Data), Subs, State),
+    NewState = handle_messages(rtnetlink, nl_rt_dec(Data), Subs, State),
 
     {noreply, NewState};
 
-handle_info({udp, S, _IP, _Port, _Data}, #state{subscribers = Sub} = State) ->
+handle_info({S, {data, _Data}}, #state{subscribers = Sub} = State) ->
     %% io:format("got on Socket ~p~n", [S]),
     Subs = lists:filter(fun(Elem) ->
                                 lists:member(s, Elem#subscription.types)
@@ -1373,8 +1354,12 @@ handle_info(Msg, {_Ct, _Rt} = State) ->
     io:format("got Message ~p~n", [Msg]),
     {noreply, State}.
 
-terminate(Reason, _State) ->
+terminate(Reason, #state{ct = Ct, rt = Rt, ctnl = CtNl, rtnl = RtNl}) ->
     io:format("~p terminate:~p~n", [?MODULE, Reason]),
+    catch erlang:port_close(Ct),
+    catch erlang:port_close(Rt),
+    gen_socket:close(CtNl),
+    gen_socket:close(RtNl),
     ok.
 
 code_change(_OldVsn, State, _Extra) ->

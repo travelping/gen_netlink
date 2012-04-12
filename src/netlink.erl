@@ -31,6 +31,7 @@
 		 dec_netlink/2,
 		 create_table/0, gen_const/1, define_consts/0, enc_nlmsghdr/5, rtnl_wilddump/2]).
 -export([sockaddr_nl/3, setsockoption/4]).
+-export([rcvbufsiz/2]).
 -export([notify/3]).
 
 -include_lib("gen_socket/include/gen_socket.hrl").
@@ -780,6 +781,12 @@ setsockoption(Socket, Level, OptName, Val) when is_atom(Val) ->
 setsockoption(Socket, Level, OptName, Val) when is_integer(Val) ->
     gen_socket:setsockoption(Socket, Level, OptName, Val).
 
+rcvbufsiz(Socket, BufSiz) ->
+    case gen_socket:setsockoption(Socket, sol_socket, so_rcvbufforce, BufSiz) of
+	ok -> ok;
+	_ -> gen_socket:setsockoption(Socket, sol_socket, so_rcvbuf, BufSiz)
+    end.
+
 enc_flags(Type, Flags) ->
 	lists:foldl(fun(Flag, R) ->
 						{Val,flag} = dec_netlink(Type, Flag),
@@ -1249,7 +1256,7 @@ init(_Args) ->
     ok = gen_socket:bind(CtNl, sockaddr_nl(netlink, 0, -1)),
 
     ok = gen_socket:setsockoption(CtNl, sol_socket, so_sndbuf, 32768),
-    ok = gen_socket:setsockoption(CtNl, sol_socket, so_rcvbuf, 32768),
+    ok = rcvbufsiz(CtNl, 128 * 1024),
 
     ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_new),
     ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_update),
@@ -1265,7 +1272,7 @@ init(_Args) ->
     ok = gen_socket:bind(RtNl, sockaddr_nl(netlink, 0, -1)),
 
     ok = gen_socket:setsockoption(RtNl, sol_socket, so_sndbuf, 32768),
-    ok = gen_socket:setsockoption(RtNl, sol_socket, so_rcvbuf, 32768),
+    ok = rcvbufsiz(RtNl, 128 * 1024),
 
     ok = setsockoption(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_link),
     ok = setsockoption(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_notify),

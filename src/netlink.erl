@@ -1266,7 +1266,7 @@ init(_Args) ->
     ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_exp_destroy),
 
     %% UDP is close enough (connection less, datagram oriented), so we can use the driver from it
-    {ok, Ct} = gen_udp:open(0, [binary, {fd, CtNl}]),
+    {ok, Ct} = gen_udp:open(0, [binary, {fd, CtNl}, {read_packets, 1024}]),
 
     {ok, RtNl} = gen_socket:socket(netlink, raw, ?NETLINK_ROUTE),
     ok = gen_socket:bind(RtNl, sockaddr_nl(netlink, 0, -1)),
@@ -1280,7 +1280,7 @@ init(_Args) ->
     ok = setsockoption(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_ipv4_route),
 
     %% UDP is close enough (connection less, datagram oriented), so we can use the driver from it
-    {ok, Rt} = gen_udp:open(0, [binary, {fd, RtNl}]),
+    {ok, Rt} = gen_udp:open(0, [binary, {fd, RtNl}, {read_packets, 1024}]),
 
     {ok, #state{
         ct = Ct, rt = Rt,

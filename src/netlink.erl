@@ -1255,6 +1255,9 @@ init(_Args) ->
     {ok, CtNl} = gen_socket:socket(netlink, raw, ?NETLINK_NETFILTER),
     ok = gen_socket:bind(CtNl, sockaddr_nl(netlink, 0, -1)),
 
+    %% UDP is close enough (connection less, datagram oriented), so we can use the driver from it
+    {ok, Ct} = gen_udp:open(0, [binary, {fd, CtNl}, {read_packets, 16 * 1024}]),
+
     ok = gen_socket:setsockoption(CtNl, sol_socket, so_sndbuf, 32768),
     ok = rcvbufsiz(CtNl, 128 * 1024),
 
@@ -1265,11 +1268,11 @@ init(_Args) ->
     ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_exp_update),
     ok = setsockoption(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_exp_destroy),
 
-    %% UDP is close enough (connection less, datagram oriented), so we can use the driver from it
-    {ok, Ct} = gen_udp:open(0, [binary, {fd, CtNl}, {read_packets, 1024}]),
-
     {ok, RtNl} = gen_socket:socket(netlink, raw, ?NETLINK_ROUTE),
     ok = gen_socket:bind(RtNl, sockaddr_nl(netlink, 0, -1)),
+
+    %% UDP is close enough (connection less, datagram oriented), so we can use the driver from it
+    {ok, Rt} = gen_udp:open(0, [binary, {fd, RtNl}, {read_packets, 16 * 1024}]),
 
     ok = gen_socket:setsockoption(RtNl, sol_socket, so_sndbuf, 32768),
     ok = rcvbufsiz(RtNl, 128 * 1024),
@@ -1279,8 +1282,6 @@ init(_Args) ->
     ok = setsockoption(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_ipv4_ifaddr),
     ok = setsockoption(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_ipv4_route),
 
-    %% UDP is close enough (connection less, datagram oriented), so we can use the driver from it
-    {ok, Rt} = gen_udp:open(0, [binary, {fd, RtNl}, {read_packets, 1024}]),
 
     {ok, #state{
         ct = Ct, rt = Rt,
@@ -1363,6 +1364,9 @@ handle_info({udp, S, _IP, _Port, _Data}, #state{subscribers = Sub} = State) ->
                                 lists:member(s, Elem#subscription.types)
                         end, Sub),
     spawn(?MODULE, notify, [s, Subs, S]),
+    {noreply, State};
+
+handle_info({udp_error, _, enobufs}, State) ->
     {noreply, State};
 
 handle_info({'DOWN', _Ref, process, Pid, _Reason}, #state{subscribers = Sub} = State) ->

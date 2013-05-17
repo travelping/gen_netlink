@@ -274,6 +274,9 @@ create_table() ->
 emit_enum(Type, _Cnt, C, {flag, X}) when is_integer(X) ->
     ets:insert(?TAB, {{Type, X}, C, flag}),
     ets:insert(?TAB, {{Type, C}, X, flag});
+emit_enum(Type, _Cnt, C, {X, DType}) when is_integer(X) ->
+    ets:insert(?TAB, {{Type, X}, C, DType}),
+    ets:insert(?TAB, {{Type, C}, X, DType});
 emit_enum(Type, Cnt, C, DType) ->
     ets:insert(?TAB, {{Type, Cnt}, C, DType}),
     ets:insert(?TAB, {{Type, C}, Cnt, DType}).
@@ -597,10 +600,10 @@ define_consts() ->
 							   {nowhere,  {flag, 255}}
 							  ]},
 	 {{rtnetlink, rtm_flags}, [
-							   {notify,   {flag, 16#100}},
-							   {cloned,   {flag, 16#200}},
-							   {equalize, {flag, 16#400}},
-							   {prefix,   {flag, 16#800}}
+							   {notify,   {flag, 8}},
+							   {cloned,   {flag, 9}},
+							   {equalize, {flag, 10}},
+							   {prefix,   {flag, 11}}
 							  ]},
 	 {{rtnetlink, rtm_table}, [
 							   {unspec,  {flag, 0}},
@@ -679,7 +682,15 @@ define_consts() ->
                           {num_vf, huint32},
                           {vfinfo_list, none},
                           {stats64, huint64_array},
-                          {vf_ports, none}
+                          {vf_ports, {nested, vf_ports}},
+			  {port_self, {nested, port_self}},
+			  {af_spec, {nested, af_spec}},
+			  {group, huint32},
+			  {net_ns_fd, huint32},
+			  {ext_mask, huint32},
+			  {promiscuity, huint32},
+			  {num_tx_queues, huint32},
+			  {num_rx_queues, huint32}
                          ]},
      {{rtnetlink, link, operstate}, [
                                      {unknown, atom},
@@ -716,6 +727,31 @@ define_consts() ->
                                                   {ra_othercon, {flag, 7}},
                                                   {ready, {flag, 31}}
                                                  ]},
+     {{rtnetlink, link, af_spec}, [
+				   {inet,  {gen_socket:family(inet), {nested, inet}}},
+				   {inet6, {gen_socket:family(inet6), {nested, inet6}}}
+				  ]},
+
+     {{rtnetlink, link, af_spec, inet}, [
+					 {unspec, none},
+					 {conf, huint32_array}
+					]},
+     {{rtnetlink, link, af_spec, inet6}, [
+					 {unspec, none},
+					  {flags, hflag32},
+					  {conf, hsint32_array},
+					  {stats, huint64_array},
+					  {mcast, none},
+					  {cacheinfo, huint32_array},
+					  {icmp6stats, huint64_array}
+					 ]},
+     {{rtnetlink, link, af_spec, inet6, flags}, [
+						 {rs_sent, {flag, 4}},
+						 {ra_rcvd, {flag, 5}},
+						 {ra_managed, {flag, 6}},
+						 {ra_othercon, {flag, 7}},
+						 {ready, {flag, 31}}
+						]},
      {{rtnetlink, prefix}, [
                             {unspec, none},
                             {address, addr},

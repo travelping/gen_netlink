@@ -1396,6 +1396,8 @@ handle_socket_data(Socket, NlType, SubscriptionType, Decode, #state{subscribers 
 %% gen_server internal functions
 %%
 
+notify(_SubSys, _Pids, []) ->
+    ok;
 notify(SubSys, Pids, Msgs) ->
     lists:foreach(fun(Pid) -> Pid#subscription.pid ! {SubSys, Msgs} end, Pids).
 
@@ -1409,13 +1411,14 @@ process_maybe_multipart([], MsgBuf) ->
 process_maybe_multipart([Msg | Rest], MsgBuf) ->
     Type = element(2, Msg),     % Msg may be arbitrary netlink record
     Flags = element(3, Msg),
+    MsgSeq = element(4, Msg),
 
     case Type of
         done ->
-            {done, lists:reverse(MsgBuf), Rest};
+            {done, MsgSeq, lists:reverse(MsgBuf), Rest};
         _ ->
             case proplists:get_bool(multi, Flags) of
-                false -> {done, [Msg], Rest};
+                false -> {done, MsgSeq, [Msg], Rest};
                 true  -> process_maybe_multipart(Rest, [Msg | MsgBuf])
             end
     end.
@@ -1432,9 +1435,9 @@ handle_messages(SubSys, Msgs, Subs, State) ->
     case process_maybe_multipart(Msgs, State#state.msgbuf) of
         {incomplete, MsgBuf} ->
             State#state{msgbuf = MsgBuf};
-        {done, MsgGrp, Rest} ->
-            NewState = case is_request_reply(MsgGrp, State) of
-                true  -> send_request_reply(MsgGrp, State);
+        {done, MsgSeq, MsgGrp, Rest} ->
+            NewState = case is_request_reply(MsgSeq, State) of
+                true  -> send_request_reply(MsgSeq, MsgGrp, State);
                 false -> spawn(?MODULE, notify, [SubSys, Subs, MsgGrp]),
                          State
             end,
@@ -1458,16 +1461,14 @@ register_request(Seq, From, #state{requests = Requests} = State) ->
         curseq = NextSeq
     }.
 
--spec is_request_reply(MaybeReply :: [netlink_record(), ...], #state{}) -> boolean().
-is_request_reply([Msg | _Rest], #state{requests = Request}) ->
-    MsgSeq = element(4, Msg),
+-spec is_request_reply(integer(), #state{}) -> boolean().
+is_request_reply(MsgSeq, #state{requests = Request}) ->
     gb_trees:is_defined(MsgSeq, Request).
 
--spec send_request_reply([netlink_record(), ...], #state{}) -> #state{}.
-send_request_reply([Msg | _Rest] = Reply, #state{requests = Requests} = State) ->
-    ReqSeq = element(4, Msg),
-    From = gb_trees:get(ReqSeq, Requests),
+-spec send_request_reply(integer(), [netlink_record(), ...], #state{}) -> #state{}.
+send_request_reply(MsgSeq, Reply, #state{requests = Requests} = State) ->
+    From = gb_trees:get(MsgSeq, Requests),
 
     gen_server:reply(From, {ok, Reply}),
-    State#state{requests = gb_trees:delete(ReqSeq, Requests)}.
+    State#state{requests = gb_trees:delete(MsgSeq, Requests)}.
 

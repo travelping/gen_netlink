@@ -21,8 +21,12 @@
 -module(netlink).
 -behaviour(gen_server).
 
--export([start/0, start_link/0, stop/0]).
--export([subscribe/2, send/2, request/2]).
+-export([start/0, start/2, start/3,
+	 start_link/0, start_link/2, start_link/3,
+	 stop/0, stop/1]).
+-export([subscribe/2, subscribe/3,
+	 send/2, send/3,
+	 request/2, request/3]).
 
 -export([init/1, handle_info/2, handle_cast/2, handle_call/3, terminate/2, code_change/3]).
 
@@ -37,6 +41,7 @@
 -include_lib("gen_socket/include/gen_socket.hrl").
 -include("netlink.hrl").
 
+-define(SERVER, ?MODULE).
 -define(TAB, ?MODULE).
 
 -record(subscription, {
@@ -269,7 +274,13 @@ nfnl_subsys(count)             -> ?NFNL_SUBSYS_COUNT.
 -define(IPCTNL_MSG_EXP_DELETE, 2).
 
 create_table() ->
-    ets:new(?TAB, [named_table, public]).
+    case ets:info(?TAB, owner) of
+	undefined ->
+	    ets:new(?TAB, [named_table, public]),
+	    gen_const(define_consts());
+	_ ->
+	    ok
+    end.
 
 emit_enum(Type, _Cnt, C, {flag, X}) when is_integer(X) ->
     ets:insert(?TAB, {{Type, X}, C, flag}),
@@ -1255,34 +1266,59 @@ rtnl_wilddump(Family, Type) ->
 %%
 
 start() ->
-    gen_server:start({local, ?MODULE}, ?MODULE, [], []).
+    start({local, ?SERVER}, [], []).
+
+start(Args, Options) ->
+    gen_server:start(?SERVER, Args, Options).
+
+start(ServerName, Args, Options) ->
+    gen_server:start(ServerName, ?SERVER, Args, Options).
 
 start_link() ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+    start_link({local, ?SERVER}, [], []).
+
+start_link(Args, Options) ->
+    gen_server:start_link(?SERVER, Args, Options).
+
+start_link(ServerName, Args, Options) ->
+    gen_server:start_link(ServerName, ?SERVER, Args, Options).
 
 stop() ->
-    gen_server:cast(?MODULE, stop).
+    stop(?SERVER).
+
+stop(ServerName) ->
+    gen_server:cast(ServerName, stop).
 
 -spec send(atom(), binary()) -> ok.
 send(SubSys, Msg) ->
-    gen_server:cast(?MODULE, {send, SubSys, Msg}).
+    send(?SERVER, SubSys, Msg).
+
+-spec send(atom() | pid(), atom(), binary()) -> ok.
+send(ServerName, SubSys, Msg) ->
+    gen_server:cast(ServerName, {send, SubSys, Msg}).
 
 subscribe(Pid, Types) ->
-    gen_server:call(?MODULE, {subscribe, #subscription{pid = Pid, types = Types}}).
+    subscribe(?SERVER, Pid, Types).
+
+subscribe(ServerName, Pid, Types) ->
+    gen_server:call(ServerName, {subscribe, #subscription{pid = Pid, types = Types}}).
 
 -spec request(atom(), netlink_record()) -> {ok, [netlink_record(), ...]} | {error, term()}.
 request(SubSys, Msg) ->
-    gen_server:call(?MODULE, {request, SubSys, Msg}).
+    request(?SERVER, SubSys, Msg).
+
+-spec request(atom() | pid(), atom(), netlink_record()) -> {ok, [netlink_record(), ...]} | {error, term()}.
+request(ServerName, SubSys, Msg) ->
+    gen_server:call(ServerName, {request, SubSys, Msg}).
 
 %%
 %% gen_server callbacks
 %%
 
-init(_Args) ->
+init(Opts) ->
     create_table(),
-    gen_const(define_consts()),
 
-    {ok, CtNl} = gen_socket:socket(netlink, raw, ?NETLINK_NETFILTER),
+    {ok, CtNl} = socket(netlink, raw, ?NETLINK_NETFILTER, Opts),
     ok = gen_socket:bind(CtNl, sockaddr_nl(netlink, 0, -1)),
     ok = gen_socket:input_event(CtNl, true),
 
@@ -1296,7 +1332,7 @@ init(_Args) ->
     ok = setsockopt(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_exp_update),
     ok = setsockopt(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_exp_destroy),
 
-    {ok, RtNl} = gen_socket:socket(netlink, raw, ?NETLINK_ROUTE),
+    {ok, RtNl} = socket(netlink, raw, ?NETLINK_ROUTE, Opts),
     ok = gen_socket:bind(RtNl, sockaddr_nl(netlink, 0, -1)),
     ok = gen_socket:input_event(RtNl, true),
 
@@ -1472,3 +1508,10 @@ send_request_reply(MsgSeq, Reply, #state{requests = Requests} = State) ->
     gen_server:reply(From, {ok, Reply}),
     State#state{requests = gb_trees:delete(MsgSeq, Requests)}.
 
+socket(Family, Type, Protocol, Opts) ->
+    case proplists:get_value(netns, Opts) of
+	undefined ->
+	    gen_socket:socket(Family, Type, Protocol);
+	NetNs ->
+	    gen_socket:socketat(NetNs, Family, Type, Protocol)
+    end.

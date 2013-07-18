@@ -1269,19 +1269,19 @@ start() ->
     start({local, ?SERVER}, [], []).
 
 start(Args, Options) ->
-    gen_server:start(?SERVER, Args, Options).
+    gen_server:start(?MODULE, Args, Options).
 
 start(ServerName, Args, Options) ->
-    gen_server:start(ServerName, ?SERVER, Args, Options).
+    gen_server:start(ServerName, ?MODULE, Args, Options).
 
 start_link() ->
     start_link({local, ?SERVER}, [], []).
 
 start_link(Args, Options) ->
-    gen_server:start_link(?SERVER, Args, Options).
+    gen_server:start_link(?MODULE, Args, Options).
 
 start_link(ServerName, Args, Options) ->
-    gen_server:start_link(ServerName, ?SERVER, Args, Options).
+    gen_server:start_link(ServerName, ?MODULE, Args, Options).
 
 stop() ->
     stop(?SERVER).

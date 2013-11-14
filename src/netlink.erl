@@ -1,4 +1,4 @@
-%% Copyright 2010-2012, Travelping GmbH <info@travelping.com>
+%% Copyright 2010-2013, Travelping GmbH <info@travelping.com>
 
 %% Permission is hereby granted, free of charge, to any person obtaining a
 %% copy of this software and associated documentation files (the "Software"),
@@ -21,6 +21,9 @@
 -module(netlink).
 -behaviour(gen_server).
 
+-compile(inline).
+-compile(inline_list_funcs).
+
 -export([start/0, start/2, start/3,
 	 start_link/0, start_link/2, start_link/3,
 	 stop/0, stop/1]).
@@ -32,8 +35,7 @@
 
 -export([nl_ct_dec/1, nl_rt_dec/1,
 	 nl_rt_enc/1, nl_ct_enc/1,
-	 dec_netlink/2, dec_flags/2,
-	 create_table/0, gen_const/1, define_consts/0, enc_nlmsghdr/5, rtnl_wilddump/2]).
+	 enc_nlmsghdr/5, rtnl_wilddump/2]).
 -export([sockaddr_nl/3, setsockopt/4]).
 -export([rcvbufsiz/2]).
 -export([notify/3]).
@@ -273,539 +275,79 @@ nfnl_subsys(count)             -> ?NFNL_SUBSYS_COUNT.
 -define(IPCTNL_MSG_EXP_GET, 1).
 -define(IPCTNL_MSG_EXP_DELETE, 2).
 
-create_table() ->
-    case ets:info(?TAB, owner) of
-	undefined ->
-	    ets:new(?TAB, [named_table, public]),
-	    gen_const(define_consts());
-	_ ->
-	    ok
-    end.
-
-emit_enum(Type, _Cnt, C, {flag, X}) when is_integer(X) ->
-    ets:insert(?TAB, {{Type, X}, C, flag}),
-    ets:insert(?TAB, {{Type, C}, X, flag});
-emit_enum(Type, _Cnt, C, {X, DType}) when is_integer(X) ->
-    ets:insert(?TAB, {{Type, X}, C, DType}),
-    ets:insert(?TAB, {{Type, C}, X, DType});
-emit_enum(Type, Cnt, C, DType) ->
-    ets:insert(?TAB, {{Type, Cnt}, C, DType}),
-    ets:insert(?TAB, {{Type, C}, Cnt, DType}).
-
-emit_enums(Type, Cnt, [{C, DType}|T]) ->
-    emit_enum(Type, Cnt, C, DType),
-    emit_enums(Type, Cnt + 1, T);
-emit_enums(_, _, []) ->
-    ok.
-
-gen_const([{Type, Consts}|T]) ->
-    emit_enums(Type, 0, Consts),
-    gen_const(T);
-gen_const([]) ->
-    ok.
-
-define_consts() ->
-    [{rtm_msgtype, [
-                    {noop,         {flag, ?NLMSG_NOOP}},
-                    {error,        {flag, ?NLMSG_ERROR}},
-                    {done,         {flag, ?NLMSG_DONE}},
-                    {overrun,      {flag, ?NLMSG_OVERRUN}},
-                    {newlink,      {flag, ?RTM_NEWLINK}},
-                    {dellink,      {flag, ?RTM_DELLINK}},
-                    {getlink,      {flag, ?RTM_GETLINK}},
-                    {setlink,      {flag, ?RTM_SETLINK}},
-                    {newaddr,      {flag, ?RTM_NEWADDR}},
-                    {deladdr,      {flag, ?RTM_DELADDR}},
-                    {getaddr,      {flag, ?RTM_GETADDR}},
-                    {newroute,     {flag, ?RTM_NEWROUTE}},
-                    {delroute,     {flag, ?RTM_DELROUTE}},
-                    {getroute,     {flag, ?RTM_GETROUTE}},
-                    {newneigh,     {flag, ?RTM_NEWNEIGH}},
-                    {delneigh,     {flag, ?RTM_DELNEIGH}},
-                    {getneigh,     {flag, ?RTM_GETNEIGH}},
-                    {newrule,      {flag, ?RTM_NEWRULE}},
-                    {delrule,      {flag, ?RTM_DELRULE}},
-                    {getrule,      {flag, ?RTM_GETRULE}},
-                    {newqdisc,     {flag, ?RTM_NEWQDISC}},
-                    {delqdisc,     {flag, ?RTM_DELQDISC}},
-                    {getqdisc,     {flag, ?RTM_GETQDISC}},
-                    {newtclass,    {flag, ?RTM_NEWTCLASS}},
-                    {deltclass,    {flag, ?RTM_DELTCLASS}},
-                    {gettclass,    {flag, ?RTM_GETTCLASS}},
-                    {newtfilter,   {flag, ?RTM_NEWTFILTER}},
-                    {deltfilter,   {flag, ?RTM_DELTFILTER}},
-                    {gettfilter,   {flag, ?RTM_GETTFILTER}},
-                    {newaction,    {flag, ?RTM_NEWACTION}},
-                    {delaction,    {flag, ?RTM_DELACTION}},
-                    {getaction,    {flag, ?RTM_GETACTION}},
-                    {newprefix,    {flag, ?RTM_NEWPREFIX}},
-                    {getmulticast, {flag, ?RTM_GETMULTICAST}},
-                    {getanycast,   {flag, ?RTM_GETANYCAST}},
-                    {newneightbl,  {flag, ?RTM_NEWNEIGHTBL}},
-                    {getneightbl,  {flag, ?RTM_GETNEIGHTBL}},
-                    {setneightbl,  {flag, ?RTM_SETNEIGHTBL}},
-                    {newnduseropt, {flag, ?RTM_NEWNDUSEROPT}},
-                    {newaddrlabel, {flag, ?RTM_NEWADDRLABEL}},
-                    {deladdrlabel, {flag, ?RTM_DELADDRLABEL}},
-                    {getaddrlabel, {flag, ?RTM_GETADDRLABEL}},
-                    {getdcb,       {flag, ?RTM_GETDCB}},
-                    {setdcb,       {flag, ?RTM_SETDCB}}
-                 ]},
-     {nlm_flags, [
-                  {request, {flag,  0}},
-                  {multi,   {flag,  1}},
-                  {ack,     {flag,  2}},
-                  {echo,    {flag,  3}}
-                 ]},
-     {nlm_get_flags, [
-                      {request, {flag,  0}},
-                      {multi,   {flag,  1}},
-                      {ack,     {flag,  2}},
-                      {echo,    {flag,  3}},
-                      {root,    {flag,  8}},
-                      {match,   {flag,  9}},
-                      {atomic,  {flag, 10}}
-                 ]},
-     {nlm_new_flags, [
-                      {request, {flag,  0}},
-                      {multi,   {flag,  1}},
-                      {ack,     {flag,  2}},
-                      {echo,    {flag,  3}},
-                      {replace, {flag,  8}},
-                      {excl,    {flag,  9}},
-                      {create,  {flag, 10}},
-                      {append,  {flag, 11}}
-                 ]},
-     {iff_flags, [
-                    {up, flag},
-                    {broadcast, flag},
-                    {debug, flag},
-                    {loopback, flag},
-                    {pointopoint, flag},
-                    {notrailers, flag},
-                    {running, flag},
-                    {noarp, flag},
-                    {promisc, flag},
-                    {allmulti, flag},
-                    {master, flag},
-                    {slave, flag},
-                    {multicast, flag},
-                    {portsel, flag},
-                    {automedia, flag},
-                    {dynamic, flag},
-                    {lower_up, flag},
-                    {dormant, flag},
-                    {echo, flag}
-                 ]},
-	 {{ctm_msgtype, netlink}, [
-							{noop,         {flag, ?NLMSG_NOOP}},
-							{error,        {flag, ?NLMSG_ERROR}},
-							{done,         {flag, ?NLMSG_DONE}},
-							{overrun,      {flag, ?NLMSG_OVERRUN}}
-						   ]},
-	 {{ctm_msgtype, ctnetlink}, [
-								 {new,         {flag, ?IPCTNL_MSG_CT_NEW}},
-								 {get,         {flag, ?IPCTNL_MSG_CT_GET}},
-								 {delete,      {flag, ?IPCTNL_MSG_CT_DELETE}},
-								 {get_ctrzero, {flag, ?IPCTNL_MSG_CT_GET_CTRZERO}}
-								]},
-	 {{ctm_msgtype, ctnetlink_exp}, [
-									 {new,         {flag, ?IPCTNL_MSG_EXP_NEW}},
-									 {get,         {flag, ?IPCTNL_MSG_EXP_GET}},
-									 {delete,      {flag, ?IPCTNL_MSG_EXP_DELETE}}
-									]},
-     {{ctnetlink}, [
-                    {unspec, none},
-                    {tuple_orig, tuple},
-                    {tuple_reply, tuple},
-                    {status, flag32},
-                    {protoinfo, protoinfo},
-                    {help, help},
-                    {nat_src, none},
-                    {timeout, uint32},
-                    {mark, uint32},
-                    {counters_orig, counters},
-                    {counters_reply, counters},
-                    {use, uint32},
-                    {id, uint32},
-                    {nat_dst, none},
-                    {tuple_master, tuple},
-                    {nat_seq_adj_orig, nat_seq_adj},
-                    {nat_seq_adj_reply, nat_seq_adj},
-                    {secmark, uint32},                    %% obsolete sine 2.6.36....?
-					{zone, uint16},
-					{secctx, none},
-					{timestamp, timestamp}
-                 ]},
-     {{ctnetlink, status}, [
-                            {expected, flag},
-                            {seen_reply, flag},
-                            {assured, flag},
-                            {confirmed, flag},
-                            {src_nat, flag},
-                            {dst_nat, flag},
-                            {seq_adjust, flag},
-                            {src_nat_done, flag},
-                            {dst_nat_done, flag},
-                            {dying, flag},
-                            {fixed_timeout, flag}
-                          ]},
-     {{ctnetlink, tuple}, [
-                {unspec, none},
-                {ip, ip},
-                {proto, proto}
-               ]},
-     {{ctnetlink, tuple, ip}, [
-                               {unspec, none},
-                               {v4_src, addr},
-                               {v4_dst, addr},
-                               {v6_src, addr},
-                               {v6_dst, addr}
-                              ]},
-     {{ctnetlink, tuple, proto}, [
-                                  {unspec, none},
-                                  {num, protocol},
-                                  {src_port, uint16},
-                                  {dst_port, uint16},
-                                  {icmp_id, uint16},
-                                  {icmp_type, uint8},
-                                  {icmp_code, uint8},
-                                  {icmpv6_id, none},
-                                  {icmpv6_type, none},
-                                  {icmpv6_code, none}
-                              ]},
-	 {{ctnetlink, nat_seq_adj}, [
-								 {unspec, none},
-								 {correction_pos, uint32},
-								 {offset_before, uint32},
-								 {offset_after, uint32}
-								]},
-     {{ctnetlink, protoinfo}, [
-                               {unspec, none},
-                               {tcp, tcp},
-                               {dccp, dccp},
-                               {sctp, sctp}
-                              ]},
-
-     {{ctnetlink, protoinfo, tcp}, [
-                                    {unspec, none},
-                                    {state, atom},
-                                    {wscale_original, uint8},
-                                    {wscale_reply, uint8},
-                                    {flags_original, uint16},
-                                    {flags_reply, uint16}
-                                   ]},
-
-     {{ctnetlink, protoinfo, tcp, state}, [
-                                           {none, flag},
-                                           {syn_sent, flag},
-                                           {syn_recv, flag},
-                                           {established, flag},
-                                           {fin_wait, flag},
-                                           {close_wait, flag},
-                                           {last_ack, flag},
-                                           {time_wait, flag},
-                                           {close, flag},
-                                           {listen, flag},
-                                           {max, flag},
-                                           {ignore, flag}
-                                          ]},
-     {{ctnetlink, help}, [
-						  {unspec, none},
-						  {name, string}
-						 ]},
-     {{ctnetlink, counters}, [
-                              {unspec, none},
-                              {packets, uint64},
-                              {bytes, uint64},
-                              {packets32, uint32},
-                              {bytes32, uint32}
-                             ]},
-     {{ctnetlink, timestamp}, [
-						  {unspec, none},
-						  {start, uint64},
-						  {stop, uint64}
-						 ]},
-     {{ctnetlink_exp}, [
-						{unspec, none},
-						{master, tuple},
-						{tuple, tuple},
-						{mask, tuple},
-						{timeout, uint32},
-						{id, uint32},
-						{help_name, string},
-						{zone, uint16},
-						{flags, flag32}
-					   ]},
-     {{ctnetlink_exp, tuple}, [
-                {unspec, none},
-                {ip, ip},
-                {proto, proto}
-               ]},
-     {{ctnetlink_exp, tuple, ip}, [
-                               {unspec, none},
-                               {v4_src, addr},
-                               {v4_dst, addr},
-                               {v6_src, addr},
-                               {v6_dst, addr}
-                              ]},
-     {{ctnetlink_exp, tuple, proto}, [
-                                  {unspec, none},
-                                  {num, protocol},
-                                  {src_port, uint16},
-                                  {dst_port, uint16},
-                                  {icmp_id, uint16},
-                                  {icmp_type, uint8},
-                                  {icmp_code, uint8},
-                                  {icmpv6_id, none},
-                                  {icmpv6_type, none},
-                                  {icmpv6_code, none}
-                              ]},
-     {{ctnetlink_exp, flags}, [
-                            {permanent, flag},
-                            {inactive, flag},
-                            {userspace, flag}
-                          ]},
-      {{rtnetlink, neigh}, [
-                           {unspec, none},
-                           {dst, addr},
-                           {lladdr, mac},
-                           {cacheinfo, huint32_array},
-                           {probes, huint32}
-                 ]},
-     {{rtnetlink, rtm_type}, [
-							  {unspec,      flag},
-							  {unicast,     flag},
-							  {local,       flag},
-							  {broadcast,   flag},
-							  {anycast,     flag},
-							  {multicast,   flag},
-							  {blackhole,   flag},
-							  {unreachable, flag},
-							  {prohibit,    flag},
-							  {throw,       flag},
-							  {nat,         flag},
-							  {xresolve,    flag}
-							 ]},
-	 {{rtnetlink, rtm_protocol}, [
-								  {unspec,   {flag, 0}},
-								  {redirect, {flag, 1}},
-								  {kernel,   {flag, 2}},
-								  {boot,     {flag, 3}},
-								  {static,   {flag, 4}},
-								  {gated,    {flag, 8}},
-								  {ra,       {flag, 9}},
-								  {mrt,      {flag, 10}},
-								  {zebra,    {flag, 11}},
-								  {bird,     {flag, 12}},
-								  {dnrouted, {flag, 13}},
-								  {xorp,     {flag, 14}},
-								  {ntk,      {flag, 15}},
-								  {dhcp,     {flag, 16}}
-							 ]},
-	 {{rtnetlink, rtm_scope}, [
-							   {universe, {flag, 0}},
-							   {site,     {flag, 200}},
-							   {link,     {flag, 253}},
-							   {host,     {flag, 254}},
-							   {nowhere,  {flag, 255}}
-							  ]},
-	 {{rtnetlink, rtm_flags}, [
-							   {notify,   {flag, 8}},
-							   {cloned,   {flag, 9}},
-							   {equalize, {flag, 10}},
-							   {prefix,   {flag, 11}}
-							  ]},
-	 {{rtnetlink, rtm_table}, [
-							   {unspec,  {flag, 0}},
-							   {compat,  {flag, 252}},
-							   {default, {flag, 253}},
-							   {main,    {flag, 254}},
-							   {local,   {flag, 255}}
-							 ]},
-     {{rtnetlink, route}, [
-                           {unspec, none},
-                           {dst, addr},
-                           {src, addr},
-                           {iif, huint32},
-                           {oif, huint32},
-                           {gateway, addr},
-                           {priority, huint32},
-                           {prefsrc, addr},
-                           {metrics, {nested, metrics}},
-                           {multipath, none},
-                           {protoinfo, none},
-                           {flow, huint32},
-                           {cacheinfo, huint32_array},
-                           {session, none},
-                           {mp_algo, none},
-                           {table, huint32}
-                          ]},
-     {{rtnetlink, route, metrics}, [
-                                    {unspec, none},
-                                    {lock, huint32},
-                                    {mtu, huint32},
-                                    {window, huint32},
-                                    {rtt, huint32},
-                                    {rttvar, huint32},
-                                    {ssthresh, huint32},
-                                    {cwnd, huint32},
-                                    {advmss, huint32},
-                                    {reordering, huint32},
-                                    {hoplimit, huint32},
-                                    {initcwnd, huint32},
-                                    {features, huint32},
-                                    {rto_min, huint32},
-                                    {initrwnd, huint32}
-                          ]},
-     {{rtnetlink, addr}, [
-                                {unspec, none},
-                                {address, addr},
-                                {local, addr},
-                                {label, string},
-                                {broadcast, addr},
-                                {anycast, addr},
-                                {cacheinfo, huint32_array},
-                                {multicast, addr}
-                               ]},
-     {{rtnetlink, link}, [
-                          {unspec, none},
-                          {address, mac},
-                          {broadcast, mac},
-                          {ifname, string},
-                          {mtu, huint32},
-                          {link, huint32},
-                          {qdisc, string},
-                          {stats, huint32_array},
-                          {cost, none},
-                          {priority, none},
-                          {master, none},
-                          {wireless, none},
-                          {protinfo, {nested, protinfo}},
-                          {txqlen, huint32},
-                          {map, if_map},
-                          {weight, none},
-                          {operstate, atom},
-                          {linkmode, atom},
-                          {linkinfo, {nested, linkinfo}},
-                          {net_ns_pid, none},
-                          {ifalias, string},
-                          {num_vf, huint32},
-                          {vfinfo_list, none},
-                          {stats64, huint64_array},
-                          {vf_ports, {nested, vf_ports}},
-			  {port_self, {nested, port_self}},
-			  {af_spec, {nested, af_spec}},
-			  {group, huint32},
-			  {net_ns_fd, huint32},
-			  {ext_mask, huint32},
-			  {promiscuity, huint32},
-			  {num_tx_queues, huint32},
-			  {num_rx_queues, huint32}
-                         ]},
-     {{rtnetlink, link, operstate}, [
-                                     {unknown, atom},
-                                     {notpresent, atom},
-                                     {down, atom},
-                                     {lowerlayerdown, atom},
-                                     {testing, atom},
-                                     {dormant, atom},
-                                     {up, atom}
-                                    ]},
-     {{rtnetlink, link, linkmode}, [
-                                     {default, atom},
-                                     {dormant, atom}
-                                    ]},
-     {{rtnetlink, link, linkinfo}, [
-                                    {unspec, none},
-                                    {kind, string},
-                                    {data, binary},
-                                    {xstats, binary}
-                                    ]},
-     {{rtnetlink, link, protinfo, inet6}, [
-                                            {unspec, none},
-                                            {flags, hflag32},
-                                            {conf, hsint32_array},
-                                            {stats, huint64_array},
-                                            {mcast, none},
-                                            {cacheinfo, huint32_array},
-                                            {icmp6stats, huint64_array}
-                                           ]},
-     {{rtnetlink, link, protinfo, inet6, flags}, [
-                                                  {rs_sent, {flag, 4}},
-                                                  {ra_rcvd, {flag, 5}},
-                                                  {ra_managed, {flag, 6}},
-                                                  {ra_othercon, {flag, 7}},
-                                                  {ready, {flag, 31}}
-                                                 ]},
-     {{rtnetlink, link, af_spec}, [
-				   {inet,  {gen_socket:family(inet), {nested, inet}}},
-				   {inet6, {gen_socket:family(inet6), {nested, inet6}}}
-				  ]},
-
-     {{rtnetlink, link, af_spec, inet}, [
-					 {unspec, none},
-					 {conf, huint32_array}
-					]},
-     {{rtnetlink, link, af_spec, inet6}, [
-					 {unspec, none},
-					  {flags, hflag32},
-					  {conf, hsint32_array},
-					  {stats, huint64_array},
-					  {mcast, none},
-					  {cacheinfo, huint32_array},
-					  {icmp6stats, huint64_array}
-					 ]},
-     {{rtnetlink, link, af_spec, inet6, flags}, [
-						 {rs_sent, {flag, 4}},
-						 {ra_rcvd, {flag, 5}},
-						 {ra_managed, {flag, 6}},
-						 {ra_othercon, {flag, 7}},
-						 {ready, {flag, 31}}
-						]},
-     {{rtnetlink, prefix}, [
-                            {unspec, none},
-                            {address, addr},
-                            {cacheinfo, huint32_array}
-                           ]}
-    ].
-
-
-dec_netlink(Type, Attr) ->
-    case ets:lookup(?TAB, {Type, Attr}) of
-        [{_, Id, DType}] -> {Id, DType};
-        _ -> {none, none}
-    end.
+-include("netlink_decoder_gen.hrl").
 
 dec_rtm_msgtype(Type) ->
-    {MsgType, _} = dec_netlink(rtm_msgtype, Type),
-    MsgType.
+    decode_rtm_msgtype(Type).
 
 dec_rtm_type(RtmType) ->
-    {Type, _} = dec_netlink({rtnetlink, rtm_type}, RtmType),
-    Type.
+    decode_rtnetlink_rtm_type(RtmType).
 
 dec_rtm_protocol(RtmProto) ->
-    case dec_netlink({rtnetlink, rtm_protocol}, RtmProto) of
-		{Proto, flag} -> Proto;
-		_ -> RtmProto
-	end.
+    decode_rtnetlink_rtm_protocol(RtmProto).
 
 dec_rtm_scope(RtmScope) ->
-    case dec_netlink({rtnetlink, rtm_scope}, RtmScope) of
-		{Scope, flag} -> Scope;
-		_ -> RtmScope
-	end.
+    decode_rtnetlink_rtm_scope(RtmScope).
 
 dec_rtm_table(RtmTable) ->
-    case dec_netlink({rtnetlink, rtm_table}, RtmTable) of
-		{Table, flag} -> Table;
-		_ -> RtmTable
-	end.
+    decode_rtnetlink_rtm_table(RtmTable).
 
-ipctnl_msg(SubSys, Type) ->
-	{MsgType, _} = dec_netlink({ctm_msgtype, SubSys}, Type),
-    MsgType.
+%% decode_rtnetlink_link_protinfo(inet, Type, Value) ->
+%%     decode_rtnetlink_link_protinfo_inet(inet, Type, Value);
+decode_rtnetlink_link_protinfo(inet6, Type, Value) ->
+    decode_rtnetlink_link_protinfo_inet6(inet6, Type, Value);
+decode_rtnetlink_link_protinfo(Family, Type, Value) ->
+    {decode_rtnetlink_link_protinfo, Family, Type, Value}.
+
+decode_ctnetlink_protoinfo_dccp(Family, Type, Value) ->
+    {decode_ctnetlink_protoinfo_dccp, Family, Type, Value}.
+decode_ctnetlink_protoinfo_sctp(Family, Type, Value) ->
+    {decode_ctnetlink_protoinfo_sctp, Family, Type, Value}.
+
+decode_ipctnl_msg(netlink, Type) ->
+    decode_ctm_msgtype_netlink(Type);
+decode_ipctnl_msg(ctnetlink, Type) ->
+    decode_ctm_msgtype_ctnetlink(Type);
+decode_ipctnl_msg(ctnetlink_exp, Type) ->
+    decode_ctm_msgtype_ctnetlink_exp(Type).
+
+decode_nlm_msg_flags(new, Flags) ->
+    decode_flag(flag_info_nlm_new_flags(), Flags);
+decode_nlm_msg_flags(_, Flags) ->
+    decode_flag(flag_info_nlm_get_flags(), Flags).
+
+decode_rtnetlink_rtm_flags(Flags) ->
+    decode_flag(flag_info_rtnetlink_rtm_flags(), Flags).
+
+decode_nlm_flags(Flags) ->
+    decode_flag(flag_info_nlm_flags(), Flags).
+
+decode_iff_flags(Flags) ->
+    decode_flag(flag_info_iff_flags(), Flags).
+
+encode_iff_flags(Flags) ->
+    encode_flag(flag_info_iff_flags(), Flags).
+
+encode_rtnetlink_rtm_flags(Flags) ->
+    encode_flag(flag_info_rtnetlink_rtm_flags(), Flags).
+
+encode_rtnetlink_link_protinfo(inet6, Value) ->
+    encode_rtnetlink_link_protinfo_inet6(inet6, Value);
+encode_rtnetlink_link_protinfo(Family, Value) ->
+    io:format("encode_rtnetlink_link_protinfo: ~p~n", {Family, Value}).
+
+encode_ctnetlink_protoinfo_dccp(Family, Value) ->
+    io:format("encode_ctnetlink: ~p~n", {Family, Value}).
+
+encode_ctnetlink_protoinfo_sctp(Family, Value) ->
+    io:format("encode_ctnetlink_protoinfo_sctp: ~p~n", {Family, Value}).
+
+encode_ipctnl_msg(netlink, Type) ->
+    encode_ctm_msgtype_netlink(Type);
+encode_ipctnl_msg(ctnetlink, Type) ->
+    encode_ctm_msgtype_ctnetlink(Type);
+encode_ipctnl_msg(ctnetlink_exp, Type) ->
+    encode_ctm_msgtype_ctnetlink_exp(Type).
 
 sockaddr_nl(Family, Pid, Groups) ->
     sockaddr_nl({Family, Pid, Groups}).
@@ -834,173 +376,138 @@ rcvbufsiz(Socket, BufSiz) ->
 	_ -> gen_socket:setsockopt(Socket, sol_socket, rcvbuf, BufSiz)
     end.
 
-enc_flags(Type, Flags) ->
-	lists:foldl(fun(Flag, R) ->
-						{Val,flag} = dec_netlink(Type, Flag),
-						R + (1 bsl Val)
-				end, 0, Flags).
-enc_iff_flags(Flags) ->
-	enc_flags(iff_flags, Flags).
-
-dec_flag(_Type, 0, _Cnt, Acc) ->
-    Acc;
-dec_flag(Type, F, Cnt, Acc) ->
-    case F rem 2 of
-        1 -> {Flag, _} = dec_netlink(Type, Cnt),
-             dec_flag(Type, F bsr 1, Cnt + 1, [Flag | Acc]);
-        _ -> dec_flag(Type, F bsr 1, Cnt + 1, Acc)
+encode_flag(_Type, [], Value) ->
+    Value;
+encode_flag(Type, [Flag|Next], Value) when is_integer(Flag) ->
+    encode_flag(Type, Next, Value bor Flag);
+encode_flag(Type, [Flag|Next], Value) when is_atom(Flag) ->
+    case lists:keyfind(Flag, 2, Type) of
+	{Pos, _} ->
+	    encode_flag(Type, Next, Value bor Pos);
+	_ ->
+	    encode_flag(Type, Next, Value)
     end.
 
-dec_flags(Type, Flag) ->
-     dec_flag(Type, Flag, 0, []).
+encode_flag(Type, Flag) ->
+    io:format("encode_flag: ~p, ~p~n", [Type, Flag]),
+    encode_flag(Type, Flag, 0).
 
-dec_iff_flags(Flag) ->
-     dec_flags(iff_flags, Flag).
+
+decode_flag([], 0, Acc) ->
+    Acc;
+decode_flag([], Flag, Acc) ->
+    [Flag|Acc];
+decode_flag([{Pos, V}|Rest], Flag, Acc) ->
+    if Pos band Flag /= 0 ->
+	    decode_flag(Rest, Flag bxor Pos, [V|Acc]);
+       true ->
+	    decode_flag(Rest, Flag, Acc)
+    end.
+
+decode_flag(Type, Flag) ->
+    decode_flag(Type, Flag, []).
 
 enc_nla(NlaType, Data) ->
 	pad_to(4, <<(size(Data)+4):16/native-integer, NlaType:16/native-integer, Data/binary>>).
-enc_nla_nested(NlaType, Data) ->
-	pad_to(4, <<(size(Data)+4):16/native-integer, (NlaType bor 16#8000):16/native-integer, Data/binary>>).
 
-nl_enc_nl_attr(_Family, Type, NlaType, flag8, false, {_, Flag}) ->
-	enc_nla(NlaType, <<(enc_flags(Type, Flag)):8>>);
-nl_enc_nl_attr(_Family, Type, NlaType, flag16, false, {_, Flag}) ->
-	enc_nla(NlaType, <<(enc_flags(Type, Flag)):16>>);
-nl_enc_nl_attr(_Family, Type, NlaType, flag32, false, {_, Flag}) ->
-	enc_nla(NlaType, <<(enc_flags(Type, Flag)):32>>);
-nl_enc_nl_attr(_Family, Type, NlaType, hflag8, false, {_, Flag}) ->
-	enc_nla(NlaType, <<(enc_flags(Type, Flag)):8>>);
-nl_enc_nl_attr(_Family, Type, NlaType, hflag16, false, {_, Flag}) ->
-	enc_nla(NlaType, <<(enc_flags(Type, Flag)):16/native-integer>>);
-nl_enc_nl_attr(_Family, Type, NlaType, hflag32, false, {_, Flag}) ->
-	enc_nla(NlaType, <<(enc_flags(Type, Flag)):32/native-integer>>);
+encode_none(NlaType, Data) ->
+	enc_nla(NlaType, Data).
 
-nl_enc_nl_attr(_Family, Type, NlaType, atom, false, {_, Atom}) ->
-	{Val, _} = dec_netlink(Type, Atom),
-	enc_nla(NlaType, <<Val:8>>);
-nl_enc_nl_attr(_Family, _Type, NlaType, binary, _Nested, {_, Data}) ->
-	enc_nla(NlaType, Data);
-nl_enc_nl_attr(_Family, _Type, NlaType, string, false, {_, String}) ->
-	enc_nla(NlaType, <<(list_to_binary(String))/binary, 0>>);
-nl_enc_nl_attr(_Family, _Type, NlaType, uint8, false, {_, Val}) ->
-	enc_nla(NlaType, <<Val:8>>);
-nl_enc_nl_attr(_Family, _Type, NlaType, uint16, false, {_, Val}) ->
-	enc_nla(NlaType, <<Val:16>>);
-nl_enc_nl_attr(_Family, _Type, NlaType, uint32, false, {_, Val}) ->
-	enc_nla(NlaType, <<Val:32>>);
-nl_enc_nl_attr(_Family, _Type, NlaType, uint64, false, {_, Val}) ->
-	enc_nla(NlaType, <<Val:64>>);
-nl_enc_nl_attr(_Family, _Type, NlaType, huint16, false, {_, Val}) ->
-	enc_nla(NlaType, <<Val:16/native-integer>>);
-nl_enc_nl_attr(_Family, _Type, NlaType, huint32, false, {_, Val}) ->
-	enc_nla(NlaType, <<Val:32/native-integer>>);
-nl_enc_nl_attr(_Family, _Type, NlaType, huint64, false, {_, Val}) ->
-	enc_nla(NlaType, <<Val:64/native-integer>>);
+encode_binary(NlaType, Data) ->
+	enc_nla(NlaType, Data).
 
-nl_enc_nl_attr(_Family, _Type, NlaType, protocol, false, {_, Proto}) ->
-	enc_nla(NlaType, <<(gen_socket:protocol(Proto)):8>>);
-nl_enc_nl_attr(_Family, _Type, NlaType, mac, false, {_, {A, B, C, D, E, F}}) ->
-	enc_nla(NlaType, << A:8, B:8, C:8, D:8, E:8, F:8 >>);
-nl_enc_nl_attr(inet, _Type, NlaType, addr, false, {_, {A, B, C, D}}) ->
+encode_string(NlaType, String) ->
+	enc_nla(NlaType, <<(list_to_binary(String))/binary, 0>>).
+
+encode_uint8(NlaType, Val) ->
+	enc_nla(NlaType, <<Val:8>>).
+encode_uint16(NlaType, Val) ->
+	enc_nla(NlaType, <<Val:16>>).
+encode_uint32(NlaType, Val) ->
+	enc_nla(NlaType, <<Val:32>>).
+encode_uint64(NlaType, Val) ->
+	enc_nla(NlaType, <<Val:64>>).
+%% encode_huint16(NlaType, Val) ->
+%% 	enc_nla(NlaType, <<Val:16/native-integer>>).
+encode_huint32(NlaType, Val) ->
+	enc_nla(NlaType, <<Val:32/native-integer>>).
+%% encode_huint64(NlaType, Val) ->
+%% 	enc_nla(NlaType, <<Val:64/native-integer>>).
+
+encode_protocol(NlaType, Proto) ->
+	enc_nla(NlaType, <<(gen_socket:protocol(Proto)):8>>).
+encode_mac(NlaType, {A, B, C, D, E, F}) ->
+	enc_nla(NlaType, << A:8, B:8, C:8, D:8, E:8, F:8 >>).
+
+encode_addr(NlaType, {A, B, C, D}) ->
 	enc_nla(NlaType, << A:8, B:8, C:8, D:8 >>);
-nl_enc_nl_attr(inet6, _Type, NlaType, addr, false, {_, {A,B,C,D,E,F,G,H}}) ->
-	enc_nla(NlaType, <<A:16, B:16, C:16, D:16, E:16, F:16, G:16, H:16>>);
+encode_addr(NlaType, {A,B,C,D,E,F,G,H}) ->
+	enc_nla(NlaType, <<A:16, B:16, C:16, D:16, E:16, F:16, G:16, H:16>>).
 
-nl_enc_nl_attr(Family, Type, NlaType, protinfo, true, {_, Req}) ->
-	io:format("nl_enc_nl_attr (protinfo): ~w ~w ~w~n", [Type, NlaType, Req]),
-	enc_nla(NlaType, nl_enc_nla(Family, erlang:append_element(Type, Family), Req));
-nl_enc_nl_attr(Family, Type, NlaType, NestedType, true, {_, Req}) ->
-	NewType = setelement(size(Type), Type, NestedType),
-    io:format("nl_enc_nl_attr (nested #1): ~w ~w ~w ~w ~w~n", [Type, NewType, NlaType, NestedType, Req]),
-	enc_nla(NlaType, nl_enc_nla(Family, NewType, Req));
+encode_if_map(NlaType, {_Attr, MemStart, MemEnd, BaseAddr, Irq, Dma, Port}) ->
+    %% WARNING: THIS might be broken, compiler specific aligment must be take into consideration
+    enc_nla(NlaType, << MemStart:64/native-integer, MemEnd:64/native-integer,
+			BaseAddr:64/native-integer, Irq:16/native-integer,
+			Dma:8, Port:8, 0:32 >>).
 
-nl_enc_nl_attr(_Family, _Type, NlaType, if_map, false, {_, MemStart, MemEnd, BaseAddr, Irq, Dma, Port}) ->
-	%% WARNING: THIS might be broken, compiler specific aligment must be take into consideration
-	enc_nla(NlaType, << MemStart:64/native-integer, MemEnd:64/native-integer,
-						BaseAddr:64/native-integer, Irq:16/native-integer,
-						Dma:8, Port:8, 0:32 >>);
+encode_hsint32_array(NlaType, Req) ->
+    enc_nla(NlaType, << <<H:4/native-signed-integer-unit:8>> || H <- tl(tuple_to_list(Req)) >>).
 
-nl_enc_nl_attr(_Family, _Type, NlaType, hsint32_array, false, Req) ->
-	enc_nla(NlaType, << <<H:4/native-signed-integer-unit:8>> || H <- tl(tuple_to_list(Req)) >>);
-nl_enc_nl_attr(_Family, _Type, NlaType, huint32_array, false, Req) ->
-	enc_nla(NlaType, << <<H:4/native-integer-unit:8>> || H <- tl(tuple_to_list(Req)) >>);
-nl_enc_nl_attr(_Family, _Type, NlaType, huint64_array, false, Req) ->
-	enc_nla(NlaType, << <<H:8/native-integer-unit:8>> || H <- tl(tuple_to_list(Req)) >>);
+encode_huint32_array(NlaType, Req) ->
+    enc_nla(NlaType, << <<H:4/native-integer-unit:8>> || H <- tl(tuple_to_list(Req)) >>).
 
-nl_enc_nl_attr(Family, Type, NlaType, NestedType, Nested, {NType, Req})
-  when is_list(Req) ->
-	NewType = setelement(size(Type), Type, NestedType),
-    io:format("nl_enc_nl_attr (nested #2): ~w ~w ~w ~w ~w ~w~n", [NewType, NlaType, NestedType, Nested, NType, Req]),
-	enc_nla_nested(NlaType, nl_enc_nla(Family, NewType, Req));
-nl_enc_nl_attr(Family, Type, NlaType, DType, Nested, Data) ->
-    io:format("nl_enc_nl_attr (wildcard): ~w, ~w, ~w, ~w, ~w, ~w~n", [Family, Type, NlaType, DType, Nested, Data]),
-    {Type, Data}.
+encode_huint64_array(NlaType, Req) ->
+    enc_nla(NlaType, << <<H:8/native-integer-unit:8>> || H <- tl(tuple_to_list(Req)) >>).
 
-nl_dec_nl_attr(_Family, Type, Attr, flag8, false, << Flag:8 >>) ->
-    {Attr, dec_flags(Type, Flag)};
-nl_dec_nl_attr(_Family, Type, Attr, flag16, false, << Flag:16 >>) ->
-    {Attr, dec_flags(Type, Flag)};
-nl_dec_nl_attr(_Family, Type, Attr, flag32, false, << Flag:32 >>) ->
-    {Attr, dec_flags(Type, Flag)};
-nl_dec_nl_attr(_Family, Type, Attr, hflag8, false, << Flag:8 >>) ->
-    {Attr, dec_flags(Type, Flag)};
-nl_dec_nl_attr(_Family, Type, Attr, hflag16, false, << Flag:16/native-integer >>) ->
-    {Attr, dec_flags(Type, Flag)};
-nl_dec_nl_attr(_Family, Type, Attr, hflag32, false, << Flag:32/native-integer >>) ->
-    {Attr, dec_flags(Type, Flag)};
+%%
+%% decoder
+%%
 
-nl_dec_nl_attr(_Family, Type, Attr, atom, false, << Val:8 >>) ->
-    {Atom, _} = dec_netlink(Type, Val),
-    {Attr, Atom};
-nl_dec_nl_attr(_Family, _Type, Attr, binary, _Nested, Val) ->
-    {Attr, Val};
-nl_dec_nl_attr(_Family, _Type, Attr, string, false, Val) ->
-    {Attr, binary_to_list(binary:part(Val, 0, size(Val) - 1))};
-nl_dec_nl_attr(_Family, _Type, Attr, uint8, false, << Val:8 >>) ->
-    {Attr, Val};
-nl_dec_nl_attr(_Family, _Type, Attr, uint16, false, << Val:16 >>) ->
-    {Attr, Val};
-nl_dec_nl_attr(_Family, _Type, Attr, uint32, false, << Val:32 >>) ->
-    {Attr, Val};
-nl_dec_nl_attr(_Family, _Type, Attr, uint64, false, << Val:64 >>) ->
-    {Attr, Val};
-nl_dec_nl_attr(_Family, _Type, Attr, huint16, false, << Val:16/native-integer >>) ->
-    {Attr, Val};
-nl_dec_nl_attr(_Family, _Type, Attr, huint32, false, << Val:32/native-integer >>) ->
-    {Attr, Val};
-nl_dec_nl_attr(_Family, _Type, Attr, huint64, false, << Val:64/native-integer >>) ->
-    {Attr, Val};
-nl_dec_nl_attr(_Family, _Type, Attr, protocol, false, << Proto:8 >>) ->
-    {Attr,  gen_socket:protocol(Proto)};
-nl_dec_nl_attr(_Family, _Type, Attr, mac, false, << A:8, B:8, C:8, D:8, E:8, F:8 >>) ->
-    {Attr, {A, B, C, D, E, F}};
-nl_dec_nl_attr(inet, _Type, Attr, addr, false, << A:8, B:8, C:8, D:8 >>) ->
-    {Attr, {A, B, C, D}};
-nl_dec_nl_attr(inet6, _Type, Attr, addr, false, <<A:16, B:16, C:16, D:16, E:16, F:16, G:16, H:16>>) ->
-    {Attr, {A,B,C,D,E,F,G,H}};
+decode_binary(Val) ->
+    Val.
+decode_none(Val) ->
+    Val.
+decode_string(Val) ->
+    binary_to_list(binary:part(Val, 0, size(Val) - 1)).
+decode_uint8(<< Val:8 >>) ->
+    Val.
+decode_uint16(<< Val:16 >>) ->
+    Val.
+decode_uint32(<< Val:32 >>) ->
+    Val.
+decode_uint64(<< Val:64 >>) ->
+    Val.
+%% decode_huint16(<< Val:16/native-integer >>) ->
+%%     Val.
+decode_huint32(<< Val:32/native-integer >>) ->
+    Val.
+%% decode_huint64(<< Val:64/native-integer >>) ->
+%%     Val.
 
-nl_dec_nl_attr(Family, Type, Attr, protinfo, true, Data) ->
-    { Attr, nl_dec_nla(Family, erlang:append_element(Type, Family), Data) };
-nl_dec_nl_attr(Family, Type, Attr, _NestedType, true, Data) ->
-    { Attr, nl_dec_nla(Family, Type, Data) };
+decode_protocol(<< Proto:8 >>) ->
+    gen_socket:protocol(Proto).
+decode_mac(<< A:8, B:8, C:8, D:8, E:8, F:8 >>) ->
+    {A, B, C, D, E, F}.
+decode_addr(<< A:8, B:8, C:8, D:8 >>) ->
+    {A, B, C, D};
+decode_addr(<<A:16, B:16, C:16, D:16, E:16, F:16, G:16, H:16>>) ->
+    {A,B,C,D,E,F,G,H}.
 
-nl_dec_nl_attr(_Family, _Type, Attr, if_map, false, << MemStart:64/native-integer, MemEnd:64/native-integer,
-                                                       BaseAddr:64/native-integer, Irq:16/native-integer,
-                                                       Dma:8, Port:8, _Pad/binary >> = D) ->
-	io:format("map: ~w~n", [D]),
-	%% WARNING: THIS might be broken, compiler specific aligment must be take into consideration
-    {Attr, MemStart, MemEnd, BaseAddr, Irq, Dma, Port};
+decode_if_map(Attr, << MemStart:64/native-integer, MemEnd:64/native-integer,
+		       BaseAddr:64/native-integer, Irq:16/native-integer,
+		       Dma:8, Port:8, _Pad/binary >> = D) ->
+    %% WARNING: THIS might be broken, compiler specific aligment must be take into consideration
+    {Attr, MemStart, MemEnd, BaseAddr, Irq, Dma, Port}.
 
-nl_dec_nl_attr(_Family, _Type, Attr, hsint32_array, false, Data) ->
-    list_to_tuple([Attr | [ H || <<H:4/native-signed-integer-unit:8>> <= Data ]]);
-nl_dec_nl_attr(_Family, _Type, Attr, huint32_array, false, Data) ->
-    list_to_tuple([Attr | [ H || <<H:4/native-integer-unit:8>> <= Data ]]);
-nl_dec_nl_attr(_Family, _Type, Attr, huint64_array, false, Data) ->
-    list_to_tuple([Attr | [ H || <<H:8/native-integer-unit:8>> <= Data ]]);
+decode_hsint32_array(Attr, Data) ->
+    list_to_tuple([Attr | [ H || <<H:4/native-signed-integer-unit:8>> <= Data ]]).
+%% decode_huint64_array(Attr, Data) ->
+%%     list_to_tuple([Attr | [ H || <<H:8/native-signed-integer-unit:8>> <= Data ]]).
 
-nl_dec_nl_attr(_Family, Type, Attr, DType, Nested, Data) ->
-    io:format("nl_dec_nl_attr (wildcard): ~p ~p ~p ~p ~p~n", [Type, Attr, DType, Nested, size(Data)]),
-    {Type, Data}.
+decode_huint32_array(Attr, Data) ->
+    list_to_tuple([Attr | [ H || <<H:4/native-integer-unit:8>> <= Data ]]).
+decode_huint64_array(Attr, Data) ->
+    list_to_tuple([Attr | [ H || <<H:8/native-integer-unit:8>> <= Data ]]).
 
 %%
 %% pad binary to specific length
@@ -1015,90 +522,85 @@ pad_to(Width, Binary) ->
 pad_len(Block, Size) ->
     (Block - (Size rem Block)) rem Block.
 
-nl_dec_nla(Family, Type0, << Len:16/native-integer, NlaType:16/native-integer, Rest/binary >>, Acc) ->
+nl_dec_nla(Family, Fun, << Len:16/native-integer, NlaType:16/native-integer, Rest/binary >>, Acc) ->
     PLen = Len - 4,
     Padding = pad_len(4, PLen),
     << Data:PLen/bytes, _Pad:Padding/bytes, NewRest/binary >> = Rest,
 
-    {NewAttr, DType} = dec_netlink(Type0, NlaType band 16#7FFF),
+    H = Fun(Family, NlaType band 16#7FFF, Data),
+    nl_dec_nla(Family, Fun, NewRest, [H | Acc]);
 
-    {Nested, DType1} = case DType of
-                           {nested, T} -> {true, T};
-                           T -> { (NlaType band 16#8000) /= 0, T }
-                       end,
-    NewType = case Nested of
-                  true  -> erlang:append_element(Type0, DType1);
-                  false -> erlang:append_element(Type0, NewAttr)
-              end,
-    H = nl_dec_nl_attr(Family, NewType, NewAttr, DType1, Nested, Data),
-
-    nl_dec_nla(Family, Type0, NewRest, [H | Acc]);
-
-nl_dec_nla(_Family, _Type, << >>, Acc) ->
+nl_dec_nla(_Family, _Fun, << >>, Acc) ->
     lists:reverse(Acc).
 
-nl_dec_nla(Family, Type, Data) ->
-    nl_dec_nla(Family, Type, Data, []).
+nl_dec_nla(Family, Fun, Data)
+  when is_function(Fun, 3) ->
+    nl_dec_nla(Family, Fun, Data, []).
 
-nl_enc_nla(_Family, _Type, [], Acc) ->
+nl_enc_nla(_Family, _Fun, [], Acc) ->
     list_to_binary(lists:reverse(Acc));
+nl_enc_nla(Family, Fun, [Head|Rest], Acc) ->
+    io:format("nl_enc_nla: ~w, ~w~n", [Family, Head]),
+    H = Fun(Family, Head),
+    nl_enc_nla(Family, Fun, Rest, [H|Acc]).
 
-nl_enc_nla(Family, Type, [Head|Rest], Acc) ->
-	io:format("nl_enc_nla: ~w, ~w, ~w~n", [Family, Type, Head]),
+nl_enc_nla(Family, Fun, Req) when is_function(Fun, 2) ->
+    nl_enc_nla(Family, Fun, Req, []).
 
-	{AttrId, DType} = netlink:dec_netlink(Type, element(1, Head)),
-    {Nested, DType1} = case DType of
-                           {nested, T} -> {true, T};
-                           T -> {false, T}
-                       end,
-
-    NewType = erlang:append_element(Type, element(1, Head)),
-	io:format("AttrId: ~w, DType: ~w, Nested: ~w, DType1: ~w, NewType: ~w~n", [AttrId, DType, Nested, DType1, NewType]),
-    H = nl_enc_nl_attr(Family, NewType, AttrId, DType1, Nested, Head),
-
-	nl_enc_nla(Family, Type, Rest, [H |Acc]).
-
-nl_enc_nla(Family, Type, Req) ->
-    nl_enc_nla(Family, Type, Req, []).
-
-nl_enc_payload(Type, _MsgType, {Family, Version, ResId, Req})
-  when Type == {ctnetlink}; Type == {ctnetlink_exp} ->
+nl_enc_payload(ctnetlink, _MsgType, {Family, Version, ResId, Req}) ->
     Fam = gen_socket:family(Family),
-	Data = nl_enc_nla(Family, Type, Req),
+    Data = nl_enc_nla(Family, fun encode_ctnetlink/2, Req),
+    << Fam:8, Version:8, ResId:16/native-integer, Data/binary >>;
+
+nl_enc_payload(ctnetlink_exp, _MsgType, {Family, Version, ResId, Req}) ->
+    Fam = gen_socket:family(Family),
+	Data = nl_enc_nla(Family, fun encode_ctnetlink_exp/2, Req),
 	<< Fam:8, Version:8, ResId:16/native-integer, Data/binary >>;
 
-nl_enc_payload({rtnetlink}, MsgType, {Family, IfIndex, State, Flags, NdmType, Req})
+nl_enc_payload(rtnetlink, MsgType, {Family, IfIndex, State, Flags, NdmType, Req})
   when MsgType == newneigh; MsgType == delneigh ->
     Fam = gen_socket:family(Family),
-	Data = nl_enc_nla(Family, {rtnetlink,neigh}, Req),
-	<< Fam:8, 0:8, 0:16, IfIndex:32/native-signed-integer, State:16/native-integer, Flags:8, NdmType:8, Data/binary >>;
+    Data = nl_enc_nla(Family, fun encode_rtnetlink_neigh/2, Req),
+    << Fam:8, 0:8, 0:16, IfIndex:32/native-signed-integer, State:16/native-integer, Flags:8, NdmType:8, Data/binary >>;
 
-nl_enc_payload({rtnetlink}, MsgType, {Family, PrefixLen, Flags, Scope, Index, Req})
+nl_enc_payload(rtnetlink, MsgType, {Family, PrefixLen, Flags, Scope, Index, Req})
   when MsgType == newaddr; MsgType == deladdr ->
     Fam = gen_socket:family(Family),
-    Data = nl_enc_nla(Family, {rtnetlink,addr}, Req),
-	<< Fam:8, PrefixLen:8, Flags:8, Scope:8, Index:32/native-integer, Data/binary >>;
+    Data = nl_enc_nla(Family, fun encode_rtnetlink_addr/2, Req),
+    << Fam:8, PrefixLen:8, Flags:8, Scope:8, Index:32/native-integer, Data/binary >>;
 
-nl_enc_payload({rtnetlink}, MsgType, {Family, DstLen, SrcLen, Tos, Table, Protocol, Scope, RtmType, Flags, Req})
+nl_enc_payload(rtnetlink, MsgType, {Family, DstLen, SrcLen, Tos, Table, Protocol, Scope, RtmType, Flags, Req})
   when MsgType == newroute; MsgType == delroute ; MsgType == getroute ->
     Fam = gen_socket:family(Family),
-	Proto = gen_socket:protocol(Protocol),
-	Data = nl_enc_nla(Family, {rtnetlink,route}, Req),
-	<< Fam:8, DstLen:8, SrcLen:8, Tos:8, Table:8, Proto:8, Scope:8, RtmType:8, Flags:32/native-integer, Data/binary >>;
+    Proto = gen_socket:protocol(Protocol),
+    io:format("nl_enc_payload: ~p~n", [{Family, DstLen, SrcLen, Tos, Table, Protocol, Scope, RtmType, Flags, Req}]),
+    io:format("~p, ~p, ~p, ~p, ~p~n", [encode_rtnetlink_rtm_table(Table),
+				       encode_rtnetlink_rtm_protocol(Proto),
+				       encode_rtnetlink_rtm_scope(Scope),
+				       encode_rtnetlink_rtm_type(RtmType),
+				       encode_rtnetlink_rtm_flags(Flags)]),
 
-nl_enc_payload({rtnetlink}, MsgType, {Family, Type, Index, Flags, Change, Req})
+    Data = nl_enc_nla(Family, fun encode_rtnetlink_route/2, Req),
+    << Fam:8, DstLen:8, SrcLen:8, Tos:8,
+       (encode_rtnetlink_rtm_table(Table)):8,
+       (encode_rtnetlink_rtm_protocol(Proto)):8,
+       (encode_rtnetlink_rtm_scope(Scope)):8,
+       (encode_rtnetlink_rtm_type(RtmType)):8,
+       (encode_rtnetlink_rtm_flags(Flags)):32/native-integer, Data/binary >>;
+
+nl_enc_payload(rtnetlink, MsgType, {Family, Type, Index, Flags, Change, Req})
   when MsgType == newlink; MsgType == dellink ->
 	Fam = gen_socket:family(Family),
 	Type0 = gen_socket:arphdr(Type),
-	Flags0 = enc_iff_flags(Flags),
-	Change0 = enc_iff_flags(Change),
-	Data = nl_enc_nla(Family, {rtnetlink,link}, Req),
+	Flags0 = encode_iff_flags(Flags),
+	Change0 = encode_iff_flags(Change),
+	Data = nl_enc_nla(Family, fun encode_rtnetlink_link/2, Req),
 	<<Fam:8, 0:8, Type0:16/native-integer, Index:32/native-integer, Flags0:32/native-integer, Change0:32/native-integer, Data/binary >>;
 
-nl_enc_payload({rtnetlink}, MsgType,{Family, IfIndex, PfxType, PfxLen, Flags, Req})
+nl_enc_payload(rtnetlink, MsgType,{Family, IfIndex, PfxType, PfxLen, Flags, Req})
   when MsgType == newprefix; MsgType == delprefix ->
     Fam = gen_socket:family(Family),
-	Data = nl_enc_nla(Family, {rtnetlink,prefix}, Req),
+	Data = nl_enc_nla(Family, fun encode_rtnetlink_prefix/2, Req),
 	<< Fam:8, 0:8, 0:16, IfIndex:32/native-signed-integer, PfxType:8, PfxLen:8, Flags:8, 0:8, Data/binary >>;
 
 nl_enc_payload(_, _, Data)
@@ -1108,35 +610,38 @@ nl_enc_payload(_, _, Data)
 nl_dec_payload(_Type, done, << Length:32/native-integer >>) ->
 	Length;
 
-nl_dec_payload(Type, _MsgType, << Family:8, Version:8, ResId:16/native-integer, Data/binary >>)
-  when Type == {ctnetlink}; Type == {ctnetlink_exp} ->
+nl_dec_payload(ctnetlink, _MsgType, << Family:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
     Fam = gen_socket:family(Family),
-    { Fam, Version, ResId, nl_dec_nla(Fam, Type, Data) };
+    { Fam, Version, ResId, nl_dec_nla(Fam, fun decode_ctnetlink/3, Data) };
 
-nl_dec_payload({rtnetlink}, MsgType, << Family:8, _Pad1:8, _Pad2:16, IfIndex:32/native-signed-integer, State:16/native-integer, Flags:8, NdmType:8, Data/binary >>)
+nl_dec_payload(ctnetlink_exp, _MsgType, << Family:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
+    Fam = gen_socket:family(Family),
+    { Fam, Version, ResId, nl_dec_nla(Fam, fun decode_ctnetlink_exp/3, Data) };
+
+nl_dec_payload(rtnetlink, MsgType, << Family:8, _Pad1:8, _Pad2:16, IfIndex:32/native-signed-integer, State:16/native-integer, Flags:8, NdmType:8, Data/binary >>)
   when MsgType == newneigh; MsgType == delneigh ->
     Fam = gen_socket:family(Family),
-    { Fam, IfIndex, State, Flags, NdmType, nl_dec_nla(Fam, {rtnetlink,neigh}, Data) };
+    { Fam, IfIndex, State, Flags, NdmType, nl_dec_nla(Fam, fun decode_rtnetlink_neigh/3, Data) };
 
-nl_dec_payload({rtnetlink}, MsgType, << Family:8, DstLen:8, SrcLen:8, Tos:8, Table:8, Protocol:8, Scope:8, RtmType:8, Flags:32/native-integer, Data/binary >>)
+nl_dec_payload(rtnetlink, MsgType, << Family:8, DstLen:8, SrcLen:8, Tos:8, Table:8, Protocol:8, Scope:8, RtmType:8, Flags:32/native-integer, Data/binary >>)
   when MsgType == newroute; MsgType == delroute ->
     Fam = gen_socket:family(Family),
-    { Fam, DstLen, SrcLen, Tos, dec_rtm_table(Table), dec_rtm_protocol(Protocol), dec_rtm_scope(Scope), dec_rtm_type(RtmType), dec_flags({rtnetlink, rtm_flags}, Flags), nl_dec_nla(Fam, {rtnetlink,route}, Data) };
+    { Fam, DstLen, SrcLen, Tos, dec_rtm_table(Table), dec_rtm_protocol(Protocol), dec_rtm_scope(Scope), dec_rtm_type(RtmType), decode_rtnetlink_rtm_flags(Flags), nl_dec_nla(Fam, fun decode_rtnetlink_route/3, Data) };
 
-nl_dec_payload({rtnetlink}, MsgType, << Family:8, PrefixLen:8, Flags:8, Scope:8, Index:32/native-integer, Data/binary >>)
+nl_dec_payload(rtnetlink, MsgType, << Family:8, PrefixLen:8, Flags:8, Scope:8, Index:32/native-integer, Data/binary >>)
   when MsgType == newaddr; MsgType == deladdr ->
     Fam = gen_socket:family(Family),
-    { Fam, PrefixLen, Flags, Scope, Index, nl_dec_nla(Fam, {rtnetlink,addr}, Data) };
+    { Fam, PrefixLen, Flags, Scope, Index, nl_dec_nla(Fam, fun decode_rtnetlink_addr/3, Data) };
 
-nl_dec_payload({rtnetlink}, MsgType, << Family:8, _Pad:8, Type:16/native-integer, Index:32/native-integer, Flags:32/native-integer, Change:32/native-integer, Data/binary >>)
+nl_dec_payload(rtnetlink, MsgType, << Family:8, _Pad:8, Type:16/native-integer, Index:32/native-integer, Flags:32/native-integer, Change:32/native-integer, Data/binary >>)
   when MsgType == newlink; MsgType == dellink ->
     Fam = gen_socket:family(Family),
-    { Fam, gen_socket:arphdr(Type), Index, dec_iff_flags(Flags), dec_iff_flags(Change), nl_dec_nla(Fam, {rtnetlink,link}, Data) };
+    { Fam, gen_socket:arphdr(Type), Index, decode_iff_flags(Flags), decode_iff_flags(Change), nl_dec_nla(Fam, fun decode_rtnetlink_link/3, Data) };
 
-nl_dec_payload({rtnetlink}, MsgType, << Family:8, _Pad1:8, _Pad2:16, IfIndex:32/native-signed-integer, PfxType:8, PfxLen:8, Flags:8, _Pad3:8, Data/binary >>)
+nl_dec_payload(rtnetlink, MsgType, << Family:8, _Pad1:8, _Pad2:16, IfIndex:32/native-signed-integer, PfxType:8, PfxLen:8, Flags:8, _Pad3:8, Data/binary >>)
   when MsgType == newprefix; MsgType == delprefix ->
     Fam = gen_socket:family(Family),
-    { Fam, IfIndex, PfxType, PfxLen, Flags, nl_dec_nla(Fam, {rtnetlink,prefix}, Data) };
+    { Fam, IfIndex, PfxType, PfxLen, Flags, nl_dec_nla(Fam, fun decode_rtnetlink_prefix/3, Data) };
 
 nl_dec_payload(_SubSys, _MsgType, Data) ->
     Data.
@@ -1150,20 +655,17 @@ nl_ct_dec(Msg) ->
 
 nl_ct_dec(<< Len:32/native-integer, Type:16/native-integer, Flags:16/native-integer, Seq:32/native-integer, Pid:32/native-integer, Data/binary >> = Msg, Acc) ->
     {DecodedMsg, Next} = case nlmsg_ok(size(Msg), Len) of
-							 true ->
+			     true ->
                                  PayLoadLen = Len - 16,
                                  << PayLoad:PayLoadLen/bytes, NextMsg/binary >> = Data,
 
-								 SubSys = nfnl_subsys(Type bsr 8),
-								 MsgType = ipctnl_msg(SubSys, Type band 16#00FF),
-								 Flags0 = case MsgType of
-											  new -> dec_flags(nlm_new_flags, Flags);
-											  _   -> dec_flags(nlm_get_flags, Flags)
-										  end,
-								 {{ SubSys, MsgType, Flags0, Seq, Pid, nl_dec_payload({SubSys}, MsgType, PayLoad) }, NextMsg};
-							 _ ->
-								 {{ error, format }, << >>}
-						 end,
+				 SubSys = nfnl_subsys(Type bsr 8),
+				 MsgType = decode_ipctnl_msg(SubSys, Type band 16#00FF),
+				 Flags0 = decode_nlm_msg_flags(MsgType, Flags),
+				 {{ SubSys, MsgType, Flags0, Seq, Pid, nl_dec_payload(SubSys, MsgType, PayLoad) }, NextMsg};
+			     _ ->
+				 {{ error, format }, << >>}
+			 end,
     nl_ct_dec(Next, [DecodedMsg | Acc]);
 
 nl_ct_dec(<< >>, Acc) ->
@@ -1179,7 +681,7 @@ nl_rt_dec(<< Len:32/native-integer, Type:16/native-integer, Flags:16/native-inte
                                  PayLoadLen = Len - 16,
                                  << PayLoad:PayLoadLen/bytes, NextMsg/binary >> = Data,
                                  MsgType = dec_rtm_msgtype(Type),
-                                 {{ rtnetlink, MsgType, dec_flags(nlm_flags, Flags), Seq, Pid, nl_dec_payload({rtnetlink}, MsgType, PayLoad) }, NextMsg};
+                                 {{ rtnetlink, MsgType, decode_nlm_flags(Flags), Seq, Pid, nl_dec_payload(rtnetlink, MsgType, PayLoad) }, NextMsg};
                              _ ->
                                  {{ error, format }, << >>}
                  end,
@@ -1188,42 +690,32 @@ nl_rt_dec(<< Len:32/native-integer, Type:16/native-integer, Flags:16/native-inte
 nl_rt_dec(<< >>, Acc) ->
     lists:reverse(Acc).
 
-enc_flags(Type, [F|T], Ret) ->
-    V = case dec_netlink(Type, F) of
-            {X, _} when is_integer(X) -> 1 bsl X;
-            _ -> 0
-        end,
-    enc_flags(Type, T, V bor Ret);
-enc_flags(_Type, [], Ret) ->
-    Ret.
-
 enc_nlmsghdr_flags(Type, Flags) when
       Type == getlink; Type == getaddr; Type == getroute; Type == getneigh;
       Type == getrule; Type == getqdisc; Type == gettclass; Type == gettfilter;
       Type == getaction; Type == getmulticast; Type == getanycast; Type == getneightbl;
       Type == getaddrlabel; Type == getdcb ->
-    enc_flags(nlm_get_flags, Flags, 0);
+    encode_flag(flag_info_nlm_get_flags(), Flags);
 enc_nlmsghdr_flags(Type, Flags) when
       Type == newlink; Type == newaddr; Type == newroute; Type == newneigh;
       Type == newrule; Type == newqdisc; Type == newtclass; Type == newtfilter;
       Type == newaction; Type == newprefix; Type == newneightbl; Type == newnduseropt;
       Type == newaddrlabel ->
-    enc_flags(nlm_new_flags, Flags, 0);
+    encode_flag(flag_info_nlm_new_flags(), Flags);
 enc_nlmsghdr_flags(_Type, Flags) ->
-    enc_flags(nlm_flags, Flags, 0).
+    encode_flag(flag_info_nlm_flags(), Flags).
 
 enc_nlmsghdr(Type, Flags, Seq, Pid, Req) when is_list(Flags) ->
     enc_nlmsghdr(Type, enc_nlmsghdr_flags(Type, Flags), Seq, Pid, Req);
 enc_nlmsghdr(Type, Flags, Seq, Pid, Req) when is_atom(Type) ->
-    {NumType, _} = dec_netlink(rtm_msgtype, Type),
-    enc_nlmsghdr(NumType, Flags, Seq, Pid, Req);
+    enc_nlmsghdr(encode_rtm_msgtype(Type), Flags, Seq, Pid, Req);
 enc_nlmsghdr(Type, Flags, Seq, Pid, Req) when is_integer(Flags), is_binary(Req) ->
     Payload = pad_to(4, Req),
     Len = 16 + byte_size(Payload),
     << Len:32/native-integer, Type:16/native-integer, Flags:16/native-integer, Seq:32/native-integer, Pid:32/native-integer, Payload/binary >>.
 
 nl_rt_enc({rtnetlink, MsgType, Flags, Seq, Pid, PayLoad}) ->
-	Data = nl_enc_payload({rtnetlink}, MsgType, PayLoad),
+	Data = nl_enc_payload(rtnetlink, MsgType, PayLoad),
 	enc_nlmsghdr(MsgType, Flags, Seq, Pid, Data);
 nl_rt_enc(Msg)
   when is_list(Msg) ->
@@ -1245,17 +737,13 @@ nl_ct_enc(Msg)
 
 nl_ct_enc({SubSys, MsgType, Flags, Seq, Pid, PayLoad})
   when is_atom(SubSys), is_atom(MsgType) ->
-	nl_ct_enc({SubSys, ipctnl_msg(SubSys, MsgType), Flags, Seq, Pid, PayLoad});
+	nl_ct_enc({SubSys, encode_ipctnl_msg(SubSys, MsgType), Flags, Seq, Pid, PayLoad});
 
 nl_ct_enc({SubSys, MsgType, Flags, Seq, Pid, PayLoad})
   when is_atom(SubSys), is_integer(MsgType) ->
-	Data = nl_enc_payload({SubSys}, MsgType, PayLoad),
+	Data = nl_enc_payload(SubSys, MsgType, PayLoad),
 	Type = (nfnl_subsys(SubSys) bsl 8) bor MsgType,
-	Flags0 = case ipctnl_msg(SubSys, MsgType) of
-				 new -> enc_flags(nlm_new_flags, Flags);
-				 _ ->   enc_flags(nlm_get_flags, Flags)
-			 end,
-	enc_nlmsghdr(Type, Flags0, Seq, Pid, Data).
+	enc_nlmsghdr(Type, Flags, Seq, Pid, Data).
 
 rtnl_wilddump(Family, Type) ->
     NumFamily = gen_socket:family(Family),
@@ -1316,8 +804,6 @@ request(ServerName, SubSys, Msg) ->
 %%
 
 init(Opts) ->
-    create_table(),
-
     {ok, CtNl} = socket(netlink, raw, ?NETLINK_NETFILTER, Opts),
     ok = gen_socket:bind(CtNl, sockaddr_nl(netlink, 0, -1)),
     ok = gen_socket:input_event(CtNl, true),

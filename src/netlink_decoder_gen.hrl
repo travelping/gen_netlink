@@ -5,13 +5,14 @@
 %% ============================
 
 flag_info_nlm_flags() ->
-    [{1,request},{2,multi},{4,ack},{8,echo}].
+    [{1,request},{2,multi},{4,ack},{8,echo},{16,dump_intr}].
 
 flag_info_nlm_get_flags() ->
     [{1,request},
      {2,multi},
      {4,ack},
      {8,echo},
+     {16,dump_intr},
      {256,root},
      {512,match},
      {1024,atomic}].
@@ -21,6 +22,7 @@ flag_info_nlm_new_flags() ->
      {2,multi},
      {4,ack},
      {8,echo},
+     {16,dump_intr},
      {256,replace},
      {512,excl},
      {1024,create},

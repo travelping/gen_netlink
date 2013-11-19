@@ -319,7 +319,21 @@ decode_nlm_msg_flags(_, Flags) ->
 decode_rtnetlink_rtm_flags(Flags) ->
     decode_flag(flag_info_rtnetlink_rtm_flags(), Flags).
 
-decode_nlm_flags(Flags) ->
+decode_nlm_flags(Type, Flags) when
+      Type == getlink; Type == getaddr; Type == getroute; Type == getneigh;
+      Type == getrule; Type == getqdisc; Type == gettclass; Type == gettfilter;
+      Type == getaction; Type == getmulticast; Type == getanycast; Type == getneightbl;
+      Type == getaddrlabel; Type == getdcb ->
+    decode_flag(flag_info_nlm_get_flags(), Flags);
+
+decode_nlm_flags(Type, Flags) when
+      Type == newlink; Type == newaddr; Type == newroute; Type == newneigh;
+      Type == newrule; Type == newqdisc; Type == newtclass; Type == newtfilter;
+      Type == newaction; Type == newprefix; Type == newneightbl; Type == newnduseropt;
+      Type == newaddrlabel ->
+    decode_flag(flag_info_nlm_new_flags(), Flags);
+
+decode_nlm_flags(_Type, Flags) ->
     decode_flag(flag_info_nlm_flags(), Flags).
 
 decode_iff_flags(Flags) ->
@@ -681,7 +695,7 @@ nl_rt_dec(<< Len:32/native-integer, Type:16/native-integer, Flags:16/native-inte
                                  PayLoadLen = Len - 16,
                                  << PayLoad:PayLoadLen/bytes, NextMsg/binary >> = Data,
                                  MsgType = dec_rtm_msgtype(Type),
-                                 {{ rtnetlink, MsgType, decode_nlm_flags(Flags), Seq, Pid, nl_dec_payload(rtnetlink, MsgType, PayLoad) }, NextMsg};
+                                 {{ rtnetlink, MsgType, decode_nlm_flags(MsgType, Flags), Seq, Pid, nl_dec_payload(rtnetlink, MsgType, PayLoad) }, NextMsg};
                              _ ->
                                  {{ error, format }, << >>}
                  end,

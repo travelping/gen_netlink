@@ -52,29 +52,32 @@ define_consts() ->
                     {setdcb,       {atom, "?RTM_SETDCB"}}
                  ]},
      {nlm_flags, [
-                  {request, {flag,  0}},
-                  {multi,   {flag,  1}},
-                  {ack,     {flag,  2}},
-                  {echo,    {flag,  3}}
+                  {request,   {flag,  0}},
+                  {multi,     {flag,  1}},
+                  {ack,       {flag,  2}},
+                  {echo,      {flag,  3}},
+                  {dump_intr, {flag,  4}}
                  ]},
      {nlm_get_flags, [
-                      {request, {flag,  0}},
-                      {multi,   {flag,  1}},
-                      {ack,     {flag,  2}},
-                      {echo,    {flag,  3}},
-                      {root,    {flag,  8}},
-                      {match,   {flag,  9}},
-                      {atomic,  {flag, 10}}
+                      {request,   {flag,  0}},
+                      {multi,     {flag,  1}},
+                      {ack,       {flag,  2}},
+                      {echo,      {flag,  3}},
+		      {dump_intr, {flag,  4}},
+                      {root,      {flag,  8}},
+                      {match,     {flag,  9}},
+                      {atomic,    {flag, 10}}
                  ]},
      {nlm_new_flags, [
-                      {request, {flag,  0}},
-                      {multi,   {flag,  1}},
-                      {ack,     {flag,  2}},
-                      {echo,    {flag,  3}},
-                      {replace, {flag,  8}},
-                      {excl,    {flag,  9}},
-                      {create,  {flag, 10}},
-                      {append,  {flag, 11}}
+                      {request,   {flag,  0}},
+                      {multi,     {flag,  1}},
+                      {ack,       {flag,  2}},
+                      {echo,      {flag,  3}},
+		      {dump_intr, {flag,  4}},
+                      {replace,   {flag,  8}},
+                      {excl,      {flag,  9}},
+                      {create,    {flag, 10}},
+                      {append,    {flag, 11}}
                  ]},
      {iff_flags, [
                     {up, flag},

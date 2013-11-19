@@ -22,6 +22,17 @@
 -define(NETLINK_SCSITRANSPORT, 18).
 -define(NETLINK_ECRYPTFS, 19).
 
+-define(NUD_INCOMPLETE, 16#01).
+-define(NUD_REACHABLE,  16#02).
+-define(NUD_STALE,      16#04).
+-define(NUD_DELAY,      16#08).
+-define(NUD_PROBE,      16#10).
+-define(NUD_FAILED,     16#20).
+%% Dummy states
+-define(NUD_NOARP,      16#40).
+-define(NUD_PERMANENT,  16#80).
+-define(NUD_NONE,       16#00).
+
 -type nl_flags() :: list(atom()).
 -type family() :: atom().
 -type protocol() :: atom().
@@ -105,6 +116,22 @@
 -record(prefix_cacheinfo, {
 	  preferred_time :: integer(),
 	  valid_time     :: integer()
+	 }).
+
+-record(neighbour_cache_entry, {
+	  key,                    %% {if_index, dst}
+	  if_index,
+	  dst,
+	  lladdr
+	 }).
+
+-record(route_cache_entry, {
+	  key,
+	  dst,
+	  dst_len,
+	  table,
+	  gateway,
+	  oif
 	 }).
 
 -type netlink_record() :: #rtnetlink{} | #ctnetlink{} | #ctnetlink_exp{}.

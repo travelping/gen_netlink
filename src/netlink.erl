@@ -842,9 +842,11 @@ init(Opts) ->
 
     ok = setsockopt(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_link),
     ok = setsockopt(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_notify),
+    ok = setsockopt(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_neigh),
     ok = setsockopt(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_ipv4_ifaddr),
     ok = setsockopt(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_ipv4_route),
-
+    ok = setsockopt(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_ipv6_ifaddr),
+    ok = setsockopt(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_ipv6_route),
 
     {ok, #state{
         ct = CtNl, rt = RtNl,

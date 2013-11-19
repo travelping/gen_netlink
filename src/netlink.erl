@@ -574,7 +574,7 @@ nl_enc_payload(ctnetlink_exp, _MsgType, {Family, Version, ResId, Req}) ->
 	<< Fam:8, Version:8, ResId:16/native-integer, Data/binary >>;
 
 nl_enc_payload(rtnetlink, MsgType, {Family, IfIndex, State, Flags, NdmType, Req})
-  when MsgType == newneigh; MsgType == delneigh ->
+  when MsgType == getneigh; MsgType == newneigh; MsgType == delneigh ->
     Fam = gen_socket:family(Family),
     Data = nl_enc_nla(Family, fun encode_rtnetlink_neigh/2, Req),
     << Fam:8, 0:8, 0:16, IfIndex:32/native-signed-integer, State:16/native-integer, Flags:8, NdmType:8, Data/binary >>;
@@ -634,12 +634,12 @@ nl_dec_payload(ctnetlink_exp, _MsgType, << Family:8, Version:8, ResId:16/native-
     { Fam, Version, ResId, nl_dec_nla(Fam, fun decode_ctnetlink_exp/3, Data) };
 
 nl_dec_payload(rtnetlink, MsgType, << Family:8, _Pad1:8, _Pad2:16, IfIndex:32/native-signed-integer, State:16/native-integer, Flags:8, NdmType:8, Data/binary >>)
-  when MsgType == newneigh; MsgType == delneigh ->
+  when MsgType == getneigh; MsgType == newneigh; MsgType == delneigh ->
     Fam = gen_socket:family(Family),
     { Fam, IfIndex, State, Flags, NdmType, nl_dec_nla(Fam, fun decode_rtnetlink_neigh/3, Data) };
 
 nl_dec_payload(rtnetlink, MsgType, << Family:8, DstLen:8, SrcLen:8, Tos:8, Table:8, Protocol:8, Scope:8, RtmType:8, Flags:32/native-integer, Data/binary >>)
-  when MsgType == newroute; MsgType == delroute ->
+  when MsgType == newroute; MsgType == delroute; MsgType == getroute ->
     Fam = gen_socket:family(Family),
     { Fam, DstLen, SrcLen, Tos, dec_rtm_table(Table), dec_rtm_protocol(Protocol), dec_rtm_scope(Scope), dec_rtm_type(RtmType), decode_rtnetlink_rtm_flags(Flags), nl_dec_nla(Fam, fun decode_rtnetlink_route/3, Data) };
 

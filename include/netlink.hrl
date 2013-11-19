@@ -70,6 +70,43 @@
 		  msg           ::ctnetlink_msg()
 		 }).
 
+-record(nda_cacheinfo, {
+	  confirmed :: integer(),
+	  used      :: integer(),
+	  updated   :: integer(),
+	  refcnt    :: integer()
+	 }).
+
+-record(ifa_cacheinfo, {
+	  prefered :: integer(),
+	  valid    :: integer(),
+	  cstamp   :: integer(),             %% created timestamp, hundredths of seconds
+	  tstamp   :: integer()              %% updated timestamp, hundredths of seconds
+	 }).
+
+-record(ifla_cacheinfo, {
+	  max_reasm_len  :: integer(),
+	  tstamp         :: integer(),       %% ipv6InterfaceTable updated timestamp
+	  reachable_time :: integer(),
+	  retrans_time   :: integer()
+	 }).
+
+-record(rta_cacheinfo, {
+	  rta_clntref :: integer(),
+	  rta_lastuse :: integer(),
+	  rta_expires :: integer(),
+	  rta_error   :: integer(),
+	  rta_used    :: integer(),
+	  rta_id      :: integer(),
+	  rta_ts      :: integer(),
+	  rta_tsage   :: integer()
+	 }).
+
+-record(prefix_cacheinfo, {
+	  preferred_time :: integer(),
+	  valid_time     :: integer()
+	 }).
+
 -type netlink_record() :: #rtnetlink{} | #ctnetlink{} | #ctnetlink_exp{}.
 
 -type ctnetlink_ev() :: {ctnetlink, MsgGrp :: [#ctnetlink{} | #ctnetlink_exp{}, ...]}.

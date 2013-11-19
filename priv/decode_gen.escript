@@ -266,11 +266,11 @@ define_consts() ->
                             {inactive, flag},
                             {userspace, flag}
                           ]},
-      {{rtnetlink, neigh}, [
+     {{rtnetlink, neigh}, [
                            {unspec, none},
                            {dst, addr},
                            {lladdr, mac},
-                           {cacheinfo, huint32_array},
+                           {nda_cacheinfo, huint32_array},
                            {probes, huint32}
                  ]},
      {{rtnetlink, rtm_type}, [
@@ -336,7 +336,7 @@ define_consts() ->
                            {multipath, none},
                            {protoinfo, none},
                            {flow, huint32},
-                           {cacheinfo, huint32_array},
+                           {rta_cacheinfo, huint32_array},
                            {session, none},
                            {mp_algo, none},
                            {table, huint32}
@@ -365,7 +365,7 @@ define_consts() ->
                                 {label, string},
                                 {broadcast, addr},
                                 {anycast, addr},
-                                {cacheinfo, huint32_array},
+                                {ifa_cacheinfo, huint32_array},
                                 {multicast, addr}
                                ]},
      {{rtnetlink, link}, [
@@ -420,7 +420,7 @@ define_consts() ->
                                             {conf, hsint32_array},
                                             {stats, huint64_array},
                                             {mcast, none},
-                                            {cacheinfo, huint32_array},
+                                            {ifla_cacheinfo, huint32_array},
                                             {icmp6stats, huint64_array}
                                            ]},
      {{rtnetlink, link, protinfo, inet6, flags}, [
@@ -433,7 +433,7 @@ define_consts() ->
      {{rtnetlink, prefix}, [
                             {unspec, none},
                             {address, addr},
-                            {cacheinfo, huint32_array}
+                            {prefix_cacheinfo, huint32_array}
                            ]}
     ].
 

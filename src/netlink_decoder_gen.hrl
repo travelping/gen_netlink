@@ -651,7 +651,7 @@ decode_rtnetlink_neigh(_Family, 2, Value) ->
     {lladdr, decode_mac(Value)};
 
 decode_rtnetlink_neigh(_Family, 3, Value) ->
-    decode_huint32_array(cacheinfo, Value);
+    decode_huint32_array(nda_cacheinfo, Value);
 
 decode_rtnetlink_neigh(_Family, 4, Value) ->
     {probes, decode_huint32(Value)};
@@ -826,7 +826,7 @@ decode_rtnetlink_route(_Family, 11, Value) ->
     {flow, decode_huint32(Value)};
 
 decode_rtnetlink_route(_Family, 12, Value) ->
-    decode_huint32_array(cacheinfo, Value);
+    decode_huint32_array(rta_cacheinfo, Value);
 
 decode_rtnetlink_route(_Family, 13, Value) ->
     {session, decode_none(Value)};
@@ -911,7 +911,7 @@ decode_rtnetlink_addr(_Family, 5, Value) ->
     {anycast, decode_addr(Value)};
 
 decode_rtnetlink_addr(_Family, 6, Value) ->
-    decode_huint32_array(cacheinfo, Value);
+    decode_huint32_array(ifa_cacheinfo, Value);
 
 decode_rtnetlink_addr(_Family, 7, Value) ->
     {multicast, decode_addr(Value)};
@@ -1071,7 +1071,7 @@ decode_rtnetlink_link_protinfo_inet6(_Family, 4, Value) ->
     {mcast, decode_none(Value)};
 
 decode_rtnetlink_link_protinfo_inet6(_Family, 5, Value) ->
-    decode_huint32_array(cacheinfo, Value);
+    decode_huint32_array(ifla_cacheinfo, Value);
 
 decode_rtnetlink_link_protinfo_inet6(_Family, 6, Value) ->
     decode_huint64_array(icmp6stats, Value);
@@ -1088,7 +1088,7 @@ decode_rtnetlink_prefix(_Family, 1, Value) ->
     {address, decode_addr(Value)};
 
 decode_rtnetlink_prefix(_Family, 2, Value) ->
-    decode_huint32_array(cacheinfo, Value);
+    decode_huint32_array(ifa_cacheinfo, Value);
 
 decode_rtnetlink_prefix(_Family, Id, Value) ->
     {Id, Value}.
@@ -1685,7 +1685,7 @@ encode_rtnetlink_neigh(_Family, {lladdr, Value}) ->
     encode_mac(2, Value);
 
 encode_rtnetlink_neigh(_Family, Value)
-  when is_tuple(Value), element(1, Value) == cacheinfo ->
+  when is_tuple(Value), element(1, Value) == nda_cacheinfo ->
     encode_huint32_array(3, Value);
 
 encode_rtnetlink_neigh(_Family, {probes, Value}) ->
@@ -1862,7 +1862,7 @@ encode_rtnetlink_route(_Family, {flow, Value}) ->
     encode_huint32(11, Value);
 
 encode_rtnetlink_route(_Family, Value)
-  when is_tuple(Value), element(1, Value) == cacheinfo ->
+  when is_tuple(Value), element(1, Value) == rta_cacheinfo ->
     encode_huint32_array(12, Value);
 
 encode_rtnetlink_route(_Family, {session, Value}) ->
@@ -1950,7 +1950,7 @@ encode_rtnetlink_addr(_Family, {anycast, Value}) ->
     encode_addr(5, Value);
 
 encode_rtnetlink_addr(_Family, Value)
-  when is_tuple(Value), element(1, Value) == cacheinfo ->
+  when is_tuple(Value), element(1, Value) == ifa_cacheinfo ->
     encode_huint32_array(6, Value);
 
 encode_rtnetlink_addr(_Family, {multicast, Value}) ->
@@ -2118,7 +2118,7 @@ encode_rtnetlink_link_protinfo_inet6(_Family, {mcast, Value}) ->
     encode_none(4, Value);
 
 encode_rtnetlink_link_protinfo_inet6(_Family, Value)
-  when is_tuple(Value), element(1, Value) == cacheinfo ->
+  when is_tuple(Value), element(1, Value) == ifla_cacheinfo ->
     encode_huint32_array(5, Value);
 
 encode_rtnetlink_link_protinfo_inet6(_Family, Value)
@@ -2138,7 +2138,7 @@ encode_rtnetlink_prefix(_Family, {address, Value}) ->
     encode_addr(1, Value);
 
 encode_rtnetlink_prefix(_Family, Value)
-  when is_tuple(Value), element(1, Value) == cacheinfo ->
+  when is_tuple(Value), element(1, Value) == ifa_cacheinfo ->
     encode_huint32_array(2, Value);
 
 encode_rtnetlink_prefix(_Family, {Type, Value})

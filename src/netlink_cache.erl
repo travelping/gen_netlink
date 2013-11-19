@@ -17,7 +17,7 @@
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
--include_lib("gen_netlink/include/netlink.hrl").
+-include("include/netlink.hrl").
 
 %% API
 -export([start/0, start/2, start/3,

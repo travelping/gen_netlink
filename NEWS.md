@@ -12,3 +12,4 @@ Version 0.4.0 - xx Oct 2013
 * add dump_intr flag
 * MAC's are no longer decoded into tupples, all other app's use binaries
   for MAC's, do the same here
+* fix protocol field en/decoding for route events

@@ -588,10 +588,9 @@ nl_enc_payload(rtnetlink, MsgType, {Family, PrefixLen, Flags, Scope, Index, Req}
 nl_enc_payload(rtnetlink, MsgType, {Family, DstLen, SrcLen, Tos, Table, Protocol, Scope, RtmType, Flags, Req})
   when MsgType == newroute; MsgType == delroute ; MsgType == getroute ->
     Fam = gen_socket:family(Family),
-    Proto = gen_socket:protocol(Protocol),
     io:format("nl_enc_payload: ~p~n", [{Family, DstLen, SrcLen, Tos, Table, Protocol, Scope, RtmType, Flags, Req}]),
     io:format("~p, ~p, ~p, ~p, ~p~n", [encode_rtnetlink_rtm_table(Table),
-				       encode_rtnetlink_rtm_protocol(Proto),
+				       encode_rtnetlink_rtm_protocol(Protocol),
 				       encode_rtnetlink_rtm_scope(Scope),
 				       encode_rtnetlink_rtm_type(RtmType),
 				       encode_rtnetlink_rtm_flags(Flags)]),
@@ -599,7 +598,7 @@ nl_enc_payload(rtnetlink, MsgType, {Family, DstLen, SrcLen, Tos, Table, Protocol
     Data = nl_enc_nla(Family, fun encode_rtnetlink_route/2, Req),
     << Fam:8, DstLen:8, SrcLen:8, Tos:8,
        (encode_rtnetlink_rtm_table(Table)):8,
-       (encode_rtnetlink_rtm_protocol(Proto)):8,
+       (encode_rtnetlink_rtm_protocol(Protocol)):8,
        (encode_rtnetlink_rtm_scope(Scope)):8,
        (encode_rtnetlink_rtm_type(RtmType)):8,
        (encode_rtnetlink_rtm_flags(Flags)):32/native-integer, Data/binary >>;

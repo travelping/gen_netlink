@@ -10,3 +10,5 @@ Version 0.4.0 - xx Oct 2013
   (gives about 2x speedup)
 * add proper records for cacheinfo's
 * add dump_intr flag
+* MAC's are no longer decoded into tupples, all other app's use binaries
+  for MAC's, do the same here

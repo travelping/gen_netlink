@@ -451,7 +451,9 @@ encode_huint32(NlaType, Val) ->
 encode_protocol(NlaType, Proto) ->
 	enc_nla(NlaType, <<(gen_socket:protocol(Proto)):8>>).
 encode_mac(NlaType, {A, B, C, D, E, F}) ->
-	enc_nla(NlaType, << A:8, B:8, C:8, D:8, E:8, F:8 >>).
+	enc_nla(NlaType, << A:8, B:8, C:8, D:8, E:8, F:8 >>);
+encode_mac(NlaType, MAC) when is_binary(MAC), size(MAC) == 6 ->
+	enc_nla(NlaType, MAC).
 
 encode_addr(NlaType, {A, B, C, D}) ->
 	enc_nla(NlaType, << A:8, B:8, C:8, D:8 >>);
@@ -500,8 +502,8 @@ decode_huint32(<< Val:32/native-integer >>) ->
 
 decode_protocol(<< Proto:8 >>) ->
     gen_socket:protocol(Proto).
-decode_mac(<< A:8, B:8, C:8, D:8, E:8, F:8 >>) ->
-    {A, B, C, D, E, F}.
+decode_mac(MAC) when size(MAC) == 6 ->
+    MAC.
 decode_addr(<< A:8, B:8, C:8, D:8 >>) ->
     {A, B, C, D};
 decode_addr(<<A:16, B:16, C:16, D:16, E:16, F:16, G:16, H:16>>) ->

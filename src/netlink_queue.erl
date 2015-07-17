@@ -109,7 +109,7 @@ nfnl_query(Socket, Query) ->
     end.
 
 build_send_cfg_msg(Socket, Command, Queue, Pf) ->
-    Cmd = {cmd, {Command, Pf}},
+    Cmd = {cmd, Command, Pf},
     Msg = {queue, config, [ack,request], 0, 0, {unspec, 0, Queue, [Cmd]}},
     nfnl_query(Socket, Msg).
 
@@ -123,7 +123,7 @@ nfq_create_queue(Socket, Queue) ->
     build_send_cfg_msg(Socket, bind, Queue, unspec).
 
 nfq_set_mode(Socket, Queue, CopyMode, CopyLen) ->
-    Cmd = {params, {CopyLen, CopyMode}},
+    Cmd = {params, CopyLen, CopyMode},
     Msg = {queue, config, [ack,request], 0, 0, {unspec, 0, Queue, [Cmd]}},
     nfnl_query(Socket, Msg).
 
@@ -139,11 +139,10 @@ process_nfq_msg({queue, packet, _Flags, _Seq, _Pid, Packet}, State) ->
 
 process_nfq_packet({inet, _Version, _Queue, Info}, #state{socket = Socket, queue = Queue}) ->
     dump_packet(Info),
-    {_, Hdr} = lists:keyfind(packet_hdr, 1, Info),
-    Id = element(1, Hdr),
+    {_, Id, _, _} = lists:keyfind(packet_hdr, 1, Info),
     lager:debug("Verdict for ~p~n", [Id]),
 
-    NLA = {verdict_hdr, {?NF_ACCEPT, Id}},
+    NLA = {verdict_hdr, ?NF_ACCEPT, Id},
     Msg = {queue, verdict, [request], 0, 0, {unspec, 0, Queue, [NLA]}},
     Request = netlink:nl_ct_enc(Msg),
     gen_socket:sendto(Socket, netlink:sockaddr_nl(netlink, 0, 0), Request).

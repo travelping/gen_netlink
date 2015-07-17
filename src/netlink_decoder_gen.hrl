@@ -1171,10 +1171,10 @@ decode_nfqnl_cfg_msg(_Family, 0, Value) ->
     {unspec, decode_none(Value)};
 
 decode_nfqnl_cfg_msg(_Family, 1, Value) ->
-    {cmd, decode_nfqnl_cfg_msg_struct(cmd, Value)};
+    decode_nfqnl_cfg_msg(cmd, Value);
 
 decode_nfqnl_cfg_msg(_Family, 2, Value) ->
-    {params, decode_nfqnl_cfg_msg_struct(params, Value)};
+    decode_nfqnl_cfg_msg(params, Value);
 
 decode_nfqnl_cfg_msg(_Family, 3, Value) ->
     {queue_maxlen, decode_none(Value)};
@@ -1194,16 +1194,16 @@ decode_nfqnl_attr(_Family, 0, Value) ->
     {unspec, decode_none(Value)};
 
 decode_nfqnl_attr(_Family, 1, Value) ->
-    {packet_hdr, decode_nfqnl_attr_struct(packet_hdr, Value)};
+    decode_nfqnl_attr(packet_hdr, Value);
 
 decode_nfqnl_attr(_Family, 2, Value) ->
-    {verdict_hdr, decode_nfqnl_attr_struct(verdict_hdr, Value)};
+    decode_nfqnl_attr(verdict_hdr, Value);
 
 decode_nfqnl_attr(_Family, 3, Value) ->
     {mark, decode_uint32(Value)};
 
 decode_nfqnl_attr(_Family, 4, Value) ->
-    {timestamp, decode_nfqnl_attr_struct(timestamp, Value)};
+    decode_nfqnl_attr(timestamp, Value);
 
 decode_nfqnl_attr(_Family, 5, Value) ->
     {ifindex_indev, decode_uint32(Value)};
@@ -1218,7 +1218,7 @@ decode_nfqnl_attr(_Family, 8, Value) ->
     {ifindex_physoutdev, decode_uint32(Value)};
 
 decode_nfqnl_attr(_Family, 9, Value) ->
-    {hwaddr, decode_nfqnl_attr_struct(hwaddr, Value)};
+    decode_nfqnl_attr(hwaddr, Value);
 
 decode_nfqnl_attr(_Family, 10, Value) ->
     {payload, decode_binary(Value)};
@@ -2374,11 +2374,13 @@ encode_nfqnl_config_cmd(Value) when is_integer(Value) ->
 encode_nfqnl_cfg_msg(_Family, {unspec, Value}) ->
     encode_none(0, Value);
 
-encode_nfqnl_cfg_msg(_Family, {cmd, Value}) ->
-    enc_nla(1, encode_nfqnl_cfg_msg_struct(cmd, Value));
+encode_nfqnl_cfg_msg(_Family, Value)
+  when is_tuple(Value), element(1, Value) == cmd ->
+    enc_nla(1, encode_nfqnl_cfg_msg(Value));
 
-encode_nfqnl_cfg_msg(_Family, {params, Value}) ->
-    enc_nla(2, encode_nfqnl_cfg_msg_struct(params, Value));
+encode_nfqnl_cfg_msg(_Family, Value)
+  when is_tuple(Value), element(1, Value) == params ->
+    enc_nla(2, encode_nfqnl_cfg_msg(Value));
 
 encode_nfqnl_cfg_msg(_Family, {queue_maxlen, Value}) ->
     encode_none(3, Value);
@@ -2398,17 +2400,20 @@ encode_nfqnl_cfg_msg(_Family, {Type, Value})
 encode_nfqnl_attr(_Family, {unspec, Value}) ->
     encode_none(0, Value);
 
-encode_nfqnl_attr(_Family, {packet_hdr, Value}) ->
-    enc_nla(1, encode_nfqnl_attr_struct(packet_hdr, Value));
+encode_nfqnl_attr(_Family, Value)
+  when is_tuple(Value), element(1, Value) == packet_hdr ->
+    enc_nla(1, encode_nfqnl_attr(Value));
 
-encode_nfqnl_attr(_Family, {verdict_hdr, Value}) ->
-    enc_nla(2, encode_nfqnl_attr_struct(verdict_hdr, Value));
+encode_nfqnl_attr(_Family, Value)
+  when is_tuple(Value), element(1, Value) == verdict_hdr ->
+    enc_nla(2, encode_nfqnl_attr(Value));
 
 encode_nfqnl_attr(_Family, {mark, Value}) ->
     encode_uint32(3, Value);
 
-encode_nfqnl_attr(_Family, {timestamp, Value}) ->
-    enc_nla(4, encode_nfqnl_attr_struct(timestamp, Value));
+encode_nfqnl_attr(_Family, Value)
+  when is_tuple(Value), element(1, Value) == timestamp ->
+    enc_nla(4, encode_nfqnl_attr(Value));
 
 encode_nfqnl_attr(_Family, {ifindex_indev, Value}) ->
     encode_uint32(5, Value);
@@ -2422,8 +2427,9 @@ encode_nfqnl_attr(_Family, {ifindex_physindev, Value}) ->
 encode_nfqnl_attr(_Family, {ifindex_physoutdev, Value}) ->
     encode_uint32(8, Value);
 
-encode_nfqnl_attr(_Family, {hwaddr, Value}) ->
-    enc_nla(9, encode_nfqnl_attr_struct(hwaddr, Value));
+encode_nfqnl_attr(_Family, Value)
+  when is_tuple(Value), element(1, Value) == hwaddr ->
+    enc_nla(9, encode_nfqnl_attr(Value));
 
 encode_nfqnl_attr(_Family, {payload, Value}) ->
     encode_binary(10, Value);

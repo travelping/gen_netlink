@@ -497,20 +497,20 @@ encode_huint32_array(NlaType, Req) ->
 encode_huint64_array(NlaType, Req) ->
     enc_nla(NlaType, << <<H:8/native-integer-unit:8>> || H <- tl(tuple_to_list(Req)) >>).
 
-encode_nfqnl_cfg_msg_struct(cmd, {Command, Pf}) ->
+encode_nfqnl_cfg_msg({cmd, Command, Pf}) ->
     <<(encode_nfqnl_config_cmd(Command)):8, 0:8, (gen_socket:family(Pf)):16>>;
-encode_nfqnl_cfg_msg_struct(params, {CopyRange, CopyMode}) ->
+encode_nfqnl_cfg_msg({params, CopyRange, CopyMode}) ->
     << CopyRange:32, CopyMode:8 >>.
 
-encode_nfqnl_attr_struct(packet_hdr, {PacketId, HwProtocol, Hook}) ->
+encode_nfqnl_attr({packet_hdr, PacketId, HwProtocol, Hook}) ->
     <<PacketId:32, HwProtocol:16, Hook:8>>;
-encode_nfqnl_attr_struct(verdict_hdr, {Verdict, Id}) ->
+encode_nfqnl_attr({verdict_hdr, Verdict, Id}) ->
     <<Verdict:32, Id:32>>;
-encode_nfqnl_attr_struct(timestamp, {Sec, USec}) ->
+encode_nfqnl_attr({timestamp, Sec, USec}) ->
     <<Sec:64, USec:64>>;
-encode_nfqnl_attr_struct(hwaddr, HwAddr) ->
+encode_nfqnl_attr({hwaddr, HwAddr}) ->
     <<(size(HwAddr)):16, 0:16, (pad_to(8, HwAddr))/binary>>;
-encode_nfqnl_attr_struct(_Type, Data) when is_binary(Data) ->
+encode_nfqnl_attr({_Type, Data}) when is_binary(Data) ->
     Data.
 
 %%
@@ -563,20 +563,20 @@ decode_huint32_array(Attr, Data) ->
 decode_huint64_array(Attr, Data) ->
     list_to_tuple([Attr | [ H || <<H:8/native-integer-unit:8>> <= Data ]]).
 
-decode_nfqnl_cfg_msg_struct(cmd, << Command:8, _Pad:8, Pf:16>>) ->
-    {decode_nfqnl_config_cmd(Command), gen_socket:family(Pf)};
-decode_nfqnl_cfg_msg_struct(params, << CopyRange:32, CopyMode:8 >>) ->
-    {CopyRange, CopyMode}.
+decode_nfqnl_cfg_msg(cmd, << Command:8, _Pad:8, Pf:16>>) ->
+    {cmd, decode_nfqnl_config_cmd(Command), gen_socket:family(Pf)};
+decode_nfqnl_cfg_msg(params, << CopyRange:32, CopyMode:8 >>) ->
+    {params, CopyRange, CopyMode}.
 
-decode_nfqnl_attr_struct(packet_hdr, <<PacketId:32, HwProtocol:16, Hook:8>>) ->
-    {PacketId, HwProtocol, Hook};
-decode_nfqnl_attr_struct(verdict_hdr, <<Verdict:32, Id:32>>) ->
-    {Verdict, Id};
-decode_nfqnl_attr_struct(timestamp, <<Sec:64, USec:64>>) ->
-    {Sec, USec};
-decode_nfqnl_attr_struct(hwaddr, <<Len:16, _Pad:16, HwAddr:Len/binary, _/binary>>) ->
-    HwAddr;
-decode_nfqnl_attr_struct(Type, Data) ->
+decode_nfqnl_attr(packet_hdr, <<PacketId:32, HwProtocol:16, Hook:8>>) ->
+    {packet_hdr, PacketId, HwProtocol, Hook};
+decode_nfqnl_attr(verdict_hdr, <<Verdict:32, Id:32>>) ->
+    {verdict_hdr, Verdict, Id};
+decode_nfqnl_attr(timestamp, <<Sec:64, USec:64>>) ->
+    {timestamp, Sec, USec};
+decode_nfqnl_attr(hwaddr, <<Len:16, _Pad:16, HwAddr:Len/binary, _/binary>>) ->
+    {hwaddr, HwAddr};
+decode_nfqnl_attr(Type, Data) ->
     {Type, Data}.
 
 %%

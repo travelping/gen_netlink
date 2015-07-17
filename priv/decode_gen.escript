@@ -584,7 +584,7 @@ make_decoder({Name, Attr, Pos, Type})
 
 make_decoder({Name, Attr, Pos, struct}) ->
     %% built in
-    io_lib:format("decode_~s(_Family, ~w, Value) ->~n    {~p, decode_~s_struct(~p, Value)}", [format_name(Name), Pos, Attr, format_name(Name), Attr]);
+    io_lib:format("decode_~s(_Family, ~w, Value) ->~n    decode_~s(~p, Value)", [format_name(Name), Pos, format_name(Name), Attr]);
 
 make_decoder({Name, Attr, Pos, Type}) ->
     io_lib:format("decode_~s(Family, ~w, Value) ->~n    {~p, nl_dec_nla(Family, fun decode_~s/3, Value)}", [format_name(Name), Pos, Attr, format_name(make_name(Name, Type))]).
@@ -627,6 +627,10 @@ make_encoder({Name, Attr, Pos, Type})
     %% built ins
     io_lib:format("encode_~s(_Family, Value)~n  when is_tuple(Value), element(1, Value) == ~p ->~n    encode_~p(~s, Value)", [format_name(Name), Attr, Type, format_id(Pos)]);
 
+make_encoder({Name, Attr, Pos, struct}) ->
+    %% built in
+    io_lib:format("encode_~s(_Family, Value)~n  when is_tuple(Value), element(1, Value) == ~p ->~n    enc_nla(~s, encode_~s(Value))", [format_name(Name), Attr, format_id(Pos), format_name(Name)]);
+
 make_encoder({Name, Attr, Pos, Type})
   when Type == binary; Type == none; Type == string;
        Type == uint8;  Type == uint16;  Type == uint32;  Type == uint64;
@@ -634,10 +638,6 @@ make_encoder({Name, Attr, Pos, Type})
        Type == protocol; Type == mac; Type == addr ->
     %% built ins
     io_lib:format("encode_~s(_Family, {~p, Value}) ->~n    encode_~p(~s, Value)", [format_name(Name), Attr, Type, format_id(Pos)]);
-
-make_encoder({Name, Attr, Pos, struct}) ->
-    %% built in
-    io_lib:format("encode_~s(_Family, {~p, Value}) ->~n    enc_nla(~s, encode_~s_struct(~p, Value))", [format_name(Name), Attr, format_id(Pos), format_name(Name), Attr]);
 
 make_encoder({Name, Attr, Pos, Type}) ->
     io_lib:format("encode_~s(Family, {~p, Value}) ->~n    enc_nla(~s bor 16#8000, nl_enc_nla(Family, fun encode_~s/2, Value))", [format_name(Name), Attr, format_id(Pos), format_name(make_name(Name, Type))]).

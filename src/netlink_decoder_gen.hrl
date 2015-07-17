@@ -998,6 +998,39 @@ decode_rtnetlink_link(_Family, 23, Value) ->
 decode_rtnetlink_link(_Family, 24, Value) ->
     {vf_ports, decode_none(Value)};
 
+decode_rtnetlink_link(_Family, 25, Value) ->
+    {port_self, decode_none(Value)};
+
+decode_rtnetlink_link(_Family, 26, Value) ->
+    {af_spec, decode_none(Value)};
+
+decode_rtnetlink_link(_Family, 27, Value) ->
+    {group, decode_none(Value)};
+
+decode_rtnetlink_link(_Family, 28, Value) ->
+    {net_ns_fd, decode_none(Value)};
+
+decode_rtnetlink_link(_Family, 29, Value) ->
+    {ext_mask, decode_huint32(Value)};
+
+decode_rtnetlink_link(_Family, 30, Value) ->
+    {promiscuity, decode_none(Value)};
+
+decode_rtnetlink_link(_Family, 31, Value) ->
+    {num_tx_queues, decode_none(Value)};
+
+decode_rtnetlink_link(_Family, 32, Value) ->
+    {num_rx_queues, decode_none(Value)};
+
+decode_rtnetlink_link(_Family, 33, Value) ->
+    {carrier, decode_none(Value)};
+
+decode_rtnetlink_link(_Family, 34, Value) ->
+    {phys_port_id, decode_none(Value)};
+
+decode_rtnetlink_link(_Family, 35, Value) ->
+    {carrier_changes, decode_none(Value)};
+
 decode_rtnetlink_link(_Family, Id, Value) ->
     {Id, Value}.
 
@@ -1090,9 +1123,128 @@ decode_rtnetlink_prefix(_Family, 1, Value) ->
     {address, decode_addr(Value)};
 
 decode_rtnetlink_prefix(_Family, 2, Value) ->
-    decode_huint32_array(ifa_cacheinfo, Value);
+    decode_huint32_array(prefix_cacheinfo, Value);
 
 decode_rtnetlink_prefix(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_ctm_msgtype_queue(?NFQNL_MSG_PACKET) ->
+    packet;
+
+decode_ctm_msgtype_queue(?NFQNL_MSG_VERDICT) ->
+    verdict;
+
+decode_ctm_msgtype_queue(?NFQNL_MSG_CONFIG) ->
+    config;
+
+decode_ctm_msgtype_queue(?NFQNL_MSG_VERDICT_BATCH) ->
+    verdict_batch;
+
+decode_ctm_msgtype_queue(Value) ->
+    Value.
+
+%% ============================
+
+decode_nfqnl_config_cmd(?NFQNL_CFG_CMD_NONE) ->
+    none;
+
+decode_nfqnl_config_cmd(?NFQNL_CFG_CMD_BIND) ->
+    bind;
+
+decode_nfqnl_config_cmd(?NFQNL_CFG_CMD_UNBIND) ->
+    unbind;
+
+decode_nfqnl_config_cmd(?NFQNL_CFG_CMD_PF_BIND) ->
+    pf_bind;
+
+decode_nfqnl_config_cmd(?NFQNL_CFG_CMD_PF_UNBIND) ->
+    pf_unbind;
+
+decode_nfqnl_config_cmd(Value) ->
+    Value.
+
+%% ============================
+
+decode_nfqnl_cfg_msg(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nfqnl_cfg_msg(_Family, 1, Value) ->
+    {cmd, decode_nfqnl_cfg_msg_struct(cmd, Value)};
+
+decode_nfqnl_cfg_msg(_Family, 2, Value) ->
+    {params, decode_nfqnl_cfg_msg_struct(params, Value)};
+
+decode_nfqnl_cfg_msg(_Family, 3, Value) ->
+    {queue_maxlen, decode_none(Value)};
+
+decode_nfqnl_cfg_msg(_Family, 4, Value) ->
+    {mask, decode_none(Value)};
+
+decode_nfqnl_cfg_msg(_Family, 5, Value) ->
+    {flags, decode_none(Value)};
+
+decode_nfqnl_cfg_msg(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nfqnl_attr(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nfqnl_attr(_Family, 1, Value) ->
+    {packet_hdr, decode_nfqnl_attr_struct(packet_hdr, Value)};
+
+decode_nfqnl_attr(_Family, 2, Value) ->
+    {verdict_hdr, decode_nfqnl_attr_struct(verdict_hdr, Value)};
+
+decode_nfqnl_attr(_Family, 3, Value) ->
+    {mark, decode_uint32(Value)};
+
+decode_nfqnl_attr(_Family, 4, Value) ->
+    {timestamp, decode_nfqnl_attr_struct(timestamp, Value)};
+
+decode_nfqnl_attr(_Family, 5, Value) ->
+    {ifindex_indev, decode_uint32(Value)};
+
+decode_nfqnl_attr(_Family, 6, Value) ->
+    {ifindex_outdev, decode_uint32(Value)};
+
+decode_nfqnl_attr(_Family, 7, Value) ->
+    {ifindex_physindev, decode_uint32(Value)};
+
+decode_nfqnl_attr(_Family, 8, Value) ->
+    {ifindex_physoutdev, decode_uint32(Value)};
+
+decode_nfqnl_attr(_Family, 9, Value) ->
+    {hwaddr, decode_nfqnl_attr_struct(hwaddr, Value)};
+
+decode_nfqnl_attr(_Family, 10, Value) ->
+    {payload, decode_binary(Value)};
+
+decode_nfqnl_attr(_Family, 11, Value) ->
+    {ct, decode_none(Value)};
+
+decode_nfqnl_attr(_Family, 12, Value) ->
+    {ct_info, decode_none(Value)};
+
+decode_nfqnl_attr(_Family, 13, Value) ->
+    {cap_len, decode_uint32(Value)};
+
+decode_nfqnl_attr(_Family, 14, Value) ->
+    {skb_info, decode_uint32(Value)};
+
+decode_nfqnl_attr(_Family, 15, Value) ->
+    {exp, decode_none(Value)};
+
+decode_nfqnl_attr(_Family, 16, Value) ->
+    {uid, decode_uint32(Value)};
+
+decode_nfqnl_attr(_Family, 17, Value) ->
+    {gid, decode_uint32(Value)};
+
+decode_nfqnl_attr(_Family, Id, Value) ->
     {Id, Value}.
 
 %% ============================
@@ -2041,6 +2193,39 @@ encode_rtnetlink_link(_Family, Value)
 encode_rtnetlink_link(_Family, {vf_ports, Value}) ->
     encode_none(24, Value);
 
+encode_rtnetlink_link(_Family, {port_self, Value}) ->
+    encode_none(25, Value);
+
+encode_rtnetlink_link(_Family, {af_spec, Value}) ->
+    encode_none(26, Value);
+
+encode_rtnetlink_link(_Family, {group, Value}) ->
+    encode_none(27, Value);
+
+encode_rtnetlink_link(_Family, {net_ns_fd, Value}) ->
+    encode_none(28, Value);
+
+encode_rtnetlink_link(_Family, {ext_mask, Value}) ->
+    encode_huint32(29, Value);
+
+encode_rtnetlink_link(_Family, {promiscuity, Value}) ->
+    encode_none(30, Value);
+
+encode_rtnetlink_link(_Family, {num_tx_queues, Value}) ->
+    encode_none(31, Value);
+
+encode_rtnetlink_link(_Family, {num_rx_queues, Value}) ->
+    encode_none(32, Value);
+
+encode_rtnetlink_link(_Family, {carrier, Value}) ->
+    encode_none(33, Value);
+
+encode_rtnetlink_link(_Family, {phys_port_id, Value}) ->
+    encode_none(34, Value);
+
+encode_rtnetlink_link(_Family, {carrier_changes, Value}) ->
+    encode_none(35, Value);
+
 encode_rtnetlink_link(_Family, {Type, Value})
   when is_integer(Type), is_binary(Value) ->
     enc_nla(Type, Value).
@@ -2140,9 +2325,130 @@ encode_rtnetlink_prefix(_Family, {address, Value}) ->
     encode_addr(1, Value);
 
 encode_rtnetlink_prefix(_Family, Value)
-  when is_tuple(Value), element(1, Value) == ifa_cacheinfo ->
+  when is_tuple(Value), element(1, Value) == prefix_cacheinfo ->
     encode_huint32_array(2, Value);
 
 encode_rtnetlink_prefix(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_ctm_msgtype_queue(packet) ->
+    ?NFQNL_MSG_PACKET;
+
+encode_ctm_msgtype_queue(verdict) ->
+    ?NFQNL_MSG_VERDICT;
+
+encode_ctm_msgtype_queue(config) ->
+    ?NFQNL_MSG_CONFIG;
+
+encode_ctm_msgtype_queue(verdict_batch) ->
+    ?NFQNL_MSG_VERDICT_BATCH;
+
+encode_ctm_msgtype_queue(Value) when is_integer(Value) ->
+    Value.
+
+%% ============================
+
+encode_nfqnl_config_cmd(none) ->
+    ?NFQNL_CFG_CMD_NONE;
+
+encode_nfqnl_config_cmd(bind) ->
+    ?NFQNL_CFG_CMD_BIND;
+
+encode_nfqnl_config_cmd(unbind) ->
+    ?NFQNL_CFG_CMD_UNBIND;
+
+encode_nfqnl_config_cmd(pf_bind) ->
+    ?NFQNL_CFG_CMD_PF_BIND;
+
+encode_nfqnl_config_cmd(pf_unbind) ->
+    ?NFQNL_CFG_CMD_PF_UNBIND;
+
+encode_nfqnl_config_cmd(Value) when is_integer(Value) ->
+    Value.
+
+%% ============================
+
+encode_nfqnl_cfg_msg(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nfqnl_cfg_msg(_Family, {cmd, Value}) ->
+    enc_nla(1, encode_nfqnl_cfg_msg_struct(cmd, Value));
+
+encode_nfqnl_cfg_msg(_Family, {params, Value}) ->
+    enc_nla(2, encode_nfqnl_cfg_msg_struct(params, Value));
+
+encode_nfqnl_cfg_msg(_Family, {queue_maxlen, Value}) ->
+    encode_none(3, Value);
+
+encode_nfqnl_cfg_msg(_Family, {mask, Value}) ->
+    encode_none(4, Value);
+
+encode_nfqnl_cfg_msg(_Family, {flags, Value}) ->
+    encode_none(5, Value);
+
+encode_nfqnl_cfg_msg(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nfqnl_attr(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nfqnl_attr(_Family, {packet_hdr, Value}) ->
+    enc_nla(1, encode_nfqnl_attr_struct(packet_hdr, Value));
+
+encode_nfqnl_attr(_Family, {verdict_hdr, Value}) ->
+    enc_nla(2, encode_nfqnl_attr_struct(verdict_hdr, Value));
+
+encode_nfqnl_attr(_Family, {mark, Value}) ->
+    encode_uint32(3, Value);
+
+encode_nfqnl_attr(_Family, {timestamp, Value}) ->
+    enc_nla(4, encode_nfqnl_attr_struct(timestamp, Value));
+
+encode_nfqnl_attr(_Family, {ifindex_indev, Value}) ->
+    encode_uint32(5, Value);
+
+encode_nfqnl_attr(_Family, {ifindex_outdev, Value}) ->
+    encode_uint32(6, Value);
+
+encode_nfqnl_attr(_Family, {ifindex_physindev, Value}) ->
+    encode_uint32(7, Value);
+
+encode_nfqnl_attr(_Family, {ifindex_physoutdev, Value}) ->
+    encode_uint32(8, Value);
+
+encode_nfqnl_attr(_Family, {hwaddr, Value}) ->
+    enc_nla(9, encode_nfqnl_attr_struct(hwaddr, Value));
+
+encode_nfqnl_attr(_Family, {payload, Value}) ->
+    encode_binary(10, Value);
+
+encode_nfqnl_attr(_Family, {ct, Value}) ->
+    encode_none(11, Value);
+
+encode_nfqnl_attr(_Family, {ct_info, Value}) ->
+    encode_none(12, Value);
+
+encode_nfqnl_attr(_Family, {cap_len, Value}) ->
+    encode_uint32(13, Value);
+
+encode_nfqnl_attr(_Family, {skb_info, Value}) ->
+    encode_uint32(14, Value);
+
+encode_nfqnl_attr(_Family, {exp, Value}) ->
+    encode_none(15, Value);
+
+encode_nfqnl_attr(_Family, {uid, Value}) ->
+    encode_uint32(16, Value);
+
+encode_nfqnl_attr(_Family, {gid, Value}) ->
+    encode_uint32(17, Value);
+
+encode_nfqnl_attr(_Family, {Type, Value})
   when is_integer(Type), is_binary(Value) ->
     enc_nla(Type, Value).

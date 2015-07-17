@@ -209,6 +209,43 @@ rt_linkinfo_complex() ->
       40,0,18,0,9,0,1,0,118,108,97,110,0,0,0,0,24,0,2,0,6,0,1,0,103,0,0,0,12,0,
       2,0,1,0,0,0,255,255,255,255>>.
 
+nfq_unbind() ->
+    <<28,0,0,0,2,3,5,0,0,0,0,0,0,0,0,0,0,0,0,0,8,0,1,0,4,0,0,2>>.
+nfq_unbind_answer() ->
+    <<36,0,0,0,2,0,0,0,0,0,0,0,174,4,0,0,0,0,0,0,28,0,0,0,2,3,5,0,0,0,0,0,0,0,0,0>>.
+
+nfq_bind_queue() ->
+    <<28,0,0,0,2,3,5,0,0,0,0,0,0,0,0,0,0,0,0,0,8,0,1,0,3,0,0,2>>.
+
+nfq_bind_queue_answer() ->
+    <<36,0,0,0,2,0,0,0,0,0,0,0,189,4,0,0,0,0,0,0,28,0,0,0,2,3,5,0,0,0,0,0,0,0,0,0>>.
+
+nfq_bind_socket() ->
+    <<28,0,0,0,2,3,5,0,0,0,0,0,0,0,0,0,0,0,0,0,8,0,1,0,1,0,0,0>>.
+
+nfq_bind_socket_answer() ->
+    <<36,0,0,0,2,0,0,0,0,0,0,0,189,4,0,0,0,0,0,0,28,0,0,0,2,3,5,0,0,0,0,0,0,0,0,0>>.
+
+nfq_set_copy_mode() ->
+    <<32,0,0,0,2,3,5,0,0,0,0,0,0,0,0,0,0,0,0,0,9,0,2,0,0,0,255,255,2,0,0,0>>.
+
+nfq_set_copy_mode_answer() ->
+    <<36,0,0,0,2,0,0,0,0,0,0,0,189,4,0,0,0,0,0,0,32,0,0,0,2,3,5,0,0,0,0,0,0,0,0,0>>.
+
+nfq_set_verdict() ->
+    <<32,0,0,0,1,3,1,0,0,0,0,0,0,0,0,0,0,0,0,0,12,0,2,0,0,0,0,1,0,0,0,1>>.
+
+nfq_packet() ->
+    <<176,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,2,0,0,0,11,0,1,0,0,0,
+      0,1,8,0,0,0,8,0,5,0,0,0,0,11,8,0,3,0,8,12,0,0,16,0,9,0,
+      0,6,0,0,0,80,86,150,196,3,0,0,20,0,4,0,0,0,0,0,85,167,
+      197,137,0,0,0,0,0,10,209,138,92,0,10,0,69,192,0,88,87,
+      34,0,0,1,89,213,56,172,28,0,17,224,0,0,5,2,1,0,52,172,
+      28,0,17,0,0,0,0,0,0,0,2,0,0,1,16,0,7,94,156,255,255,255,
+      0,0,10,2,1,0,0,0,40,172,28,0,17,172,28,0,32,10,0,0,1,
+      172,28,0,16,231,148,79,84,211,63,84,12,100,46,35,199,
+      185,157,63,9>>.
+
 %%--------------------------------------------------------------------
 %% @spec suite() -> Info
 %% Info = [tuple()]
@@ -228,37 +265,61 @@ test_rt_newneigh_1(_Config) ->
 test_rt_newneigh_2(_Config) ->
 	Msg = rt_newneigh_2(),
 	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)).
-	
+
 test_rt_delroute(_Config) ->
 	Msg = rt_delroute(),
 	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)).
-	
+
 test_rt_newprefix(_Config) ->
 	Msg = rt_newprefix(),
 	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)).
-	
+
 test_rt_newlink_1(_Config) ->
 	Msg = rt_newlink_1(),
 	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)).
-	
+
 test_rt_newlink_2(_Config) ->
 	Msg = rt_newlink_2(),
 	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)).
-	
+
 test_rt_linkinfo_1(_Config) ->
 	Msg = rt_linkinfo_1(),
 	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)).
-	
+
 test_rt_linkinfo_complex(_Config) ->
 	Msg = rt_linkinfo_complex(),
 	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)).
-	
-all() -> 
+
+test_nfq_unbind(_Config) ->
+    Msg = nfq_unbind(),
+    Msg = netlink:nl_ct_enc(netlink:nl_ct_dec(Msg)).
+
+test_nfq_bind_queue(_Config) ->
+    Msg = nfq_bind_queue(),
+    Msg = netlink:nl_ct_enc(netlink:nl_ct_dec(Msg)).
+
+test_nfq_bind_socket(_Config) ->
+    Msg = nfq_bind_socket(),
+    Msg = netlink:nl_ct_enc(netlink:nl_ct_dec(Msg)).
+
+test_nfq_set_copy_mode(_Config) ->
+    Msg = nfq_set_copy_mode(),
+    Msg = netlink:nl_ct_enc(netlink:nl_ct_dec(Msg)).
+
+test_nfq_set_verdict(_Config) ->
+    Msg = nfq_set_verdict(),
+    Msg = netlink:nl_ct_enc(netlink:nl_ct_dec(Msg)).
+
+all() ->
 	[test_conntrack_new,
 	 test_rt_newneigh_1, test_rt_newneigh_2, test_rt_delroute,
 	 test_rt_newprefix,
 	 test_rt_newlink_1, test_rt_newlink_2,
-	 test_rt_linkinfo_1, test_rt_linkinfo_complex].
+	 test_rt_linkinfo_1, test_rt_linkinfo_complex,
+	 test_nfq_unbind, test_nfq_bind_queue,
+	 test_nfq_bind_socket, test_nfq_set_copy_mode,
+	 test_nfq_set_verdict
+	].
 
 init_per_suite(Config) ->
 	R = netlink:start(),

@@ -33,6 +33,13 @@
 -define(NUD_PERMANENT,  16#80).
 -define(NUD_NONE,       16#00).
 
+-define(NF_DROP,   0).
+-define(NF_ACCEPT, 1).
+-define(NF_STOLEN, 2).
+-define(NF_QUEUE,  3).
+-define(NF_REPEAT, 4).
+-define(NF_STOP,   5).
+
 -type nl_flags() :: list(atom()).
 -type family() :: atom().
 -type protocol() :: atom().
@@ -132,6 +139,14 @@
 	  table,
 	  gateway,
 	  oif
+	 }).
+
+-record(ifinfomsg, {
+	  family,
+	  type,
+	  index,
+	  flags,
+	  change
 	 }).
 
 -type netlink_record() :: #rtnetlink{} | #ctnetlink{} | #ctnetlink_exp{}.

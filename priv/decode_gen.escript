@@ -396,7 +396,18 @@ define_consts() ->
                           {num_vf, huint32},
                           {vfinfo_list, none},
                           {stats64, huint64_array},
-                          {vf_ports, none}
+                          {vf_ports, none},
+			  {port_self, none},
+			  {af_spec, none},
+			  {group, none},
+			  {net_ns_fd, none},
+			  {ext_mask, huint32},
+			  {promiscuity, none},
+			  {num_tx_queues, none},
+			  {num_rx_queues, none},
+			  {carrier, none},
+			  {phys_port_id, none},
+			  {carrier_changes, none}
                          ]},
      {{rtnetlink, link, operstate}, [
                                      unknown,
@@ -437,7 +448,52 @@ define_consts() ->
                             {unspec, none},
                             {address, addr},
                             {prefix_cacheinfo, huint32_array}
-                           ]}
+                           ]},
+
+     {{ctm_msgtype, queue}, [
+			     {packet,        {atom, "?NFQNL_MSG_PACKET"}},
+			     {verdict,       {atom, "?NFQNL_MSG_VERDICT"}},
+			     {config,        {atom, "?NFQNL_MSG_CONFIG"}},
+			     {verdict_batch, {atom, "?NFQNL_MSG_VERDICT_BATCH"}}
+			    ]},
+
+     {{nfqnl, config, cmd}, [
+			     {none,      {atom, "?NFQNL_CFG_CMD_NONE"}},
+			     {bind,      {atom, "?NFQNL_CFG_CMD_BIND"}},
+			     {unbind,    {atom, "?NFQNL_CFG_CMD_UNBIND"}},
+			     {pf_bind,   {atom, "?NFQNL_CFG_CMD_PF_BIND"}},
+			     {pf_unbind, {atom, "?NFQNL_CFG_CMD_PF_UNBIND"}}
+			    ]},
+
+     {{ nfqnl, cfg, msg}, [
+			   {unspec,       none},
+			   {cmd,          struct},        %% nfqnl_msg_config_cmd
+			   {params,       struct},        %% nfqnl_msg_config_params
+			   {queue_maxlen, none},          %% __u32
+			   {mask,         none},          %% identify which flags to change
+			   {flags,        none}           %% value of these flags (__u32)
+		     ]},
+
+     {{ nfqnl, attr }, [
+		       {unspec,             none},
+		       {packet_hdr,         struct},
+		       {verdict_hdr,        struct},                                    %% nfqnl_msg_verdict_hrd
+		       {mark,               uint32},                                    %% __u32 nfmark
+		       {timestamp,          struct},                                    %% nfqnl_msg_packet_timestamp
+		       {ifindex_indev,      uint32},                                    %% __u32 ifindex
+		       {ifindex_outdev,     uint32},                                    %% __u32 ifindex
+		       {ifindex_physindev,  uint32},                                    %% __u32 ifindex
+		       {ifindex_physoutdev, uint32},                                    %% __u32 ifindex
+		       {hwaddr,             struct},                                    %% nfqnl_msg_packet_hw
+		       {payload,            binary},                                    %% opaque data payload
+		       {ct,                 none},                                      %% nf_conntrack_netlink.h
+		       {ct_info,            none},                                      %% enum ip_conntrack_info
+		       {cap_len,            uint32},                                    %% __u32 length of captured packet
+		       {skb_info,           uint32},                                    %% __u32 skb meta information
+		       {exp,                none},                                      %% nf_conntrack_netlink.h
+		       {uid,                uint32},                                    %% __u32 sk uid
+		       {gid,                uint32}                                     %% __u32 sk gid
+		      ]}
     ].
 
 make_prefix(Id) when is_atom(Id) ->
@@ -526,6 +582,10 @@ make_decoder({Name, Attr, Pos, Type})
     %% built ins
     io_lib:format("decode_~s(_Family, ~w, Value) ->~n    {~p, decode_~p(Value)}", [format_name(Name), Pos, Attr, Type]);
 
+make_decoder({Name, Attr, Pos, struct}) ->
+    %% built in
+    io_lib:format("decode_~s(_Family, ~w, Value) ->~n    {~p, decode_~s_struct(~p, Value)}", [format_name(Name), Pos, Attr, format_name(Name), Attr]);
+
 make_decoder({Name, Attr, Pos, Type}) ->
     io_lib:format("decode_~s(Family, ~w, Value) ->~n    {~p, nl_dec_nla(Family, fun decode_~s/3, Value)}", [format_name(Name), Pos, Attr, format_name(make_name(Name, Type))]).
 
@@ -574,6 +634,10 @@ make_encoder({Name, Attr, Pos, Type})
        Type == protocol; Type == mac; Type == addr ->
     %% built ins
     io_lib:format("encode_~s(_Family, {~p, Value}) ->~n    encode_~p(~s, Value)", [format_name(Name), Attr, Type, format_id(Pos)]);
+
+make_encoder({Name, Attr, Pos, struct}) ->
+    %% built in
+    io_lib:format("encode_~s(_Family, {~p, Value}) ->~n    enc_nla(~s, encode_~s_struct(~p, Value))", [format_name(Name), Attr, format_id(Pos), format_name(Name), Attr]);
 
 make_encoder({Name, Attr, Pos, Type}) ->
     io_lib:format("encode_~s(Family, {~p, Value}) ->~n    enc_nla(~s bor 16#8000, nl_enc_nla(Family, fun encode_~s/2, Value))", [format_name(Name), Attr, format_id(Pos), format_name(make_name(Name, Type))]).

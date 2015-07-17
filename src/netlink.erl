@@ -275,6 +275,24 @@ nfnl_subsys(count)             -> ?NFNL_SUBSYS_COUNT.
 -define(IPCTNL_MSG_EXP_GET, 1).
 -define(IPCTNL_MSG_EXP_DELETE, 2).
 
+-define(NLM_F_DUMP, 16#0300).
+
+-define(NFQNL_MSG_PACKET, 0).              %% packet from kernel to userspace
+-define(NFQNL_MSG_VERDICT, 1).             %% verdict from userspace to kernel
+-define(NFQNL_MSG_CONFIG, 2).              %% connect to a particular queue
+-define(NFQNL_MSG_VERDICT_BATCH, 3).       %% batchv from userspace to kernel
+
+-define(NFQA_CFG_UNSPEC, 0).
+-define(NFQA_CFG_CMD, 1).                  %% nfqnl_msg_config_cmd
+-define(NFQA_CFG_PARAMS, 2).               %% nfqnl_msg_config_params
+-define(NFQA_CFG_QUEUE_MAXLEN, 3).         %% u_int32_t
+
+-define(NFQNL_CFG_CMD_NONE, 0).
+-define(NFQNL_CFG_CMD_BIND, 1).
+-define(NFQNL_CFG_CMD_UNBIND, 2).
+-define(NFQNL_CFG_CMD_PF_BIND, 3).
+-define(NFQNL_CFG_CMD_PF_UNBIND, 4).
+
 -include("netlink_decoder_gen.hrl").
 
 dec_rtm_msgtype(Type) ->
@@ -309,7 +327,9 @@ decode_ipctnl_msg(netlink, Type) ->
 decode_ipctnl_msg(ctnetlink, Type) ->
     decode_ctm_msgtype_ctnetlink(Type);
 decode_ipctnl_msg(ctnetlink_exp, Type) ->
-    decode_ctm_msgtype_ctnetlink_exp(Type).
+    decode_ctm_msgtype_ctnetlink_exp(Type);
+decode_ipctnl_msg(queue, Type) ->
+    decode_ctm_msgtype_queue(Type).
 
 decode_nlm_msg_flags(new, Flags) ->
     decode_flag(flag_info_nlm_new_flags(), Flags);
@@ -348,20 +368,22 @@ encode_rtnetlink_rtm_flags(Flags) ->
 encode_rtnetlink_link_protinfo(inet6, Value) ->
     encode_rtnetlink_link_protinfo_inet6(inet6, Value);
 encode_rtnetlink_link_protinfo(Family, Value) ->
-    io:format("encode_rtnetlink_link_protinfo: ~p~n", {Family, Value}).
+    lager:error("encode_rtnetlink_link_protinfo: ~p~n", {Family, Value}).
 
 encode_ctnetlink_protoinfo_dccp(Family, Value) ->
-    io:format("encode_ctnetlink: ~p~n", {Family, Value}).
+    lager:error("encode_ctnetlink: ~p~n", {Family, Value}).
 
 encode_ctnetlink_protoinfo_sctp(Family, Value) ->
-    io:format("encode_ctnetlink_protoinfo_sctp: ~p~n", {Family, Value}).
+    lager:error("encode_ctnetlink_protoinfo_sctp: ~p~n", {Family, Value}).
 
 encode_ipctnl_msg(netlink, Type) ->
     encode_ctm_msgtype_netlink(Type);
 encode_ipctnl_msg(ctnetlink, Type) ->
     encode_ctm_msgtype_ctnetlink(Type);
 encode_ipctnl_msg(ctnetlink_exp, Type) ->
-    encode_ctm_msgtype_ctnetlink_exp(Type).
+    encode_ctm_msgtype_ctnetlink_exp(Type);
+encode_ipctnl_msg(queue, Type) ->
+    encode_ctm_msgtype_queue(Type).
 
 sockaddr_nl(Family, Pid, Groups) ->
     sockaddr_nl({Family, Pid, Groups}).
@@ -403,7 +425,7 @@ encode_flag(Type, [Flag|Next], Value) when is_atom(Flag) ->
     end.
 
 encode_flag(Type, Flag) ->
-    io:format("encode_flag: ~p, ~p~n", [Type, Flag]),
+    lager:debug("encode_flag: ~p, ~p~n", [Type, Flag]),
     encode_flag(Type, Flag, 0).
 
 
@@ -475,6 +497,22 @@ encode_huint32_array(NlaType, Req) ->
 encode_huint64_array(NlaType, Req) ->
     enc_nla(NlaType, << <<H:8/native-integer-unit:8>> || H <- tl(tuple_to_list(Req)) >>).
 
+encode_nfqnl_cfg_msg_struct(cmd, {Command, Pf}) ->
+    <<(encode_nfqnl_config_cmd(Command)):8, 0:8, (gen_socket:family(Pf)):16>>;
+encode_nfqnl_cfg_msg_struct(params, {CopyRange, CopyMode}) ->
+    << CopyRange:32, CopyMode:8 >>.
+
+encode_nfqnl_attr_struct(packet_hdr, {PacketId, HwProtocol, Hook}) ->
+    <<PacketId:32, HwProtocol:16, Hook:8>>;
+encode_nfqnl_attr_struct(verdict_hdr, {Verdict, Id}) ->
+    <<Verdict:32, Id:32>>;
+encode_nfqnl_attr_struct(timestamp, {Sec, USec}) ->
+    <<Sec:64, USec:64>>;
+encode_nfqnl_attr_struct(hwaddr, HwAddr) ->
+    <<(size(HwAddr)):16, 0:16, (pad_to(8, HwAddr))/binary>>;
+encode_nfqnl_attr_struct(_Type, Data) when is_binary(Data) ->
+    Data.
+
 %%
 %% decoder
 %%
@@ -525,6 +563,22 @@ decode_huint32_array(Attr, Data) ->
 decode_huint64_array(Attr, Data) ->
     list_to_tuple([Attr | [ H || <<H:8/native-integer-unit:8>> <= Data ]]).
 
+decode_nfqnl_cfg_msg_struct(cmd, << Command:8, _Pad:8, Pf:16>>) ->
+    {decode_nfqnl_config_cmd(Command), gen_socket:family(Pf)};
+decode_nfqnl_cfg_msg_struct(params, << CopyRange:32, CopyMode:8 >>) ->
+    {CopyRange, CopyMode}.
+
+decode_nfqnl_attr_struct(packet_hdr, <<PacketId:32, HwProtocol:16, Hook:8>>) ->
+    {PacketId, HwProtocol, Hook};
+decode_nfqnl_attr_struct(verdict_hdr, <<Verdict:32, Id:32>>) ->
+    {Verdict, Id};
+decode_nfqnl_attr_struct(timestamp, <<Sec:64, USec:64>>) ->
+    {Sec, USec};
+decode_nfqnl_attr_struct(hwaddr, <<Len:16, _Pad:16, HwAddr:Len/binary, _/binary>>) ->
+    HwAddr;
+decode_nfqnl_attr_struct(Type, Data) ->
+    {Type, Data}.
+
 %%
 %% pad binary to specific length
 %%   -> http://www.erlang.org/pipermail/erlang-questions/2008-December/040709.html
@@ -556,7 +610,7 @@ nl_dec_nla(Family, Fun, Data)
 nl_enc_nla(_Family, _Fun, [], Acc) ->
     list_to_binary(lists:reverse(Acc));
 nl_enc_nla(Family, Fun, [Head|Rest], Acc) ->
-    io:format("nl_enc_nla: ~w, ~w~n", [Family, Head]),
+    lager:debug("nl_enc_nla: ~w, ~w~n", [Family, Head]),
     H = Fun(Family, Head),
     nl_enc_nla(Family, Fun, Rest, [H|Acc]).
 
@@ -588,12 +642,12 @@ nl_enc_payload(rtnetlink, MsgType, {Family, PrefixLen, Flags, Scope, Index, Req}
 nl_enc_payload(rtnetlink, MsgType, {Family, DstLen, SrcLen, Tos, Table, Protocol, Scope, RtmType, Flags, Req})
   when MsgType == newroute; MsgType == delroute ; MsgType == getroute ->
     Fam = gen_socket:family(Family),
-    io:format("nl_enc_payload: ~p~n", [{Family, DstLen, SrcLen, Tos, Table, Protocol, Scope, RtmType, Flags, Req}]),
-    io:format("~p, ~p, ~p, ~p, ~p~n", [encode_rtnetlink_rtm_table(Table),
-				       encode_rtnetlink_rtm_protocol(Protocol),
-				       encode_rtnetlink_rtm_scope(Scope),
-				       encode_rtnetlink_rtm_type(RtmType),
-				       encode_rtnetlink_rtm_flags(Flags)]),
+    lager:debug("nl_enc_payload: ~p~n", [{Family, DstLen, SrcLen, Tos, Table, Protocol, Scope, RtmType, Flags, Req}]),
+    lager:debug("~p, ~p, ~p, ~p, ~p~n", [encode_rtnetlink_rtm_table(Table),
+					 encode_rtnetlink_rtm_protocol(Protocol),
+					 encode_rtnetlink_rtm_scope(Scope),
+					 encode_rtnetlink_rtm_type(RtmType),
+					 encode_rtnetlink_rtm_flags(Flags)]),
 
     Data = nl_enc_nla(Family, fun encode_rtnetlink_route/2, Req),
     << Fam:8, DstLen:8, SrcLen:8, Tos:8,
@@ -618,6 +672,26 @@ nl_enc_payload(rtnetlink, MsgType,{Family, IfIndex, PfxType, PfxLen, Flags, Req}
 	Data = nl_enc_nla(Family, fun encode_rtnetlink_prefix/2, Req),
 	<< Fam:8, 0:8, 0:16, IfIndex:32/native-signed-integer, PfxType:8, PfxLen:8, Flags:8, 0:8, Data/binary >>;
 
+%% NFNL QUEUE
+%% nl_enc_payload(queue, config, {Family, Version, ResId, Req}) ->
+%%     Fam = gen_socket:family(Family),
+%%     Data = nl_enc_nla(Family, fun encode_nfqnl_cfg_msg/2, Req),
+%%     << Fam:8, Version:8, ResId:16/native-integer, Data/binary >>;
+%% nl_enc_payload(queue, verdict, {Family, Version, ResId, Req}) ->
+%%     Fam = gen_socket:family(Family),
+%%     Data = nl_enc_nla(Family, fun encode_nfqnl_attr/2, Req),
+%%     << Fam:8, Version:8, ResId:16/native-integer, Data/binary >>;
+
+nl_enc_payload(queue, MsgType, {Family, Version, ResId, Req}) ->
+    Fam = gen_socket:family(Family),
+    Fun = case MsgType of
+	      config -> fun encode_nfqnl_cfg_msg/2;
+	      _      -> fun encode_nfqnl_attr/2
+	  end,
+    Data = nl_enc_nla(Family, Fun, Req),
+    << Fam:8, Version:8, ResId:16/native-integer, Data/binary >>;
+
+%% Other
 nl_enc_payload(_, _, Data)
   when is_binary(Data) ->
 	Data.
@@ -658,11 +732,33 @@ nl_dec_payload(rtnetlink, MsgType, << Family:8, _Pad1:8, _Pad2:16, IfIndex:32/na
     Fam = gen_socket:family(Family),
     { Fam, IfIndex, PfxType, PfxLen, Flags, nl_dec_nla(Fam, fun decode_rtnetlink_prefix/3, Data) };
 
+%% NFNL QUEUE
+%% nl_dec_payload(queue, config, << Family:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
+%%     Fam = gen_socket:family(Family),
+%%     { Fam, Version, ResId, nl_dec_nla(Fam, fun decode_nfqnl_cfg_msg/3, Data) };
+%% nl_dec_payload(queue, verdict, << Family:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
+%%     Fam = gen_socket:family(Family),
+%%     { Fam, Version, ResId, nl_dec_nla(Fam, fun decode_nfqnl_attr/3, Data) };
+
+
+nl_dec_payload(queue, MsgType, << Family:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
+    Fam = gen_socket:family(Family),
+    Fun = case MsgType of
+	      config -> fun decode_nfqnl_cfg_msg/3;
+	      _      -> fun decode_nfqnl_attr/3
+	  end,
+    { Fam, Version, ResId, nl_dec_nla(Fam, Fun, Data) };
+
+%% Error
+nl_dec_payload(netlink, error, <<Error:32, Msg/binary>>) ->
+    {Error, Msg};
+
+%% Other
 nl_dec_payload(_SubSys, _MsgType, Data) ->
     Data.
 
 nlmsg_ok(DataLen, MsgLen) ->
-    (DataLen >= 16) and (MsgLen >= 16) and (MsgLen =< DataLen).
+    (DataLen >= 16) andalso (MsgLen >= 16) andalso (MsgLen =< DataLen).
 
 -spec nl_ct_dec(binary()) -> [{'error',_} | #ctnetlink{} | #ctnetlink_exp{}].
 nl_ct_dec(Msg) ->
@@ -686,6 +782,9 @@ nl_ct_dec(<< Len:32/native-integer, Type:16/native-integer, Flags:16/native-inte
 nl_ct_dec(<< >>, Acc) ->
     lists:reverse(Acc).
 
+is_rt_dump(Type, Flags) ->
+    (Type band 3) =:= 2 andalso Flags band ?NLM_F_DUMP =/= 0.
+
 -spec nl_rt_dec(binary()) -> [{'error',_} | #rtnetlink{}].
 nl_rt_dec(Msg) ->
     nl_rt_dec(Msg, []).
@@ -695,8 +794,26 @@ nl_rt_dec(<< Len:32/native-integer, Type:16/native-integer, Flags:16/native-inte
                              true ->
                                  PayLoadLen = Len - 16,
                                  << PayLoad:PayLoadLen/bytes, NextMsg/binary >> = Data,
-                                 MsgType = dec_rtm_msgtype(Type),
-                                 {{ rtnetlink, MsgType, decode_nlm_flags(MsgType, Flags), Seq, Pid, nl_dec_payload(rtnetlink, MsgType, PayLoad) }, NextMsg};
+				 MsgType = dec_rtm_msgtype(Type),
+				 MsgFlags = decode_nlm_flags(MsgType, Flags),
+				 RtMsg = #rtnetlink{type = MsgType,
+						    flags = MsgFlags,
+						    seq   = Seq,
+						    pid   = Pid},
+				 case is_rt_dump(Type, Flags) of
+				     true ->
+					 <<IfiFam:8, _Pad:8, IfiType:16/native-integer, IfiIndex:32/native-integer, IfiFlags:32/native-integer, IfiChange:32/native-integer, Filter/binary >> = PayLoad,
+					 InfoMsg = #ifinfomsg{family = gen_socket:family(IfiFam),
+							      type = Type,
+							      index = IfiIndex,
+							      flags = IfiFlags,
+							      change = IfiChange},
+					 {RtMsg#rtnetlink{msg = [InfoMsg | nl_dec_nla(IfiFam, fun decode_rtnetlink_link/3, Filter)]}, NextMsg};
+
+				     _ ->
+					 {RtMsg#rtnetlink{msg = nl_dec_payload(rtnetlink, MsgType, PayLoad)}, NextMsg}
+				 end;
+
                              _ ->
                                  {{ error, format }, << >>}
                  end,
@@ -752,13 +869,13 @@ nl_ct_enc(Msg)
 
 nl_ct_enc({SubSys, MsgType, Flags, Seq, Pid, PayLoad})
   when is_atom(SubSys), is_atom(MsgType) ->
-	nl_ct_enc({SubSys, encode_ipctnl_msg(SubSys, MsgType), Flags, Seq, Pid, PayLoad});
+	Data = nl_enc_payload(SubSys, MsgType, PayLoad),
+	Type = (nfnl_subsys(SubSys) bsl 8) bor encode_ipctnl_msg(SubSys, MsgType),
+	enc_nlmsghdr(Type, Flags, Seq, Pid, Data);
 
 nl_ct_enc({SubSys, MsgType, Flags, Seq, Pid, PayLoad})
   when is_atom(SubSys), is_integer(MsgType) ->
-	Data = nl_enc_payload(SubSys, MsgType, PayLoad),
-	Type = (nfnl_subsys(SubSys) bsl 8) bor MsgType,
-	enc_nlmsghdr(Type, Flags, Seq, Pid, Data).
+	nl_ct_enc({SubSys, decode_ipctnl_msg(SubSys, MsgType), Flags, Seq, Pid, PayLoad}).
 
 rtnl_wilddump(Family, Type) ->
     NumFamily = gen_socket:family(Family),
@@ -859,7 +976,7 @@ handle_call({subscribe, #subscription{pid = Pid} = Subscription}, _From, #state{
             NewSub = lists:keyreplace(Pid, #subscription.pid, Sub, Subscription),
             {reply, ok, State#state{subscribers = NewSub}};
         false ->
-            io:format("~p:Subscribe ~p~n", [?MODULE, Pid]),
+            lager:debug("~p:Subscribe ~p~n", [?MODULE, Pid]),
             monitor(process, Pid),
             {reply, ok, State#state{subscribers = [Subscription|Sub]}}
     end;
@@ -903,15 +1020,15 @@ handle_info({Socket, input_ready}, State0) ->
     {noreply, State};
 
 handle_info({'DOWN', _Ref, process, Pid, _Reason}, #state{subscribers = Sub} = State) ->
-    io:format("~p:Unsubscribe ~p~n", [?MODULE, Pid]),
+    lager:debug("~p:Unsubscribe ~p~n", [?MODULE, Pid]),
     {noreply, State#state{subscribers = lists:delete(Pid, Sub)}};
 
 handle_info(Msg, State) ->
-    io:format("got Message ~p~n", [Msg]),
+    lager:warning("got Message ~p~n", [Msg]),
     {noreply, State}.
 
 terminate(Reason, _State) ->
-    io:format("~p terminate:~p~n", [?MODULE, Reason]),
+    lager:debug("~p terminate:~p~n", [?MODULE, Reason]),
     ok.
 
 code_change(_OldVsn, State, _Extra) ->
@@ -920,14 +1037,14 @@ code_change(_OldVsn, State, _Extra) ->
 handle_socket_data(Socket, NlType, SubscriptionType, Decode, #state{subscribers = Sub} = State) ->
     case gen_socket:recvfrom(Socket, 128 * 1024) of
 	{ok, _Sender, Data} ->
-	    %%  io:format("~p got: ~p~n", [NlType, Decode(Data)]),
+	    %%  lager:debug("~p got: ~p~n", [NlType, Decode(Data)]),
 	    Subs = lists:filter(fun(Elem) ->
 					lists:member(NlType, Elem#subscription.types)
 				end, Sub),
 	    handle_messages(SubscriptionType, Decode(Data), Subs, State);
 
 	Other ->
-	    io:format("~p: ~p~n", [NlType, Other]),
+	    lager:error("~p: ~p~n", [NlType, Other]),
 	    State
     end.
 

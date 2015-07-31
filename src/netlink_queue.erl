@@ -3,18 +3,21 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1]).
+-export([start_link/1, start_link/2]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
 	 terminate/2, code_change/3]).
+
+%% nfq callbacks
+-export([nfq_init/1, nfq_verdict/2]).
 
 -include_lib("gen_socket/include/gen_socket.hrl").
 -include("netlink.hrl").
 
 -define(SERVER, ?MODULE).
 
--record(state, {socket, queue}).
+-record(state, {socket, queue, cb, cb_state}).
 
 -define(NFQNL_COPY_PACKET, 2).
 
@@ -25,15 +28,24 @@
 start_link(Queue) ->
     start_link(Queue, []).
 
-start_link(Queue, SocketOpts) ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [Queue, SocketOpts], []).
+start_link(Queue, Opts) ->
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [Queue, Opts], []).
+
+%%%===================================================================
+%%% nfq callbacks
+%%%===================================================================
+nfq_init(_Opts) ->
+    {}.
+
+nfq_verdict(_Info, _State) ->
+    ?NF_ACCEPT.
 
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
 
-init([Queue, SocketOpts]) ->
-    {ok, Socket} = socket(netlink, raw, ?NETLINK_NETFILTER, SocketOpts),
+init([Queue, Opts]) ->
+    {ok, Socket} = socket(netlink, raw, ?NETLINK_NETFILTER, Opts),
     %% ok = gen_socket:bind(Socket, netlink:sockaddr_nl(netlink, 0, 0)),
     gen_socket:getsockname(Socket),
 
@@ -44,7 +56,9 @@ init([Queue, SocketOpts]) ->
 
     ok = gen_socket:input_event(Socket, true),
 
-    {ok, #state{socket = Socket, queue = Queue}}.
+    Cb = proplists:get_value(cb, Opts, ?MODULE),
+    CbState = Cb:nfq_init(Opts),
+    {ok, #state{socket = Socket, queue = Queue, cb = Cb, cb_state = CbState}}.
 
 handle_call(_Request, _From, State) ->
     Reply = ok,
@@ -137,12 +151,15 @@ process_nfq_msgs([Msg|Rest], State) ->
 process_nfq_msg({queue, packet, _Flags, _Seq, _Pid, Packet}, State) ->
     process_nfq_packet(Packet, State).
 
-process_nfq_packet({inet, _Version, _Queue, Info}, #state{socket = Socket, queue = Queue}) ->
+process_nfq_packet({inet, _Version, _Queue, Info},
+		   #state{socket = Socket, queue = Queue,
+			  cb = Cb, cb_state = CbState}) ->
     dump_packet(Info),
     {_, Id, _, _} = lists:keyfind(packet_hdr, 1, Info),
     lager:debug("Verdict for ~p~n", [Id]),
 
-    NLA = {verdict_hdr, ?NF_ACCEPT, Id},
+    Verdict = Cb:nfq_verdict(Info, CbState),
+    NLA = {verdict_hdr, Verdict, Id},
     Msg = {queue, verdict, [request], 0, 0, {unspec, 0, Queue, [NLA]}},
     Request = netlink:nl_ct_enc(Msg),
     gen_socket:sendto(Socket, netlink:sockaddr_nl(netlink, 0, 0), Request).

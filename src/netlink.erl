@@ -592,14 +592,24 @@ pad_to(Width, Binary) ->
 pad_len(Block, Size) ->
     (Block - (Size rem Block)) rem Block.
 
-nl_dec_nla(Family, Fun, << Len:16/native-integer, NlaType:16/native-integer, Rest/binary >>, Acc) ->
-    PLen = Len - 4,
-    Padding = pad_len(4, PLen),
-    << Data:PLen/bytes, _Pad:Padding/bytes, NewRest/binary >> = Rest,
+nl_dec_nla(Family, Fun, << Len:16/native-integer, NlaType:16/native-integer, Rest/binary >> = RawNla, Acc) ->
+    PayLoadLen = Len - 4,
+    Padding = pad_len(4, PayLoadLen),
+    {Next, NLA} =
+	case Rest of
+	    << Data:PayLoadLen/bytes, _Pad:Padding/bytes, Next0/binary >> ->
+		{Next0, Fun(Family, NlaType band 16#7FFF, Data)};
 
-    H = Fun(Family, NlaType band 16#7FFF, Data),
-    nl_dec_nla(Family, Fun, NewRest, [H | Acc]);
+	    Data when PayLoadLen == size(Data) ->
+		%% NFQ does not allign the last NLA when it is NFQA_PAYLOAD
+		%% accept unaligned attributes when they are the last one
+		{<<>>, Fun(Family, NlaType band 16#7FFF, Data)};
 
+	    _ ->
+		lager:warning("nl_dec_nla: unable to decode pay load of ~p", [RawNla]),
+		{<<>>, {rawdata, RawNla}}
+    end,
+    nl_dec_nla(Family, Fun, Next, [NLA | Acc]);
 nl_dec_nla(_Family, _Fun, << >>, Acc) ->
     lists:reverse(Acc).
 

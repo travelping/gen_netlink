@@ -3,7 +3,7 @@ gen_netlink
 
 Erlang Decoder, Encoder and transport library for Linux netlink messages
 
-Version 0.4.0 - xx Oct 2013
+Version 0.4.0 - xx Aug 2015
 ---------------------------
 
 * convert ets table based en/decoder to generated code driven en/decoder
@@ -15,3 +15,4 @@ Version 0.4.0 - xx Oct 2013
 * fix protocol field en/decoding for route events
 * de/encode getroute and getneigh events
 * netlink cache for neighbour's and route's
+* fix typespec for Erlang R18

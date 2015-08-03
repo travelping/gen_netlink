@@ -58,7 +58,7 @@
 
     msgbuf = []         :: [netlink_record()],
     curseq = 16#FF      :: non_neg_integer(),
-    requests            :: gb_tree()
+    requests            :: gb_trees:tree()
 }).
 
 %% netlink info

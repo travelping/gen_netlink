@@ -77,143 +77,6 @@ flag_info_rtnetlink_link_protinfo_inet6_flags() ->
 
 %% ============================
 
-decode_rtm_msgtype(?NLMSG_NOOP) ->
-    noop;
-
-decode_rtm_msgtype(?NLMSG_ERROR) ->
-    error;
-
-decode_rtm_msgtype(?NLMSG_DONE) ->
-    done;
-
-decode_rtm_msgtype(?NLMSG_OVERRUN) ->
-    overrun;
-
-decode_rtm_msgtype(?RTM_NEWLINK) ->
-    newlink;
-
-decode_rtm_msgtype(?RTM_DELLINK) ->
-    dellink;
-
-decode_rtm_msgtype(?RTM_GETLINK) ->
-    getlink;
-
-decode_rtm_msgtype(?RTM_SETLINK) ->
-    setlink;
-
-decode_rtm_msgtype(?RTM_NEWADDR) ->
-    newaddr;
-
-decode_rtm_msgtype(?RTM_DELADDR) ->
-    deladdr;
-
-decode_rtm_msgtype(?RTM_GETADDR) ->
-    getaddr;
-
-decode_rtm_msgtype(?RTM_NEWROUTE) ->
-    newroute;
-
-decode_rtm_msgtype(?RTM_DELROUTE) ->
-    delroute;
-
-decode_rtm_msgtype(?RTM_GETROUTE) ->
-    getroute;
-
-decode_rtm_msgtype(?RTM_NEWNEIGH) ->
-    newneigh;
-
-decode_rtm_msgtype(?RTM_DELNEIGH) ->
-    delneigh;
-
-decode_rtm_msgtype(?RTM_GETNEIGH) ->
-    getneigh;
-
-decode_rtm_msgtype(?RTM_NEWRULE) ->
-    newrule;
-
-decode_rtm_msgtype(?RTM_DELRULE) ->
-    delrule;
-
-decode_rtm_msgtype(?RTM_GETRULE) ->
-    getrule;
-
-decode_rtm_msgtype(?RTM_NEWQDISC) ->
-    newqdisc;
-
-decode_rtm_msgtype(?RTM_DELQDISC) ->
-    delqdisc;
-
-decode_rtm_msgtype(?RTM_GETQDISC) ->
-    getqdisc;
-
-decode_rtm_msgtype(?RTM_NEWTCLASS) ->
-    newtclass;
-
-decode_rtm_msgtype(?RTM_DELTCLASS) ->
-    deltclass;
-
-decode_rtm_msgtype(?RTM_GETTCLASS) ->
-    gettclass;
-
-decode_rtm_msgtype(?RTM_NEWTFILTER) ->
-    newtfilter;
-
-decode_rtm_msgtype(?RTM_DELTFILTER) ->
-    deltfilter;
-
-decode_rtm_msgtype(?RTM_GETTFILTER) ->
-    gettfilter;
-
-decode_rtm_msgtype(?RTM_NEWACTION) ->
-    newaction;
-
-decode_rtm_msgtype(?RTM_DELACTION) ->
-    delaction;
-
-decode_rtm_msgtype(?RTM_GETACTION) ->
-    getaction;
-
-decode_rtm_msgtype(?RTM_NEWPREFIX) ->
-    newprefix;
-
-decode_rtm_msgtype(?RTM_GETMULTICAST) ->
-    getmulticast;
-
-decode_rtm_msgtype(?RTM_GETANYCAST) ->
-    getanycast;
-
-decode_rtm_msgtype(?RTM_NEWNEIGHTBL) ->
-    newneightbl;
-
-decode_rtm_msgtype(?RTM_GETNEIGHTBL) ->
-    getneightbl;
-
-decode_rtm_msgtype(?RTM_SETNEIGHTBL) ->
-    setneightbl;
-
-decode_rtm_msgtype(?RTM_NEWNDUSEROPT) ->
-    newnduseropt;
-
-decode_rtm_msgtype(?RTM_NEWADDRLABEL) ->
-    newaddrlabel;
-
-decode_rtm_msgtype(?RTM_DELADDRLABEL) ->
-    deladdrlabel;
-
-decode_rtm_msgtype(?RTM_GETADDRLABEL) ->
-    getaddrlabel;
-
-decode_rtm_msgtype(?RTM_GETDCB) ->
-    getdcb;
-
-decode_rtm_msgtype(?RTM_SETDCB) ->
-    setdcb;
-
-decode_rtm_msgtype(Value) ->
-    Value.
-
-%% ============================
-
 decode_ctm_msgtype_netlink(?NLMSG_NOOP) ->
     noop;
 
@@ -225,6 +88,126 @@ decode_ctm_msgtype_netlink(?NLMSG_DONE) ->
 
 decode_ctm_msgtype_netlink(?NLMSG_OVERRUN) ->
     overrun;
+
+decode_ctm_msgtype_netlink(?RTM_NEWLINK) ->
+    newlink;
+
+decode_ctm_msgtype_netlink(?RTM_DELLINK) ->
+    dellink;
+
+decode_ctm_msgtype_netlink(?RTM_GETLINK) ->
+    getlink;
+
+decode_ctm_msgtype_netlink(?RTM_SETLINK) ->
+    setlink;
+
+decode_ctm_msgtype_netlink(?RTM_NEWADDR) ->
+    newaddr;
+
+decode_ctm_msgtype_netlink(?RTM_DELADDR) ->
+    deladdr;
+
+decode_ctm_msgtype_netlink(?RTM_GETADDR) ->
+    getaddr;
+
+decode_ctm_msgtype_netlink(?RTM_NEWROUTE) ->
+    newroute;
+
+decode_ctm_msgtype_netlink(?RTM_DELROUTE) ->
+    delroute;
+
+decode_ctm_msgtype_netlink(?RTM_GETROUTE) ->
+    getroute;
+
+decode_ctm_msgtype_netlink(?RTM_NEWNEIGH) ->
+    newneigh;
+
+decode_ctm_msgtype_netlink(?RTM_DELNEIGH) ->
+    delneigh;
+
+decode_ctm_msgtype_netlink(?RTM_GETNEIGH) ->
+    getneigh;
+
+decode_ctm_msgtype_netlink(?RTM_NEWRULE) ->
+    newrule;
+
+decode_ctm_msgtype_netlink(?RTM_DELRULE) ->
+    delrule;
+
+decode_ctm_msgtype_netlink(?RTM_GETRULE) ->
+    getrule;
+
+decode_ctm_msgtype_netlink(?RTM_NEWQDISC) ->
+    newqdisc;
+
+decode_ctm_msgtype_netlink(?RTM_DELQDISC) ->
+    delqdisc;
+
+decode_ctm_msgtype_netlink(?RTM_GETQDISC) ->
+    getqdisc;
+
+decode_ctm_msgtype_netlink(?RTM_NEWTCLASS) ->
+    newtclass;
+
+decode_ctm_msgtype_netlink(?RTM_DELTCLASS) ->
+    deltclass;
+
+decode_ctm_msgtype_netlink(?RTM_GETTCLASS) ->
+    gettclass;
+
+decode_ctm_msgtype_netlink(?RTM_NEWTFILTER) ->
+    newtfilter;
+
+decode_ctm_msgtype_netlink(?RTM_DELTFILTER) ->
+    deltfilter;
+
+decode_ctm_msgtype_netlink(?RTM_GETTFILTER) ->
+    gettfilter;
+
+decode_ctm_msgtype_netlink(?RTM_NEWACTION) ->
+    newaction;
+
+decode_ctm_msgtype_netlink(?RTM_DELACTION) ->
+    delaction;
+
+decode_ctm_msgtype_netlink(?RTM_GETACTION) ->
+    getaction;
+
+decode_ctm_msgtype_netlink(?RTM_NEWPREFIX) ->
+    newprefix;
+
+decode_ctm_msgtype_netlink(?RTM_GETMULTICAST) ->
+    getmulticast;
+
+decode_ctm_msgtype_netlink(?RTM_GETANYCAST) ->
+    getanycast;
+
+decode_ctm_msgtype_netlink(?RTM_NEWNEIGHTBL) ->
+    newneightbl;
+
+decode_ctm_msgtype_netlink(?RTM_GETNEIGHTBL) ->
+    getneightbl;
+
+decode_ctm_msgtype_netlink(?RTM_SETNEIGHTBL) ->
+    setneightbl;
+
+decode_ctm_msgtype_netlink(?RTM_NEWNDUSEROPT) ->
+    newnduseropt;
+
+decode_ctm_msgtype_netlink(?RTM_NEWADDRLABEL) ->
+    newaddrlabel;
+
+decode_ctm_msgtype_netlink(?RTM_DELADDRLABEL) ->
+    deladdrlabel;
+
+decode_ctm_msgtype_netlink(?RTM_GETADDRLABEL) ->
+    getaddrlabel;
+
+decode_ctm_msgtype_netlink(?RTM_GETDCB) ->
+    getdcb;
+
+decode_ctm_msgtype_netlink(?RTM_SETDCB) ->
+    setdcb;
 
 decode_ctm_msgtype_netlink(Value) ->
     Value.
@@ -324,6 +307,15 @@ decode_ctnetlink(_Family, 19, Value) ->
 
 decode_ctnetlink(Family, 20, Value) ->
     {timestamp, nl_dec_nla(Family, fun decode_ctnetlink_timestamp/3, Value)};
+
+decode_ctnetlink(_Family, 21, Value) ->
+    {mark_mask, decode_uint32(Value)};
+
+decode_ctnetlink(_Family, 22, Value) ->
+    {labels, decode_binary(Value)};
+
+decode_ctnetlink(_Family, 23, Value) ->
+    {labels_mask, decode_binary(Value)};
 
 decode_ctnetlink(_Family, Id, Value) ->
     {Id, Value}.
@@ -1249,143 +1241,6 @@ decode_nfqnl_attr(_Family, Id, Value) ->
 
 %% ============================
 
-encode_rtm_msgtype(noop) ->
-    ?NLMSG_NOOP;
-
-encode_rtm_msgtype(error) ->
-    ?NLMSG_ERROR;
-
-encode_rtm_msgtype(done) ->
-    ?NLMSG_DONE;
-
-encode_rtm_msgtype(overrun) ->
-    ?NLMSG_OVERRUN;
-
-encode_rtm_msgtype(newlink) ->
-    ?RTM_NEWLINK;
-
-encode_rtm_msgtype(dellink) ->
-    ?RTM_DELLINK;
-
-encode_rtm_msgtype(getlink) ->
-    ?RTM_GETLINK;
-
-encode_rtm_msgtype(setlink) ->
-    ?RTM_SETLINK;
-
-encode_rtm_msgtype(newaddr) ->
-    ?RTM_NEWADDR;
-
-encode_rtm_msgtype(deladdr) ->
-    ?RTM_DELADDR;
-
-encode_rtm_msgtype(getaddr) ->
-    ?RTM_GETADDR;
-
-encode_rtm_msgtype(newroute) ->
-    ?RTM_NEWROUTE;
-
-encode_rtm_msgtype(delroute) ->
-    ?RTM_DELROUTE;
-
-encode_rtm_msgtype(getroute) ->
-    ?RTM_GETROUTE;
-
-encode_rtm_msgtype(newneigh) ->
-    ?RTM_NEWNEIGH;
-
-encode_rtm_msgtype(delneigh) ->
-    ?RTM_DELNEIGH;
-
-encode_rtm_msgtype(getneigh) ->
-    ?RTM_GETNEIGH;
-
-encode_rtm_msgtype(newrule) ->
-    ?RTM_NEWRULE;
-
-encode_rtm_msgtype(delrule) ->
-    ?RTM_DELRULE;
-
-encode_rtm_msgtype(getrule) ->
-    ?RTM_GETRULE;
-
-encode_rtm_msgtype(newqdisc) ->
-    ?RTM_NEWQDISC;
-
-encode_rtm_msgtype(delqdisc) ->
-    ?RTM_DELQDISC;
-
-encode_rtm_msgtype(getqdisc) ->
-    ?RTM_GETQDISC;
-
-encode_rtm_msgtype(newtclass) ->
-    ?RTM_NEWTCLASS;
-
-encode_rtm_msgtype(deltclass) ->
-    ?RTM_DELTCLASS;
-
-encode_rtm_msgtype(gettclass) ->
-    ?RTM_GETTCLASS;
-
-encode_rtm_msgtype(newtfilter) ->
-    ?RTM_NEWTFILTER;
-
-encode_rtm_msgtype(deltfilter) ->
-    ?RTM_DELTFILTER;
-
-encode_rtm_msgtype(gettfilter) ->
-    ?RTM_GETTFILTER;
-
-encode_rtm_msgtype(newaction) ->
-    ?RTM_NEWACTION;
-
-encode_rtm_msgtype(delaction) ->
-    ?RTM_DELACTION;
-
-encode_rtm_msgtype(getaction) ->
-    ?RTM_GETACTION;
-
-encode_rtm_msgtype(newprefix) ->
-    ?RTM_NEWPREFIX;
-
-encode_rtm_msgtype(getmulticast) ->
-    ?RTM_GETMULTICAST;
-
-encode_rtm_msgtype(getanycast) ->
-    ?RTM_GETANYCAST;
-
-encode_rtm_msgtype(newneightbl) ->
-    ?RTM_NEWNEIGHTBL;
-
-encode_rtm_msgtype(getneightbl) ->
-    ?RTM_GETNEIGHTBL;
-
-encode_rtm_msgtype(setneightbl) ->
-    ?RTM_SETNEIGHTBL;
-
-encode_rtm_msgtype(newnduseropt) ->
-    ?RTM_NEWNDUSEROPT;
-
-encode_rtm_msgtype(newaddrlabel) ->
-    ?RTM_NEWADDRLABEL;
-
-encode_rtm_msgtype(deladdrlabel) ->
-    ?RTM_DELADDRLABEL;
-
-encode_rtm_msgtype(getaddrlabel) ->
-    ?RTM_GETADDRLABEL;
-
-encode_rtm_msgtype(getdcb) ->
-    ?RTM_GETDCB;
-
-encode_rtm_msgtype(setdcb) ->
-    ?RTM_SETDCB;
-
-encode_rtm_msgtype(Value) when is_integer(Value) ->
-    Value.
-
-%% ============================
-
 encode_ctm_msgtype_netlink(noop) ->
     ?NLMSG_NOOP;
 
@@ -1397,6 +1252,126 @@ encode_ctm_msgtype_netlink(done) ->
 
 encode_ctm_msgtype_netlink(overrun) ->
     ?NLMSG_OVERRUN;
+
+encode_ctm_msgtype_netlink(newlink) ->
+    ?RTM_NEWLINK;
+
+encode_ctm_msgtype_netlink(dellink) ->
+    ?RTM_DELLINK;
+
+encode_ctm_msgtype_netlink(getlink) ->
+    ?RTM_GETLINK;
+
+encode_ctm_msgtype_netlink(setlink) ->
+    ?RTM_SETLINK;
+
+encode_ctm_msgtype_netlink(newaddr) ->
+    ?RTM_NEWADDR;
+
+encode_ctm_msgtype_netlink(deladdr) ->
+    ?RTM_DELADDR;
+
+encode_ctm_msgtype_netlink(getaddr) ->
+    ?RTM_GETADDR;
+
+encode_ctm_msgtype_netlink(newroute) ->
+    ?RTM_NEWROUTE;
+
+encode_ctm_msgtype_netlink(delroute) ->
+    ?RTM_DELROUTE;
+
+encode_ctm_msgtype_netlink(getroute) ->
+    ?RTM_GETROUTE;
+
+encode_ctm_msgtype_netlink(newneigh) ->
+    ?RTM_NEWNEIGH;
+
+encode_ctm_msgtype_netlink(delneigh) ->
+    ?RTM_DELNEIGH;
+
+encode_ctm_msgtype_netlink(getneigh) ->
+    ?RTM_GETNEIGH;
+
+encode_ctm_msgtype_netlink(newrule) ->
+    ?RTM_NEWRULE;
+
+encode_ctm_msgtype_netlink(delrule) ->
+    ?RTM_DELRULE;
+
+encode_ctm_msgtype_netlink(getrule) ->
+    ?RTM_GETRULE;
+
+encode_ctm_msgtype_netlink(newqdisc) ->
+    ?RTM_NEWQDISC;
+
+encode_ctm_msgtype_netlink(delqdisc) ->
+    ?RTM_DELQDISC;
+
+encode_ctm_msgtype_netlink(getqdisc) ->
+    ?RTM_GETQDISC;
+
+encode_ctm_msgtype_netlink(newtclass) ->
+    ?RTM_NEWTCLASS;
+
+encode_ctm_msgtype_netlink(deltclass) ->
+    ?RTM_DELTCLASS;
+
+encode_ctm_msgtype_netlink(gettclass) ->
+    ?RTM_GETTCLASS;
+
+encode_ctm_msgtype_netlink(newtfilter) ->
+    ?RTM_NEWTFILTER;
+
+encode_ctm_msgtype_netlink(deltfilter) ->
+    ?RTM_DELTFILTER;
+
+encode_ctm_msgtype_netlink(gettfilter) ->
+    ?RTM_GETTFILTER;
+
+encode_ctm_msgtype_netlink(newaction) ->
+    ?RTM_NEWACTION;
+
+encode_ctm_msgtype_netlink(delaction) ->
+    ?RTM_DELACTION;
+
+encode_ctm_msgtype_netlink(getaction) ->
+    ?RTM_GETACTION;
+
+encode_ctm_msgtype_netlink(newprefix) ->
+    ?RTM_NEWPREFIX;
+
+encode_ctm_msgtype_netlink(getmulticast) ->
+    ?RTM_GETMULTICAST;
+
+encode_ctm_msgtype_netlink(getanycast) ->
+    ?RTM_GETANYCAST;
+
+encode_ctm_msgtype_netlink(newneightbl) ->
+    ?RTM_NEWNEIGHTBL;
+
+encode_ctm_msgtype_netlink(getneightbl) ->
+    ?RTM_GETNEIGHTBL;
+
+encode_ctm_msgtype_netlink(setneightbl) ->
+    ?RTM_SETNEIGHTBL;
+
+encode_ctm_msgtype_netlink(newnduseropt) ->
+    ?RTM_NEWNDUSEROPT;
+
+encode_ctm_msgtype_netlink(newaddrlabel) ->
+    ?RTM_NEWADDRLABEL;
+
+encode_ctm_msgtype_netlink(deladdrlabel) ->
+    ?RTM_DELADDRLABEL;
+
+encode_ctm_msgtype_netlink(getaddrlabel) ->
+    ?RTM_GETADDRLABEL;
+
+encode_ctm_msgtype_netlink(getdcb) ->
+    ?RTM_GETDCB;
+
+encode_ctm_msgtype_netlink(setdcb) ->
+    ?RTM_SETDCB;
 
 encode_ctm_msgtype_netlink(Value) when is_integer(Value) ->
     Value.
@@ -1496,6 +1471,15 @@ encode_ctnetlink(_Family, {secctx, Value}) ->
 
 encode_ctnetlink(Family, {timestamp, Value}) ->
     enc_nla(20 bor 16#8000, nl_enc_nla(Family, fun encode_ctnetlink_timestamp/2, Value));
+
+encode_ctnetlink(_Family, {mark_mask, Value}) ->
+    encode_uint32(21, Value);
+
+encode_ctnetlink(_Family, {labels, Value}) ->
+    encode_binary(22, Value);
+
+encode_ctnetlink(_Family, {labels_mask, Value}) ->
+    encode_binary(23, Value);
 
 encode_ctnetlink(_Family, {Type, Value})
   when is_integer(Type), is_binary(Value) ->

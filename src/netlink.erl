@@ -35,7 +35,7 @@
 
 -export([nl_ct_dec/1, nl_rt_dec/1,
 	 nl_rt_enc/1, nl_ct_enc/1,
-	 enc_nlmsghdr/5, rtnl_wilddump/2]).
+	 enc_nlmsghdr/6, rtnl_wilddump/2]).
 -export([sockaddr_nl/3, setsockopt/4]).
 -export([rcvbufsiz/2]).
 -export([notify/3]).
@@ -295,9 +295,6 @@ nfnl_subsys(count)             -> ?NFNL_SUBSYS_COUNT.
 
 -include("netlink_decoder_gen.hrl").
 
-dec_rtm_msgtype(Type) ->
-    decode_rtm_msgtype(Type).
-
 dec_rtm_type(RtmType) ->
     decode_rtnetlink_rtm_type(RtmType).
 
@@ -343,7 +340,8 @@ decode_nlm_flags(Type, Flags) when
       Type == getlink; Type == getaddr; Type == getroute; Type == getneigh;
       Type == getrule; Type == getqdisc; Type == gettclass; Type == gettfilter;
       Type == getaction; Type == getmulticast; Type == getanycast; Type == getneightbl;
-      Type == getaddrlabel; Type == getdcb ->
+      Type == getaddrlabel; Type == getdcb;
+      Type == get_ctrzero; Type == get ->
     decode_flag(flag_info_nlm_get_flags(), Flags);
 
 decode_nlm_flags(Type, Flags) when
@@ -804,7 +802,7 @@ nl_rt_dec(<< Len:32/native-integer, Type:16/native-integer, Flags:16/native-inte
                              true ->
                                  PayLoadLen = Len - 16,
                                  << PayLoad:PayLoadLen/bytes, NextMsg/binary >> = Data,
-				 MsgType = dec_rtm_msgtype(Type),
+				 MsgType = decode_ipctnl_msg(netlink, Type),
 				 MsgFlags = decode_nlm_flags(MsgType, Flags),
 				 RtMsg = #rtnetlink{type = MsgType,
 						    flags = MsgFlags,
@@ -836,29 +834,29 @@ enc_nlmsghdr_flags(Type, Flags) when
       Type == getlink; Type == getaddr; Type == getroute; Type == getneigh;
       Type == getrule; Type == getqdisc; Type == gettclass; Type == gettfilter;
       Type == getaction; Type == getmulticast; Type == getanycast; Type == getneightbl;
-      Type == getaddrlabel; Type == getdcb ->
+      Type == getaddrlabel; Type == getdcb;
+      Type == get_ctrzero; Type == get ->
     encode_flag(flag_info_nlm_get_flags(), Flags);
 enc_nlmsghdr_flags(Type, Flags) when
       Type == newlink; Type == newaddr; Type == newroute; Type == newneigh;
       Type == newrule; Type == newqdisc; Type == newtclass; Type == newtfilter;
       Type == newaction; Type == newprefix; Type == newneightbl; Type == newnduseropt;
-      Type == newaddrlabel ->
+      Type == newaddrlabel; Type == new ->
     encode_flag(flag_info_nlm_new_flags(), Flags);
 enc_nlmsghdr_flags(_Type, Flags) ->
     encode_flag(flag_info_nlm_flags(), Flags).
 
-enc_nlmsghdr(Type, Flags, Seq, Pid, Req) when is_list(Flags) ->
-    enc_nlmsghdr(Type, enc_nlmsghdr_flags(Type, Flags), Seq, Pid, Req);
-enc_nlmsghdr(Type, Flags, Seq, Pid, Req) when is_atom(Type) ->
-    enc_nlmsghdr(encode_rtm_msgtype(Type), Flags, Seq, Pid, Req);
-enc_nlmsghdr(Type, Flags, Seq, Pid, Req) when is_integer(Flags), is_binary(Req) ->
+enc_nlmsghdr(SubSys, MsgType, Flags, Seq, Pid, Req) when is_list(Flags) ->
+    enc_nlmsghdr(SubSys, MsgType, enc_nlmsghdr_flags(MsgType, Flags), Seq, Pid, Req);
+enc_nlmsghdr(SubSys, MsgType, Flags, Seq, Pid, Req) when is_integer(Flags), is_binary(Req) ->
     Payload = pad_to(4, Req),
     Len = 16 + byte_size(Payload),
+    Type = (nfnl_subsys(SubSys) bsl 8) bor encode_ipctnl_msg(SubSys, MsgType),
     << Len:32/native-integer, Type:16/native-integer, Flags:16/native-integer, Seq:32/native-integer, Pid:32/native-integer, Payload/binary >>.
 
 nl_rt_enc({rtnetlink, MsgType, Flags, Seq, Pid, PayLoad}) ->
 	Data = nl_enc_payload(rtnetlink, MsgType, PayLoad),
-	enc_nlmsghdr(MsgType, Flags, Seq, Pid, Data);
+	enc_nlmsghdr(netlink, MsgType, Flags, Seq, Pid, Data);
 nl_rt_enc(Msg)
   when is_list(Msg) ->
 	nl_rt_enc(Msg, []).
@@ -880,8 +878,7 @@ nl_ct_enc(Msg)
 nl_ct_enc({SubSys, MsgType, Flags, Seq, Pid, PayLoad})
   when is_atom(SubSys), is_atom(MsgType) ->
 	Data = nl_enc_payload(SubSys, MsgType, PayLoad),
-	Type = (nfnl_subsys(SubSys) bsl 8) bor encode_ipctnl_msg(SubSys, MsgType),
-	enc_nlmsghdr(Type, Flags, Seq, Pid, Data);
+	enc_nlmsghdr(SubSys, MsgType, Flags, Seq, Pid, Data);
 
 nl_ct_enc({SubSys, MsgType, Flags, Seq, Pid, PayLoad})
   when is_atom(SubSys), is_integer(MsgType) ->
@@ -889,7 +886,7 @@ nl_ct_enc({SubSys, MsgType, Flags, Seq, Pid, PayLoad})
 
 rtnl_wilddump(Family, Type) ->
     NumFamily = gen_socket:family(Family),
-    enc_nlmsghdr(Type, [root, match, request], 0, 0, << NumFamily:8 >>).
+    enc_nlmsghdr(netlink, Type, [root, match, request], 0, 0, << NumFamily:8 >>).
 
 %%
 %% API implementation

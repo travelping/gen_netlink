@@ -88,6 +88,14 @@
 		  msg           ::ctnetlink_msg()
 		 }).
 
+-record(nftables, {
+		  type          ::atom(),
+		  flags         ::nl_flags(),
+		  seq           ::non_neg_integer(),
+		  pid           ::non_neg_integer(),
+		  msg           ::rtnetlink_msg()
+		 }).
+
 -record(nda_cacheinfo, {
 	  confirmed :: integer(),
 	  used      :: integer(),

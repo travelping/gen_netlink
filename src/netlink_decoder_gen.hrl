@@ -75,6 +75,62 @@ flag_info_rtnetlink_link_protinfo_inet6_flags() ->
      {128,ra_othercon},
      {2147483648,ready}].
 
+flag_info_nft_queue_attributes_flags() ->
+    [{1,bypass},{2,cpu_fanout},{4,mask}].
+
+flag_info_nft_table_attributes_flags() ->
+    [{1,dormant}].
+
+flag_info_nft_set_attributes_flags() ->
+    [{1,anonymous},{2,constant},{4,interval},{8,map},{16,timeout},{32,eval}].
+
+flag_info_nft_set_elem_attributes_flags() ->
+    [{1,interval_end}].
+
+%% ============================
+
+decode_nfnl_subsys(0) ->
+    netlink;
+
+decode_nfnl_subsys(1) ->
+    ctnetlink;
+
+decode_nfnl_subsys(2) ->
+    ctnetlink_exp;
+
+decode_nfnl_subsys(3) ->
+    queue;
+
+decode_nfnl_subsys(4) ->
+    ulog;
+
+decode_nfnl_subsys(5) ->
+    osf;
+
+decode_nfnl_subsys(6) ->
+    ipset;
+
+decode_nfnl_subsys(7) ->
+    acct;
+
+decode_nfnl_subsys(8) ->
+    ctnetlink_timeout;
+
+decode_nfnl_subsys(9) ->
+    cthelper;
+
+decode_nfnl_subsys(10) ->
+    nftables;
+
+decode_nfnl_subsys(11) ->
+    nft_compat;
+
+decode_nfnl_subsys(12) ->
+    count;
+
+decode_nfnl_subsys(Value) ->
+    Value.
+
 %% ============================
 
 decode_ctm_msgtype_netlink(?NLMSG_NOOP) ->
@@ -241,6 +297,70 @@ decode_ctm_msgtype_ctnetlink_exp(?IPCTNL_MSG_EXP_DELETE) ->
     delete;
 
 decode_ctm_msgtype_ctnetlink_exp(Value) ->
+    Value.
+
+%% ============================
+
+decode_ctm_msgtype_nftables(0) ->
+    newtable;
+
+decode_ctm_msgtype_nftables(1) ->
+    gettable;
+
+decode_ctm_msgtype_nftables(2) ->
+    deltable;
+
+decode_ctm_msgtype_nftables(3) ->
+    newchain;
+
+decode_ctm_msgtype_nftables(4) ->
+    getchain;
+
+decode_ctm_msgtype_nftables(5) ->
+    delchain;
+
+decode_ctm_msgtype_nftables(6) ->
+    newrule;
+
+decode_ctm_msgtype_nftables(7) ->
+    getrule;
+
+decode_ctm_msgtype_nftables(8) ->
+    delrule;
+
+decode_ctm_msgtype_nftables(9) ->
+    newset;
+
+decode_ctm_msgtype_nftables(10) ->
+    getset;
+
+decode_ctm_msgtype_nftables(11) ->
+    delset;
+
+decode_ctm_msgtype_nftables(12) ->
+    newsetelem;
+
+decode_ctm_msgtype_nftables(13) ->
+    getsetelem;
+
+decode_ctm_msgtype_nftables(14) ->
+    delsetelem;
+
+decode_ctm_msgtype_nftables(15) ->
+    newgen;
+
+decode_ctm_msgtype_nftables(16) ->
+    getgen;
+
+decode_ctm_msgtype_nftables(Value) ->
+    Value.
+
+%% ============================
+
+decode_ctm_msgtype_nft_compat(0) ->
+    get;
+
+decode_ctm_msgtype_nft_compat(Value) ->
     Value.
 
 %% ============================
@@ -1241,6 +1361,750 @@ decode_nfqnl_attr(_Family, Id, Value) ->
 
 %% ============================
 
+decode_nft_expr_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_expr_attributes(_Family, 1, Value) ->
+    {name, decode_string(Value)};
+
+decode_nft_expr_attributes(_Family, 2, Value) ->
+    {data, decode_binary(Value)};
+
+decode_nft_expr_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_immediate_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_immediate_attributes(_Family, 1, Value) ->
+    {dreg, decode_uint32(Value)};
+
+decode_nft_immediate_attributes(Family, 2, Value) ->
+    {data, nl_dec_nla(Family, fun decode_nft_data_attributes/3, Value)};
+
+decode_nft_immediate_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_data_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_data_attributes(_Family, 1, Value) ->
+    {value, decode_binary(Value)};
+
+decode_nft_data_attributes(Family, 2, Value) ->
+    {verdict, nl_dec_nla(Family, fun decode_nft_verdict_attributes/3, Value)};
+
+decode_nft_data_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_verdict_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_verdict_attributes(_Family, 1, <<Value:32>>) ->
+    {code, decode_nft_verdict_attributes_code(Value)};
+
+decode_nft_verdict_attributes(_Family, 2, Value) ->
+    {chain, decode_string(Value)};
+
+decode_nft_verdict_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_verdict_attributes_code(4294967295) ->
+    continue;
+
+decode_nft_verdict_attributes_code(4294967294) ->
+    break;
+
+decode_nft_verdict_attributes_code(4294967293) ->
+    jump;
+
+decode_nft_verdict_attributes_code(4294967292) ->
+    goto;
+
+decode_nft_verdict_attributes_code(4294967291) ->
+    return;
+
+decode_nft_verdict_attributes_code(Value) ->
+    Value.
+
+%% ============================
+
+decode_nft_bitwise_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_bitwise_attributes(_Family, 1, Value) ->
+    {sreg, decode_uint32(Value)};
+
+decode_nft_bitwise_attributes(_Family, 2, Value) ->
+    {dreg, decode_uint32(Value)};
+
+decode_nft_bitwise_attributes(_Family, 3, Value) ->
+    {len, decode_uint32(Value)};
+
+decode_nft_bitwise_attributes(Family, 4, Value) ->
+    {mask, nl_dec_nla(Family, fun decode_nft_data_attributes/3, Value)};
+
+decode_nft_bitwise_attributes(Family, 5, Value) ->
+    {'xor', nl_dec_nla(Family, fun decode_nft_data_attributes/3, Value)};
+
+decode_nft_bitwise_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_lookup_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_lookup_attributes(_Family, 1, Value) ->
+    {set, decode_string(Value)};
+
+decode_nft_lookup_attributes(_Family, 2, Value) ->
+    {sreg, decode_uint32(Value)};
+
+decode_nft_lookup_attributes(_Family, 3, Value) ->
+    {dreg, decode_uint32(Value)};
+
+decode_nft_lookup_attributes(_Family, 4, Value) ->
+    {set_id, decode_uint32(Value)};
+
+decode_nft_lookup_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_meta_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_meta_attributes(_Family, 1, Value) ->
+    {dreg, decode_uint32(Value)};
+
+decode_nft_meta_attributes(_Family, 2, <<Value:32>>) ->
+    {key, decode_nft_meta_attributes_key(Value)};
+
+decode_nft_meta_attributes(_Family, 3, Value) ->
+    {sreg, decode_uint32(Value)};
+
+decode_nft_meta_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_meta_attributes_key(0) ->
+    len;
+
+decode_nft_meta_attributes_key(1) ->
+    protocol;
+
+decode_nft_meta_attributes_key(2) ->
+    priority;
+
+decode_nft_meta_attributes_key(3) ->
+    mark;
+
+decode_nft_meta_attributes_key(4) ->
+    iif;
+
+decode_nft_meta_attributes_key(5) ->
+    oif;
+
+decode_nft_meta_attributes_key(6) ->
+    iifname;
+
+decode_nft_meta_attributes_key(7) ->
+    oifname;
+
+decode_nft_meta_attributes_key(8) ->
+    iiftype;
+
+decode_nft_meta_attributes_key(9) ->
+    oiftype;
+
+decode_nft_meta_attributes_key(10) ->
+    skuid;
+
+decode_nft_meta_attributes_key(11) ->
+    skgid;
+
+decode_nft_meta_attributes_key(12) ->
+    nftrace;
+
+decode_nft_meta_attributes_key(13) ->
+    rtclassid;
+
+decode_nft_meta_attributes_key(14) ->
+    secmark;
+
+decode_nft_meta_attributes_key(15) ->
+    nfproto;
+
+decode_nft_meta_attributes_key(16) ->
+    l4proto;
+
+decode_nft_meta_attributes_key(17) ->
+    bri_iifname;
+
+decode_nft_meta_attributes_key(18) ->
+    bri_oifname;
+
+decode_nft_meta_attributes_key(19) ->
+    pkttype;
+
+decode_nft_meta_attributes_key(20) ->
+    cpu;
+
+decode_nft_meta_attributes_key(21) ->
+    iifgroup;
+
+decode_nft_meta_attributes_key(22) ->
+    oifgroup;
+
+decode_nft_meta_attributes_key(23) ->
+    cgroup;
+
+decode_nft_meta_attributes_key(Value) ->
+    Value.
+
+%% ============================
+
+decode_nft_payload_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_payload_attributes(_Family, 1, Value) ->
+    {dreg, decode_uint32(Value)};
+
+decode_nft_payload_attributes(_Family, 2, <<Value:32>>) ->
+    {base, decode_nft_payload_attributes_base(Value)};
+
+decode_nft_payload_attributes(_Family, 3, Value) ->
+    {offset, decode_uint32(Value)};
+
+decode_nft_payload_attributes(_Family, 4, Value) ->
+    {len, decode_uint32(Value)};
+
+decode_nft_payload_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_payload_attributes_base(0) ->
+    ll_header;
+
+decode_nft_payload_attributes_base(1) ->
+    network_header;
+
+decode_nft_payload_attributes_base(2) ->
+    transport_header;
+
+decode_nft_payload_attributes_base(Value) ->
+    Value.
+
+%% ============================
+
+decode_nft_reject_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_reject_attributes(_Family, 1, <<Value:32>>) ->
+    {type, decode_nft_reject_attributes_type(Value)};
+
+decode_nft_reject_attributes(_Family, 2, <<Value:8>>) ->
+    {icmp_code, decode_nft_reject_attributes_icmp_code(Value)};
+
+decode_nft_reject_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_reject_attributes_type(0) ->
+    icmp_unreach;
+
+decode_nft_reject_attributes_type(1) ->
+    tcp_rst;
+
+decode_nft_reject_attributes_type(2) ->
+    icmpx_unreach;
+
+decode_nft_reject_attributes_type(Value) ->
+    Value.
+
+%% ============================
+
+decode_nft_reject_attributes_icmp_code(0) ->
+    no_route;
+
+decode_nft_reject_attributes_icmp_code(1) ->
+    port_unreach;
+
+decode_nft_reject_attributes_icmp_code(2) ->
+    host_unreach;
+
+decode_nft_reject_attributes_icmp_code(3) ->
+    admin_prohibited;
+
+decode_nft_reject_attributes_icmp_code(Value) ->
+    Value.
+
+%% ============================
+
+decode_nft_ct_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_ct_attributes(_Family, 1, Value) ->
+    {dreg, decode_uint32(Value)};
+
+decode_nft_ct_attributes(_Family, 2, <<Value:32>>) ->
+    {key, decode_nft_ct_attributes_key(Value)};
+
+decode_nft_ct_attributes(_Family, 3, Value) ->
+    {direction, decode_uint8(Value)};
+
+decode_nft_ct_attributes(_Family, 4, Value) ->
+    {sreg, decode_uint32(Value)};
+
+decode_nft_ct_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_ct_attributes_key(0) ->
+    state;
+
+decode_nft_ct_attributes_key(1) ->
+    direction;
+
+decode_nft_ct_attributes_key(2) ->
+    status;
+
+decode_nft_ct_attributes_key(3) ->
+    mark;
+
+decode_nft_ct_attributes_key(4) ->
+    secmark;
+
+decode_nft_ct_attributes_key(5) ->
+    expiration;
+
+decode_nft_ct_attributes_key(6) ->
+    helper;
+
+decode_nft_ct_attributes_key(7) ->
+    l3protocol;
+
+decode_nft_ct_attributes_key(8) ->
+    src;
+
+decode_nft_ct_attributes_key(9) ->
+    dst;
+
+decode_nft_ct_attributes_key(10) ->
+    protocol;
+
+decode_nft_ct_attributes_key(11) ->
+    proto_src;
+
+decode_nft_ct_attributes_key(12) ->
+    proto_dst;
+
+decode_nft_ct_attributes_key(13) ->
+    labels;
+
+decode_nft_ct_attributes_key(Value) ->
+    Value.
+
+%% ============================
+
+decode_nft_queue_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_queue_attributes(_Family, 1, Value) ->
+    {num, decode_uint16(Value)};
+
+decode_nft_queue_attributes(_Family, 2, Value) ->
+    {total, decode_uint16(Value)};
+
+decode_nft_queue_attributes(_Family, 3, <<Value:16>>) ->
+    {flags, decode_flag(flag_info_nft_queue_attributes_flags(), Value)};
+
+decode_nft_queue_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_cmp_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_cmp_attributes(_Family, 1, Value) ->
+    {sreg, decode_uint32(Value)};
+
+decode_nft_cmp_attributes(_Family, 2, <<Value:32>>) ->
+    {op, decode_nft_cmp_attributes_op(Value)};
+
+decode_nft_cmp_attributes(Family, 3, Value) ->
+    {data, nl_dec_nla(Family, fun decode_nft_data_attributes/3, Value)};
+
+decode_nft_cmp_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_cmp_attributes_op(0) ->
+    eq;
+
+decode_nft_cmp_attributes_op(1) ->
+    neq;
+
+decode_nft_cmp_attributes_op(2) ->
+    lt;
+
+decode_nft_cmp_attributes_op(3) ->
+    lte;
+
+decode_nft_cmp_attributes_op(4) ->
+    gt;
+
+decode_nft_cmp_attributes_op(5) ->
+    gte;
+
+decode_nft_cmp_attributes_op(Value) ->
+    Value.
+
+%% ============================
+
+decode_nft_match_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_match_attributes(_Family, 1, Value) ->
+    {name, decode_string(Value)};
+
+decode_nft_match_attributes(_Family, 2, Value) ->
+    {rev, decode_uint32(Value)};
+
+decode_nft_match_attributes(_Family, 3, Value) ->
+    {info, decode_binary(Value)};
+
+decode_nft_match_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_target_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_target_attributes(_Family, 1, Value) ->
+    {name, decode_string(Value)};
+
+decode_nft_target_attributes(_Family, 2, Value) ->
+    {rev, decode_uint32(Value)};
+
+decode_nft_target_attributes(_Family, 3, Value) ->
+    {info, decode_binary(Value)};
+
+decode_nft_target_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_list_attributes_expr(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_list_attributes_expr(Family, 1, Value) ->
+    {expr, nl_dec_nla(Family, fun decode_nft_expr_attributes/3, Value)};
+
+decode_nft_list_attributes_expr(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_counter_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_counter_attributes(_Family, 1, Value) ->
+    {bytes, decode_uint64(Value)};
+
+decode_nft_counter_attributes(_Family, 2, Value) ->
+    {packets, decode_uint64(Value)};
+
+decode_nft_counter_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_table_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_table_attributes(_Family, 1, Value) ->
+    {name, decode_string(Value)};
+
+decode_nft_table_attributes(_Family, 2, <<Value:32>>) ->
+    {flags, decode_flag(flag_info_nft_table_attributes_flags(), Value)};
+
+decode_nft_table_attributes(_Family, 3, Value) ->
+    {use, decode_uint32(Value)};
+
+decode_nft_table_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_chain_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_chain_attributes(_Family, 1, Value) ->
+    {table, decode_string(Value)};
+
+decode_nft_chain_attributes(_Family, 2, Value) ->
+    {handle, decode_uint64(Value)};
+
+decode_nft_chain_attributes(_Family, 3, Value) ->
+    {name, decode_string(Value)};
+
+decode_nft_chain_attributes(Family, 4, Value) ->
+    {hook, nl_dec_nla(Family, fun decode_nft_chain_attributes_hook/3, Value)};
+
+decode_nft_chain_attributes(_Family, 5, <<Value:32>>) ->
+    {policy, decode_nft_chain_attributes_policy(Value)};
+
+decode_nft_chain_attributes(_Family, 6, Value) ->
+    {use, decode_uint32(Value)};
+
+decode_nft_chain_attributes(_Family, 7, Value) ->
+    {type, decode_string(Value)};
+
+decode_nft_chain_attributes(Family, 8, Value) ->
+    {counters, nl_dec_nla(Family, fun decode_nft_counter_attributes/3, Value)};
+
+decode_nft_chain_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_chain_attributes_hook(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_chain_attributes_hook(_Family, 1, Value) ->
+    {hooknum, decode_uint32(Value)};
+
+decode_nft_chain_attributes_hook(_Family, 2, Value) ->
+    {priority, decode_int32(Value)};
+
+decode_nft_chain_attributes_hook(_Family, 3, Value) ->
+    {dev, decode_string(Value)};
+
+decode_nft_chain_attributes_hook(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_chain_attributes_policy(0) ->
+    drop;
+
+decode_nft_chain_attributes_policy(1) ->
+    accept;
+
+decode_nft_chain_attributes_policy(2) ->
+    stolen;
+
+decode_nft_chain_attributes_policy(3) ->
+    queue;
+
+decode_nft_chain_attributes_policy(4) ->
+    repeat;
+
+decode_nft_chain_attributes_policy(5) ->
+    stop;
+
+decode_nft_chain_attributes_policy(Value) ->
+    Value.
+
+%% ============================
+
+decode_nft_rule_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_rule_attributes(_Family, 1, Value) ->
+    {table, decode_string(Value)};
+
+decode_nft_rule_attributes(_Family, 2, Value) ->
+    {chain, decode_string(Value)};
+
+decode_nft_rule_attributes(_Family, 3, Value) ->
+    {handle, decode_uint64(Value)};
+
+decode_nft_rule_attributes(Family, 4, Value) ->
+    {expressions, nl_dec_nla(Family, fun decode_nft_list_attributes_expr/3, Value)};
+
+decode_nft_rule_attributes(_Family, 5, Value) ->
+    {compat, decode_binary(Value)};
+
+decode_nft_rule_attributes(_Family, 6, Value) ->
+    {position, decode_uint64(Value)};
+
+decode_nft_rule_attributes(_Family, 7, Value) ->
+    {userdata, decode_binary(Value)};
+
+decode_nft_rule_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_set_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_set_attributes(_Family, 1, Value) ->
+    {table, decode_string(Value)};
+
+decode_nft_set_attributes(_Family, 2, Value) ->
+    {name, decode_string(Value)};
+
+decode_nft_set_attributes(_Family, 3, <<Value:32>>) ->
+    {flags, decode_flag(flag_info_nft_set_attributes_flags(), Value)};
+
+decode_nft_set_attributes(_Family, 4, Value) ->
+    {key_type, decode_binary(Value)};
+
+decode_nft_set_attributes(_Family, 5, Value) ->
+    {key_len, decode_uint32(Value)};
+
+decode_nft_set_attributes(_Family, 6, Value) ->
+    {data_type, decode_binary(Value)};
+
+decode_nft_set_attributes(_Family, 7, Value) ->
+    {data_len, decode_uint32(Value)};
+
+decode_nft_set_attributes(_Family, 8, <<Value:32>>) ->
+    {policy, decode_nft_set_attributes_policy(Value)};
+
+decode_nft_set_attributes(_Family, 9, Value) ->
+    {desc, decode_binary(Value)};
+
+decode_nft_set_attributes(_Family, 10, Value) ->
+    {id, decode_uint32(Value)};
+
+decode_nft_set_attributes(_Family, 11, Value) ->
+    {timeout, decode_uint64(Value)};
+
+decode_nft_set_attributes(_Family, 12, Value) ->
+    {gc_interval, decode_uint32(Value)};
+
+decode_nft_set_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_set_attributes_policy(0) ->
+    drop;
+
+decode_nft_set_attributes_policy(1) ->
+    accept;
+
+decode_nft_set_attributes_policy(2) ->
+    stolen;
+
+decode_nft_set_attributes_policy(3) ->
+    queue;
+
+decode_nft_set_attributes_policy(4) ->
+    repeat;
+
+decode_nft_set_attributes_policy(5) ->
+    stop;
+
+decode_nft_set_attributes_policy(Value) ->
+    Value.
+
+%% ============================
+
+decode_nft_set_elem_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_set_elem_attributes(_Family, 1, Value) ->
+    {key, decode_binary(Value)};
+
+decode_nft_set_elem_attributes(_Family, 2, Value) ->
+    {data, decode_binary(Value)};
+
+decode_nft_set_elem_attributes(_Family, 3, <<Value:32>>) ->
+    {flags, decode_flag(flag_info_nft_set_elem_attributes_flags(), Value)};
+
+decode_nft_set_elem_attributes(_Family, 4, Value) ->
+    {timeout, decode_uint64(Value)};
+
+decode_nft_set_elem_attributes(_Family, 5, Value) ->
+    {expiration, decode_uint64(Value)};
+
+decode_nft_set_elem_attributes(_Family, 6, Value) ->
+    {userdata, decode_binary(Value)};
+
+decode_nft_set_elem_attributes(Family, 7, Value) ->
+    {expr, nl_dec_nla(Family, fun decode_nft_expr_attributes/3, Value)};
+
+decode_nft_set_elem_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_gen_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_gen_attributes(_Family, 1, Value) ->
+    {id, decode_uint32(Value)};
+
+decode_nft_gen_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+encode_nfnl_subsys(netlink) ->
+    0;
+
+encode_nfnl_subsys(ctnetlink) ->
+    1;
+
+encode_nfnl_subsys(ctnetlink_exp) ->
+    2;
+
+encode_nfnl_subsys(queue) ->
+    3;
+
+encode_nfnl_subsys(ulog) ->
+    4;
+
+encode_nfnl_subsys(osf) ->
+    5;
+
+encode_nfnl_subsys(ipset) ->
+    6;
+
+encode_nfnl_subsys(acct) ->
+    7;
+
+encode_nfnl_subsys(ctnetlink_timeout) ->
+    8;
+
+encode_nfnl_subsys(cthelper) ->
+    9;
+
+encode_nfnl_subsys(nftables) ->
+    10;
+
+encode_nfnl_subsys(nft_compat) ->
+    11;
+
+encode_nfnl_subsys(count) ->
+    12;
+
+encode_nfnl_subsys(Value) when is_integer(Value) ->
+    Value.
+
+%% ============================
+
 encode_ctm_msgtype_netlink(noop) ->
     ?NLMSG_NOOP;
 
@@ -1405,6 +2269,70 @@ encode_ctm_msgtype_ctnetlink_exp(delete) ->
     ?IPCTNL_MSG_EXP_DELETE;
 
 encode_ctm_msgtype_ctnetlink_exp(Value) when is_integer(Value) ->
+    Value.
+
+%% ============================
+
+encode_ctm_msgtype_nftables(newtable) ->
+    0;
+
+encode_ctm_msgtype_nftables(gettable) ->
+    1;
+
+encode_ctm_msgtype_nftables(deltable) ->
+    2;
+
+encode_ctm_msgtype_nftables(newchain) ->
+    3;
+
+encode_ctm_msgtype_nftables(getchain) ->
+    4;
+
+encode_ctm_msgtype_nftables(delchain) ->
+    5;
+
+encode_ctm_msgtype_nftables(newrule) ->
+    6;
+
+encode_ctm_msgtype_nftables(getrule) ->
+    7;
+
+encode_ctm_msgtype_nftables(delrule) ->
+    8;
+
+encode_ctm_msgtype_nftables(newset) ->
+    9;
+
+encode_ctm_msgtype_nftables(getset) ->
+    10;
+
+encode_ctm_msgtype_nftables(delset) ->
+    11;
+
+encode_ctm_msgtype_nftables(newsetelem) ->
+    12;
+
+encode_ctm_msgtype_nftables(getsetelem) ->
+    13;
+
+encode_ctm_msgtype_nftables(delsetelem) ->
+    14;
+
+encode_ctm_msgtype_nftables(newgen) ->
+    15;
+
+encode_ctm_msgtype_nftables(getgen) ->
+    16;
+
+encode_ctm_msgtype_nftables(Value) when is_integer(Value) ->
+    Value.
+
+%% ============================
+
+encode_ctm_msgtype_nft_compat(get) ->
+    0;
+
+encode_ctm_msgtype_nft_compat(Value) when is_integer(Value) ->
     Value.
 
 %% ============================
@@ -2440,5 +3368,728 @@ encode_nfqnl_attr(_Family, {gid, Value}) ->
     encode_uint32(17, Value);
 
 encode_nfqnl_attr(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_expr_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_expr_attributes(_Family, {name, Value}) ->
+    encode_string(1, Value);
+
+encode_nft_expr_attributes(_Family, {data, Value}) ->
+    encode_binary(2, Value);
+
+encode_nft_expr_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_immediate_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_immediate_attributes(_Family, {dreg, Value}) ->
+    encode_uint32(1, Value);
+
+encode_nft_immediate_attributes(Family, {data, Value}) ->
+    enc_nla(2, nl_enc_nla(Family, fun encode_nft_data_attributes/2, Value));
+
+encode_nft_immediate_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_data_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_data_attributes(_Family, {value, Value}) ->
+    encode_binary(1, Value);
+
+encode_nft_data_attributes(Family, {verdict, Value}) ->
+    enc_nla(2, nl_enc_nla(Family, fun encode_nft_verdict_attributes/2, Value));
+
+encode_nft_data_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_verdict_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_verdict_attributes(_Family, {code, Value}) ->
+    encode_uint32(1, encode_nft_verdict_attributes_code(Value));
+
+encode_nft_verdict_attributes(_Family, {chain, Value}) ->
+    encode_string(2, Value);
+
+encode_nft_verdict_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_verdict_attributes_code(continue) ->
+    4294967295;
+
+encode_nft_verdict_attributes_code(break) ->
+    4294967294;
+
+encode_nft_verdict_attributes_code(jump) ->
+    4294967293;
+
+encode_nft_verdict_attributes_code(goto) ->
+    4294967292;
+
+encode_nft_verdict_attributes_code(return) ->
+    4294967291;
+
+encode_nft_verdict_attributes_code(Value) when is_integer(Value) ->
+    Value.
+
+%% ============================
+
+encode_nft_bitwise_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_bitwise_attributes(_Family, {sreg, Value}) ->
+    encode_uint32(1, Value);
+
+encode_nft_bitwise_attributes(_Family, {dreg, Value}) ->
+    encode_uint32(2, Value);
+
+encode_nft_bitwise_attributes(_Family, {len, Value}) ->
+    encode_uint32(3, Value);
+
+encode_nft_bitwise_attributes(Family, {mask, Value}) ->
+    enc_nla(4, nl_enc_nla(Family, fun encode_nft_data_attributes/2, Value));
+
+encode_nft_bitwise_attributes(Family, {'xor', Value}) ->
+    enc_nla(5, nl_enc_nla(Family, fun encode_nft_data_attributes/2, Value));
+
+encode_nft_bitwise_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_lookup_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_lookup_attributes(_Family, {set, Value}) ->
+    encode_string(1, Value);
+
+encode_nft_lookup_attributes(_Family, {sreg, Value}) ->
+    encode_uint32(2, Value);
+
+encode_nft_lookup_attributes(_Family, {dreg, Value}) ->
+    encode_uint32(3, Value);
+
+encode_nft_lookup_attributes(_Family, {set_id, Value}) ->
+    encode_uint32(4, Value);
+
+encode_nft_lookup_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_meta_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_meta_attributes(_Family, {dreg, Value}) ->
+    encode_uint32(1, Value);
+
+encode_nft_meta_attributes(_Family, {key, Value}) ->
+    encode_uint32(2, encode_nft_meta_attributes_key(Value));
+
+encode_nft_meta_attributes(_Family, {sreg, Value}) ->
+    encode_uint32(3, Value);
+
+encode_nft_meta_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_meta_attributes_key(len) ->
+    0;
+
+encode_nft_meta_attributes_key(protocol) ->
+    1;
+
+encode_nft_meta_attributes_key(priority) ->
+    2;
+
+encode_nft_meta_attributes_key(mark) ->
+    3;
+
+encode_nft_meta_attributes_key(iif) ->
+    4;
+
+encode_nft_meta_attributes_key(oif) ->
+    5;
+
+encode_nft_meta_attributes_key(iifname) ->
+    6;
+
+encode_nft_meta_attributes_key(oifname) ->
+    7;
+
+encode_nft_meta_attributes_key(iiftype) ->
+    8;
+
+encode_nft_meta_attributes_key(oiftype) ->
+    9;
+
+encode_nft_meta_attributes_key(skuid) ->
+    10;
+
+encode_nft_meta_attributes_key(skgid) ->
+    11;
+
+encode_nft_meta_attributes_key(nftrace) ->
+    12;
+
+encode_nft_meta_attributes_key(rtclassid) ->
+    13;
+
+encode_nft_meta_attributes_key(secmark) ->
+    14;
+
+encode_nft_meta_attributes_key(nfproto) ->
+    15;
+
+encode_nft_meta_attributes_key(l4proto) ->
+    16;
+
+encode_nft_meta_attributes_key(bri_iifname) ->
+    17;
+
+encode_nft_meta_attributes_key(bri_oifname) ->
+    18;
+
+encode_nft_meta_attributes_key(pkttype) ->
+    19;
+
+encode_nft_meta_attributes_key(cpu) ->
+    20;
+
+encode_nft_meta_attributes_key(iifgroup) ->
+    21;
+
+encode_nft_meta_attributes_key(oifgroup) ->
+    22;
+
+encode_nft_meta_attributes_key(cgroup) ->
+    23;
+
+encode_nft_meta_attributes_key(Value) when is_integer(Value) ->
+    Value.
+
+%% ============================
+
+encode_nft_payload_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_payload_attributes(_Family, {dreg, Value}) ->
+    encode_uint32(1, Value);
+
+encode_nft_payload_attributes(_Family, {base, Value}) ->
+    encode_uint32(2, encode_nft_payload_attributes_base(Value));
+
+encode_nft_payload_attributes(_Family, {offset, Value}) ->
+    encode_uint32(3, Value);
+
+encode_nft_payload_attributes(_Family, {len, Value}) ->
+    encode_uint32(4, Value);
+
+encode_nft_payload_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_payload_attributes_base(ll_header) ->
+    0;
+
+encode_nft_payload_attributes_base(network_header) ->
+    1;
+
+encode_nft_payload_attributes_base(transport_header) ->
+    2;
+
+encode_nft_payload_attributes_base(Value) when is_integer(Value) ->
+    Value.
+
+%% ============================
+
+encode_nft_reject_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_reject_attributes(_Family, {type, Value}) ->
+    encode_uint32(1, encode_nft_reject_attributes_type(Value));
+
+encode_nft_reject_attributes(_Family, {icmp_code, Value}) ->
+    encode_uint8(2, encode_nft_reject_attributes_icmp_code(Value));
+
+encode_nft_reject_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_reject_attributes_type(icmp_unreach) ->
+    0;
+
+encode_nft_reject_attributes_type(tcp_rst) ->
+    1;
+
+encode_nft_reject_attributes_type(icmpx_unreach) ->
+    2;
+
+encode_nft_reject_attributes_type(Value) when is_integer(Value) ->
+    Value.
+
+%% ============================
+
+encode_nft_reject_attributes_icmp_code(no_route) ->
+    0;
+
+encode_nft_reject_attributes_icmp_code(port_unreach) ->
+    1;
+
+encode_nft_reject_attributes_icmp_code(host_unreach) ->
+    2;
+
+encode_nft_reject_attributes_icmp_code(admin_prohibited) ->
+    3;
+
+encode_nft_reject_attributes_icmp_code(Value) when is_integer(Value) ->
+    Value.
+
+%% ============================
+
+encode_nft_ct_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_ct_attributes(_Family, {dreg, Value}) ->
+    encode_uint32(1, Value);
+
+encode_nft_ct_attributes(_Family, {key, Value}) ->
+    encode_uint32(2, encode_nft_ct_attributes_key(Value));
+
+encode_nft_ct_attributes(_Family, {direction, Value}) ->
+    encode_uint8(3, Value);
+
+encode_nft_ct_attributes(_Family, {sreg, Value}) ->
+    encode_uint32(4, Value);
+
+encode_nft_ct_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_ct_attributes_key(state) ->
+    0;
+
+encode_nft_ct_attributes_key(direction) ->
+    1;
+
+encode_nft_ct_attributes_key(status) ->
+    2;
+
+encode_nft_ct_attributes_key(mark) ->
+    3;
+
+encode_nft_ct_attributes_key(secmark) ->
+    4;
+
+encode_nft_ct_attributes_key(expiration) ->
+    5;
+
+encode_nft_ct_attributes_key(helper) ->
+    6;
+
+encode_nft_ct_attributes_key(l3protocol) ->
+    7;
+
+encode_nft_ct_attributes_key(src) ->
+    8;
+
+encode_nft_ct_attributes_key(dst) ->
+    9;
+
+encode_nft_ct_attributes_key(protocol) ->
+    10;
+
+encode_nft_ct_attributes_key(proto_src) ->
+    11;
+
+encode_nft_ct_attributes_key(proto_dst) ->
+    12;
+
+encode_nft_ct_attributes_key(labels) ->
+    13;
+
+encode_nft_ct_attributes_key(Value) when is_integer(Value) ->
+    Value.
+
+%% ============================
+
+encode_nft_queue_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_queue_attributes(_Family, {num, Value}) ->
+    encode_uint16(1, Value);
+
+encode_nft_queue_attributes(_Family, {total, Value}) ->
+    encode_uint16(2, Value);
+
+encode_nft_queue_attributes(_Family, {flags, Value}) ->
+    encode_uint16(3, encode_flag(flag_info_nft_queue_attributes_flags(), Value));
+
+encode_nft_queue_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_cmp_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_cmp_attributes(_Family, {sreg, Value}) ->
+    encode_uint32(1, Value);
+
+encode_nft_cmp_attributes(_Family, {op, Value}) ->
+    encode_uint32(2, encode_nft_cmp_attributes_op(Value));
+
+encode_nft_cmp_attributes(Family, {data, Value}) ->
+    enc_nla(3, nl_enc_nla(Family, fun encode_nft_data_attributes/2, Value));
+
+encode_nft_cmp_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_cmp_attributes_op(eq) ->
+    0;
+
+encode_nft_cmp_attributes_op(neq) ->
+    1;
+
+encode_nft_cmp_attributes_op(lt) ->
+    2;
+
+encode_nft_cmp_attributes_op(lte) ->
+    3;
+
+encode_nft_cmp_attributes_op(gt) ->
+    4;
+
+encode_nft_cmp_attributes_op(gte) ->
+    5;
+
+encode_nft_cmp_attributes_op(Value) when is_integer(Value) ->
+    Value.
+
+%% ============================
+
+encode_nft_match_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_match_attributes(_Family, {name, Value}) ->
+    encode_string(1, Value);
+
+encode_nft_match_attributes(_Family, {rev, Value}) ->
+    encode_uint32(2, Value);
+
+encode_nft_match_attributes(_Family, {info, Value}) ->
+    encode_binary(3, Value);
+
+encode_nft_match_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_target_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_target_attributes(_Family, {name, Value}) ->
+    encode_string(1, Value);
+
+encode_nft_target_attributes(_Family, {rev, Value}) ->
+    encode_uint32(2, Value);
+
+encode_nft_target_attributes(_Family, {info, Value}) ->
+    encode_binary(3, Value);
+
+encode_nft_target_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_list_attributes_expr(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_list_attributes_expr(Family, {expr, Value}) ->
+    enc_nla(1, nl_enc_nla(Family, fun encode_nft_expr_attributes/2, Value));
+
+encode_nft_list_attributes_expr(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_counter_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_counter_attributes(_Family, {bytes, Value}) ->
+    encode_uint64(1, Value);
+
+encode_nft_counter_attributes(_Family, {packets, Value}) ->
+    encode_uint64(2, Value);
+
+encode_nft_counter_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_table_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_table_attributes(_Family, {name, Value}) ->
+    encode_string(1, Value);
+
+encode_nft_table_attributes(_Family, {flags, Value}) ->
+    encode_uint32(2, encode_flag(flag_info_nft_table_attributes_flags(), Value));
+
+encode_nft_table_attributes(_Family, {use, Value}) ->
+    encode_uint32(3, Value);
+
+encode_nft_table_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_chain_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_chain_attributes(_Family, {table, Value}) ->
+    encode_string(1, Value);
+
+encode_nft_chain_attributes(_Family, {handle, Value}) ->
+    encode_uint64(2, Value);
+
+encode_nft_chain_attributes(_Family, {name, Value}) ->
+    encode_string(3, Value);
+
+encode_nft_chain_attributes(Family, {hook, Value}) ->
+    enc_nla(4, nl_enc_nla(Family, fun encode_nft_chain_attributes_hook/2, Value));
+
+encode_nft_chain_attributes(_Family, {policy, Value}) ->
+    encode_uint32(5, encode_nft_chain_attributes_policy(Value));
+
+encode_nft_chain_attributes(_Family, {use, Value}) ->
+    encode_uint32(6, Value);
+
+encode_nft_chain_attributes(_Family, {type, Value}) ->
+    encode_string(7, Value);
+
+encode_nft_chain_attributes(Family, {counters, Value}) ->
+    enc_nla(8, nl_enc_nla(Family, fun encode_nft_counter_attributes/2, Value));
+
+encode_nft_chain_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_chain_attributes_hook(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_chain_attributes_hook(_Family, {hooknum, Value}) ->
+    encode_uint32(1, Value);
+
+encode_nft_chain_attributes_hook(_Family, {priority, Value}) ->
+    encode_int32(2, Value);
+
+encode_nft_chain_attributes_hook(_Family, {dev, Value}) ->
+    encode_string(3, Value);
+
+encode_nft_chain_attributes_hook(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_chain_attributes_policy(drop) ->
+    0;
+
+encode_nft_chain_attributes_policy(accept) ->
+    1;
+
+encode_nft_chain_attributes_policy(stolen) ->
+    2;
+
+encode_nft_chain_attributes_policy(queue) ->
+    3;
+
+encode_nft_chain_attributes_policy(repeat) ->
+    4;
+
+encode_nft_chain_attributes_policy(stop) ->
+    5;
+
+encode_nft_chain_attributes_policy(Value) when is_integer(Value) ->
+    Value.
+
+%% ============================
+
+encode_nft_rule_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_rule_attributes(_Family, {table, Value}) ->
+    encode_string(1, Value);
+
+encode_nft_rule_attributes(_Family, {chain, Value}) ->
+    encode_string(2, Value);
+
+encode_nft_rule_attributes(_Family, {handle, Value}) ->
+    encode_uint64(3, Value);
+
+encode_nft_rule_attributes(Family, {expressions, Value}) ->
+    enc_nla(4, nl_enc_nla(Family, fun encode_nft_list_attributes_expr/2, Value));
+
+encode_nft_rule_attributes(_Family, {compat, Value}) ->
+    encode_binary(5, Value);
+
+encode_nft_rule_attributes(_Family, {position, Value}) ->
+    encode_uint64(6, Value);
+
+encode_nft_rule_attributes(_Family, {userdata, Value}) ->
+    encode_binary(7, Value);
+
+encode_nft_rule_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_set_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_set_attributes(_Family, {table, Value}) ->
+    encode_string(1, Value);
+
+encode_nft_set_attributes(_Family, {name, Value}) ->
+    encode_string(2, Value);
+
+encode_nft_set_attributes(_Family, {flags, Value}) ->
+    encode_uint32(3, encode_flag(flag_info_nft_set_attributes_flags(), Value));
+
+encode_nft_set_attributes(_Family, {key_type, Value}) ->
+    encode_binary(4, Value);
+
+encode_nft_set_attributes(_Family, {key_len, Value}) ->
+    encode_uint32(5, Value);
+
+encode_nft_set_attributes(_Family, {data_type, Value}) ->
+    encode_binary(6, Value);
+
+encode_nft_set_attributes(_Family, {data_len, Value}) ->
+    encode_uint32(7, Value);
+
+encode_nft_set_attributes(_Family, {policy, Value}) ->
+    encode_uint32(8, encode_nft_set_attributes_policy(Value));
+
+encode_nft_set_attributes(_Family, {desc, Value}) ->
+    encode_binary(9, Value);
+
+encode_nft_set_attributes(_Family, {id, Value}) ->
+    encode_uint32(10, Value);
+
+encode_nft_set_attributes(_Family, {timeout, Value}) ->
+    encode_uint64(11, Value);
+
+encode_nft_set_attributes(_Family, {gc_interval, Value}) ->
+    encode_uint32(12, Value);
+
+encode_nft_set_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_set_attributes_policy(drop) ->
+    0;
+
+encode_nft_set_attributes_policy(accept) ->
+    1;
+
+encode_nft_set_attributes_policy(stolen) ->
+    2;
+
+encode_nft_set_attributes_policy(queue) ->
+    3;
+
+encode_nft_set_attributes_policy(repeat) ->
+    4;
+
+encode_nft_set_attributes_policy(stop) ->
+    5;
+
+encode_nft_set_attributes_policy(Value) when is_integer(Value) ->
+    Value.
+
+%% ============================
+
+encode_nft_set_elem_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_set_elem_attributes(_Family, {key, Value}) ->
+    encode_binary(1, Value);
+
+encode_nft_set_elem_attributes(_Family, {data, Value}) ->
+    encode_binary(2, Value);
+
+encode_nft_set_elem_attributes(_Family, {flags, Value}) ->
+    encode_uint32(3, encode_flag(flag_info_nft_set_elem_attributes_flags(), Value));
+
+encode_nft_set_elem_attributes(_Family, {timeout, Value}) ->
+    encode_uint64(4, Value);
+
+encode_nft_set_elem_attributes(_Family, {expiration, Value}) ->
+    encode_uint64(5, Value);
+
+encode_nft_set_elem_attributes(_Family, {userdata, Value}) ->
+    encode_binary(6, Value);
+
+encode_nft_set_elem_attributes(Family, {expr, Value}) ->
+    enc_nla(7, nl_enc_nla(Family, fun encode_nft_expr_attributes/2, Value));
+
+encode_nft_set_elem_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_gen_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_gen_attributes(_Family, {id, Value}) ->
+    encode_uint32(1, Value);
+
+encode_nft_gen_attributes(_Family, {Type, Value})
   when is_integer(Type), is_binary(Value) ->
     enc_nla(Type, Value).

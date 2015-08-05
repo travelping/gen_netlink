@@ -40,6 +40,8 @@
 -export([rcvbufsiz/2]).
 -export([notify/3]).
 
+-export([nft_decode/2, nft_encode/2]).
+
 -include_lib("gen_socket/include/gen_socket.hrl").
 -include("netlink.hrl").
 
@@ -197,29 +199,6 @@ enc_opt(rtnlgrp_phonet_route)          -> ?RTNLGRP_PHONET_ROUTE.
 %% dec_opt(?NFNLGRP_CONNTRACK_EXP_UPDATE)  -> nfnlgrp_conntrack_exp_update;
 %% dec_opt(?NFNLGRP_CONNTRACK_EXP_DESTROY) -> nfnlgrp_conntrack_exp_destroy.
 
--define(NFNL_SUBSYS_NONE,0).
--define(NFNL_SUBSYS_CTNETLINK,1).
--define(NFNL_SUBSYS_CTNETLINK_EXP,2).
--define(NFNL_SUBSYS_QUEUE,3).
--define(NFNL_SUBSYS_ULOG,4).
--define(NFNL_SUBSYS_COUNT,5).
-
-%% grep "^-define(NFNL_SUB" src/netlink.erl | awk -F"[(,]" '{ printf "nfnl_subsys(?%s)%*s %s;\n", $2, 32 - length($2), "->", tolower(substr($2,13)) }'
-nfnl_subsys(?NFNL_SUBSYS_NONE)              -> netlink;
-nfnl_subsys(?NFNL_SUBSYS_CTNETLINK)         -> ctnetlink;
-nfnl_subsys(?NFNL_SUBSYS_CTNETLINK_EXP)     -> ctnetlink_exp;
-nfnl_subsys(?NFNL_SUBSYS_QUEUE)             -> queue;
-nfnl_subsys(?NFNL_SUBSYS_ULOG)              -> ulog;
-nfnl_subsys(?NFNL_SUBSYS_COUNT)             -> count;
-nfnl_subsys(SubSys) when is_integer(SubSys) -> SubSys;
-
-nfnl_subsys(netlink)           -> ?NFNL_SUBSYS_NONE;
-nfnl_subsys(ctnetlink)         -> ?NFNL_SUBSYS_CTNETLINK;
-nfnl_subsys(ctnetlink_exp)     -> ?NFNL_SUBSYS_CTNETLINK_EXP;
-nfnl_subsys(queue)             -> ?NFNL_SUBSYS_QUEUE;
-nfnl_subsys(ulog)              -> ?NFNL_SUBSYS_ULOG;
-nfnl_subsys(count)             -> ?NFNL_SUBSYS_COUNT.
-
 -define(NLMSG_NOOP, 1).
 -define(NLMSG_ERROR, 2).
 -define(NLMSG_DONE, 3).
@@ -325,6 +304,10 @@ decode_ipctnl_msg(ctnetlink, Type) ->
     decode_ctm_msgtype_ctnetlink(Type);
 decode_ipctnl_msg(ctnetlink_exp, Type) ->
     decode_ctm_msgtype_ctnetlink_exp(Type);
+decode_ipctnl_msg(nftables, Type) ->
+    decode_ctm_msgtype_nftables(Type);
+decode_ipctnl_msg(nft_compat, Type) ->
+    decode_ctm_msgtype_nft_compat(Type);
 decode_ipctnl_msg(queue, Type) ->
     decode_ctm_msgtype_queue(Type).
 
@@ -341,7 +324,8 @@ decode_nlm_flags(Type, Flags) when
       Type == getrule; Type == getqdisc; Type == gettclass; Type == gettfilter;
       Type == getaction; Type == getmulticast; Type == getanycast; Type == getneightbl;
       Type == getaddrlabel; Type == getdcb;
-      Type == get_ctrzero; Type == get ->
+      Type == get_ctrzero; Type == get;
+      Type == gettable ->
     decode_flag(flag_info_nlm_get_flags(), Flags);
 
 decode_nlm_flags(Type, Flags) when
@@ -380,6 +364,10 @@ encode_ipctnl_msg(ctnetlink, Type) ->
     encode_ctm_msgtype_ctnetlink(Type);
 encode_ipctnl_msg(ctnetlink_exp, Type) ->
     encode_ctm_msgtype_ctnetlink_exp(Type);
+encode_ipctnl_msg(nftables, Type) ->
+    encode_ctm_msgtype_nftables(Type);
+encode_ipctnl_msg(nft_compat, Type) ->
+    encode_ctm_msgtype_nft_compat(Type);
 encode_ipctnl_msg(queue, Type) ->
     encode_ctm_msgtype_queue(Type).
 
@@ -468,6 +456,21 @@ encode_huint32(NlaType, Val) ->
 %% encode_huint64(NlaType, Val) ->
 %% 	enc_nla(NlaType, <<Val:64/native-integer>>).
 
+%% encode_int8(NlaType, Val) ->
+%% 	enc_nla(NlaType, <<Val:8/signed-integer>>).
+%% encode_int16(NlaType, Val) ->
+%% 	enc_nla(NlaType, <<Val:16/signed-integer>>).
+encode_int32(NlaType, Val) ->
+ 	enc_nla(NlaType, <<Val:32/signed-integer>>).
+%% encode_int64(NlaType, Val) ->
+%% 	enc_nla(NlaType, <<Val:64/signed-integer >>).
+%% encode_hint16(NlaType, Val) ->
+%% 	enc_nla(NlaType, <<Val:16/native-signed-integer>>).
+%% encode_hint32(NlaType, Val) ->
+%% 	enc_nla(NlaType, <<Val:32/native-signed-integer>>).
+%% encode_hint64(NlaType, Val) ->
+%% 	enc_nla(NlaType, <<Val:64/native-signed-integer>>).
+
 encode_protocol(NlaType, Proto) ->
 	enc_nla(NlaType, <<(gen_socket:protocol(Proto)):8>>).
 encode_mac(NlaType, {A, B, C, D, E, F}) ->
@@ -534,6 +537,21 @@ decode_uint64(<< Val:64 >>) ->
 decode_huint32(<< Val:32/native-integer >>) ->
     Val.
 %% decode_huint64(<< Val:64/native-integer >>) ->
+%%     Val.
+
+%% decode_int8(<< Val:8/signed-integer >>) ->
+%%     Val.
+%% decode_int16(<< Val:16/signed-integer >>) ->
+%%     Val.
+decode_int32(<< Val:32/signed-integer >>) ->
+     Val.
+%% decode_int64(<< Val:64/signed-integer >>) ->
+%%     Val.
+%% decode_hint16(<< Val:16/native-signed-integer >>) ->
+%%     Val.
+%% decode_hint32(<< Val:32/native-signed-integer >>) ->
+%%     Val.
+%% decode_hint64(<< Val:64/native-signed-integer >>) ->
 %%     Val.
 
 decode_protocol(<< Proto:8 >>) ->
@@ -680,15 +698,18 @@ nl_enc_payload(rtnetlink, MsgType,{Family, IfIndex, PfxType, PfxLen, Flags, Req}
 	Data = nl_enc_nla(Family, fun encode_rtnetlink_prefix/2, Req),
 	<< Fam:8, 0:8, 0:16, IfIndex:32/native-signed-integer, PfxType:8, PfxLen:8, Flags:8, 0:8, Data/binary >>;
 
-%% NFNL QUEUE
-%% nl_enc_payload(queue, config, {Family, Version, ResId, Req}) ->
-%%     Fam = gen_socket:family(Family),
-%%     Data = nl_enc_nla(Family, fun encode_nfqnl_cfg_msg/2, Req),
-%%     << Fam:8, Version:8, ResId:16/native-integer, Data/binary >>;
-%% nl_enc_payload(queue, verdict, {Family, Version, ResId, Req}) ->
-%%     Fam = gen_socket:family(Family),
-%%     Data = nl_enc_nla(Family, fun encode_nfqnl_attr/2, Req),
-%%     << Fam:8, Version:8, ResId:16/native-integer, Data/binary >>;
+nl_enc_payload(nftables, MsgType, {Family, Version, ResId, Req}) ->
+    Fam = gen_socket:family(Family),
+    Fun = case MsgType of
+	      _ when MsgType == newtable;   MsgType == gettable;   MsgType == deltable   -> fun encode_nft_table_attributes/2;
+	      _ when MsgType == newchain;   MsgType == getchain;   MsgType == delchain   -> fun encode_nft_chain_attributes/2;
+	      _ when MsgType == newrule;    MsgType == getrule;    MsgType == delrule    -> fun encode_nft_rule_attributes/2;
+	      _ when MsgType == newset;     MsgType == getset;     MsgType == delset     -> fun encode_nft_set_attributes/2;
+	      _ when MsgType == newsetelem; MsgType == getsetelem; MsgType == delsetelem -> fun encode_nft_set_elem_attributes/2;
+	      _ when MsgType == newgen;     MsgType == getgen                            -> fun encode_nft_gen_attributes/2
+	  end,
+    Data = nl_enc_nla(Family, Fun, Req),
+    << Fam:8, Version:8, ResId:16/native-integer, Data/binary >>;
 
 nl_enc_payload(queue, MsgType, {Family, Version, ResId, Req}) ->
     Fam = gen_socket:family(Family),
@@ -740,14 +761,17 @@ nl_dec_payload(rtnetlink, MsgType, << Family:8, _Pad1:8, _Pad2:16, IfIndex:32/na
     Fam = gen_socket:family(Family),
     { Fam, IfIndex, PfxType, PfxLen, Flags, nl_dec_nla(Fam, fun decode_rtnetlink_prefix/3, Data) };
 
-%% NFNL QUEUE
-%% nl_dec_payload(queue, config, << Family:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
-%%     Fam = gen_socket:family(Family),
-%%     { Fam, Version, ResId, nl_dec_nla(Fam, fun decode_nfqnl_cfg_msg/3, Data) };
-%% nl_dec_payload(queue, verdict, << Family:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
-%%     Fam = gen_socket:family(Family),
-%%     { Fam, Version, ResId, nl_dec_nla(Fam, fun decode_nfqnl_attr/3, Data) };
-
+nl_dec_payload(nftables, MsgType, << Family:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
+    Fam = gen_socket:family(Family),
+    Fun = case MsgType of
+	      _ when MsgType == newtable;   MsgType == gettable;   MsgType == deltable   -> fun decode_nft_table_attributes/3;
+	      _ when MsgType == newchain;   MsgType == getchain;   MsgType == delchain   -> fun decode_nft_chain_attributes/3;
+	      _ when MsgType == newrule;    MsgType == getrule;    MsgType == delrule    -> fun decode_nft_rule_attributes/3;
+	      _ when MsgType == newset;     MsgType == getset;     MsgType == delset     -> fun decode_nft_set_attributes/3;
+	      _ when MsgType == newsetelem; MsgType == getsetelem; MsgType == delsetelem -> fun decode_nft_set_elem_attributes/3;
+	      _ when MsgType == newgen;     MsgType == getgen                            -> fun decode_nft_gen_attributes/3
+	  end,
+    { Fam, Version, ResId, nl_dec_nla(Fam, Fun, Data) };
 
 nl_dec_payload(queue, MsgType, << Family:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
     Fam = gen_socket:family(Family),
@@ -778,7 +802,7 @@ nl_ct_dec(<< Len:32/native-integer, Type:16/native-integer, Flags:16/native-inte
                                  PayLoadLen = Len - 16,
                                  << PayLoad:PayLoadLen/bytes, NextMsg/binary >> = Data,
 
-				 SubSys = nfnl_subsys(Type bsr 8),
+				 SubSys = decode_nfnl_subsys(Type bsr 8),
 				 MsgType = decode_ipctnl_msg(SubSys, Type band 16#00FF),
 				 Flags0 = decode_nlm_msg_flags(MsgType, Flags),
 				 {{ SubSys, MsgType, Flags0, Seq, Pid, nl_dec_payload(SubSys, MsgType, PayLoad) }, NextMsg};
@@ -835,7 +859,9 @@ enc_nlmsghdr_flags(Type, Flags) when
       Type == getrule; Type == getqdisc; Type == gettclass; Type == gettfilter;
       Type == getaction; Type == getmulticast; Type == getanycast; Type == getneightbl;
       Type == getaddrlabel; Type == getdcb;
-      Type == get_ctrzero; Type == get ->
+      Type == get_ctrzero; Type == get;
+      Type == gettable; Type == getchain; Type == getrule;
+      Type == getset; Type == getsetelem; Type == getgen ->
     encode_flag(flag_info_nlm_get_flags(), Flags);
 enc_nlmsghdr_flags(Type, Flags) when
       Type == newlink; Type == newaddr; Type == newroute; Type == newneigh;
@@ -851,7 +877,7 @@ enc_nlmsghdr(SubSys, MsgType, Flags, Seq, Pid, Req) when is_list(Flags) ->
 enc_nlmsghdr(SubSys, MsgType, Flags, Seq, Pid, Req) when is_integer(Flags), is_binary(Req) ->
     Payload = pad_to(4, Req),
     Len = 16 + byte_size(Payload),
-    Type = (nfnl_subsys(SubSys) bsl 8) bor encode_ipctnl_msg(SubSys, MsgType),
+    Type = (encode_nfnl_subsys(SubSys) bsl 8) bor encode_ipctnl_msg(SubSys, MsgType),
     << Len:32/native-integer, Type:16/native-integer, Flags:16/native-integer, Seq:32/native-integer, Pid:32/native-integer, Payload/binary >>.
 
 nl_rt_enc({rtnetlink, MsgType, Flags, Seq, Pid, PayLoad}) ->
@@ -887,6 +913,66 @@ nl_ct_enc({SubSys, MsgType, Flags, Seq, Pid, PayLoad})
 rtnl_wilddump(Family, Type) ->
     NumFamily = gen_socket:family(Family),
     enc_nlmsghdr(netlink, Type, [root, match, request], 0, 0, << NumFamily:8 >>).
+
+nft_decode(Family, {expr, [{name, Name}, {data, Data}]}) ->
+    {expr, [{name, Name}, {data, nft_decode(Family, Name, Data)}]}.
+
+nft_decode(Family, "counter", Data) ->
+    nl_dec_nla(Family, fun decode_nft_counter_attributes/3, Data);
+nft_decode(Family, "immediate", Data) ->
+    nl_dec_nla(Family, fun decode_nft_immediate_attributes/3, Data);
+nft_decode(Family, "bitwise", Data) ->
+    nl_dec_nla(Family, fun decode_nft_bitwise_attributes/3, Data);
+nft_decode(Family, "lookup", Data) ->
+    nl_dec_nla(Family, fun decode_nft_lookup_attributes/3, Data);
+nft_decode(Family, "meta", Data) ->
+    nl_dec_nla(Family, fun decode_nft_meta_attributes/3, Data);
+nft_decode(Family, "payload", Data) ->
+    nl_dec_nla(Family, fun decode_nft_payload_attributes/3, Data);
+nft_decode(Family, "reject", Data) ->
+    nl_dec_nla(Family, fun decode_nft_reject_attributes/3, Data);
+nft_decode(Family, "ct", Data) ->
+    nl_dec_nla(Family, fun decode_nft_ct_attributes/3, Data);
+nft_decode(Family, "queue", Data) ->
+    nl_dec_nla(Family, fun decode_nft_queue_attributes/3, Data);
+nft_decode(Family, "cmp", Data) ->
+    nl_dec_nla(Family, fun decode_nft_cmp_attributes/3, Data);
+nft_decode(Family, "match", Data) ->
+    nl_dec_nla(Family, fun decode_nft_match_attributes/3, Data);
+nft_decode(Family, "target", Data) ->
+    nl_dec_nla(Family, fun decode_nft_target_attributes/3, Data);
+nft_decode(_Family, _Name, Data) ->
+    Data.
+
+nft_encode(Family, {expr, [{name, Name}, {data, NLA}]}) ->
+    {expr, [{name, Name}, {data, nft_encode(Family, Name, NLA)}]}.
+
+nft_encode(Family, "counter", NLA) ->
+    nl_enc_nla(Family, fun encode_nft_counter_attributes/2, NLA);
+nft_encode(Family, "immediate", NLA) ->
+    nl_enc_nla(Family, fun encode_nft_immediate_attributes/2, NLA);
+nft_encode(Family, "bitwise", NLA) ->
+    nl_enc_nla(Family, fun encode_nft_bitwise_attributes/2, NLA);
+nft_encode(Family, "lookup", NLA) ->
+    nl_enc_nla(Family, fun encode_nft_lookup_attributes/2, NLA);
+nft_encode(Family, "meta", NLA) ->
+    nl_enc_nla(Family, fun encode_nft_meta_attributes/2, NLA);
+nft_encode(Family, "payload", NLA) ->
+    nl_enc_nla(Family, fun encode_nft_payload_attributes/2, NLA);
+nft_encode(Family, "reject", NLA) ->
+    nl_enc_nla(Family, fun encode_nft_reject_attributes/2, NLA);
+nft_encode(Family, "ct", NLA) ->
+    nl_enc_nla(Family, fun encode_nft_ct_attributes/2, NLA);
+nft_encode(Family, "queue", NLA) ->
+    nl_enc_nla(Family, fun encode_nft_queue_attributes/2, NLA);
+nft_encode(Family, "cmp", NLA) ->
+    nl_enc_nla(Family, fun encode_nft_cmp_attributes/2, NLA);
+nft_encode(Family, "match", NLA) ->
+    nl_enc_nla(Family, fun encode_nft_match_attributes/2, NLA);
+nft_encode(Family, "target", NLA) ->
+    nl_enc_nla(Family, fun encode_nft_target_attributes/2, NLA);
+nft_encode(_Family, _Name, NLA) ->
+    NLA.
 
 %%
 %% API implementation

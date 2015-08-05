@@ -5,7 +5,21 @@
 -mode(compile).
 
 define_consts() ->
-    [{nlm_flags, [
+    [{nfnl_subsys, [{netlink,           {atom,  0}},
+		    {ctnetlink,         {atom,  1}},
+		    {ctnetlink_exp,     {atom,  2}},
+		    {queue,             {atom,  3}},
+		    {ulog,              {atom,  4}},
+		    {osf,               {atom,  5}},
+		    {ipset,             {atom,  6}},
+		    {acct,              {atom,  7}},
+		    {ctnetlink_timeout, {atom,  8}},
+		    {cthelper,          {atom,  9}},
+		    {nftables,          {atom, 10}},
+		    {nft_compat,        {atom, 11}},
+		    {count,             {atom, 12}}
+		   ]},
+     {nlm_flags, [
                   {request,   {flag,  0}},
                   {multi,     {flag,  1}},
                   {ack,       {flag,  2}},
@@ -111,6 +125,25 @@ define_consts() ->
 									 {get,         {atom, "?IPCTNL_MSG_EXP_GET"}},
 									 {delete,      {atom, "?IPCTNL_MSG_EXP_DELETE"}}
 									]},
+     {{ctm_msgtype, nftables}, [newtable,
+				gettable,
+				deltable,
+				newchain,
+				getchain,
+				delchain,
+				newrule,
+				getrule,
+				delrule,
+				newset,
+				getset,
+				delset,
+				newsetelem,
+				getsetelem,
+				delsetelem,
+				newgen,
+				getgen
+			       ]},
+     {{ctm_msgtype, nft_compat}, [get]},
      {{ctnetlink}, [
                     {unspec, none},
                     {tuple_orig, tuple},
@@ -490,7 +523,207 @@ define_consts() ->
 		       {exp,                none},                                      %% nf_conntrack_netlink.h
 		       {uid,                uint32},                                    %% __u32 sk uid
 		       {gid,                uint32}                                     %% __u32 sk gid
-		      ]}
+		      ]},
+
+
+     {{nft, expr, attributes}, [{unspec, none},
+				{name,   string},
+				{data,   binary}]},
+
+     {{nft, immediate, attributes}, [{unspec,  none},
+				     {dreg, uint32},
+				     {data, {nested, {nft, data, attributes}}}]},
+
+     {{nft, data, attributes}, [{unspec,  none},
+				{value,   binary},
+				{verdict, {nested, {nft, verdict, attributes}}}]},
+     {{nft, verdict, attributes}, [{unspec,  none},
+				   {code,    atom32},
+				   {chain,   string}]},
+     {{nft, verdict, attributes, code}, [{continue, {atom, 4294967296 - 1}},
+					 {break,    {atom, 4294967296 - 2}},
+					 {jump,     {atom, 4294967296 - 3}},
+					 {goto,     {atom, 4294967296 - 4}},
+					 {return,   {atom, 4294967296 - 5}}]},
+
+     {{nft, bitwise, attributes}, [{unspec, none},
+				   {sreg,   uint32},
+				   {dreg,   uint32},
+				   {len,    uint32},
+				   {mask,   {nested, {nft, data, attributes}}},
+				   {'xor',  {nested, {nft, data, attributes}}}]},
+
+     {{nft, lookup, attributes}, [{unspec,  none},
+				  {set,     string},
+				  {sreg,    uint32},
+				  {dreg,    uint32},
+				  {set_id,  uint32}]},
+
+     {{nft, meta, attributes}, [{unspec,  none},
+				{dreg,    uint32},
+				{key,     atom32},
+				{sreg,    uint32}]},
+
+     {{nft, meta, attributes, key}, [len,
+				     protocol,
+				     priority,
+				     mark,
+				     iif,
+				     oif,
+				     iifname,
+				     oifname,
+				     iiftype,
+				     oiftype,
+				     skuid,
+				     skgid,
+				     nftrace,
+				     rtclassid,
+				     secmark,
+				     nfproto,
+				     l4proto,
+				     bri_iifname,
+				     bri_oifname,
+				     pkttype,
+				     cpu,
+				     iifgroup,
+				     oifgroup,
+				     cgroup]},
+
+     {{nft, payload, attributes}, [{unspec,  none},
+				   {dreg,    uint32},
+				   {base,    atom32},
+				   {offset,  uint32},
+				   {len,     uint32}]},
+     {{nft, payload, attributes, base}, [ll_header, network_header, transport_header]},
+
+     {{nft, reject, attributes}, [{unspec,    none},
+				  {type,      atom32},
+				  {icmp_code, atom}]},
+     {{nft, reject, attributes, type}, [icmp_unreach, tcp_rst,icmpx_unreach]},
+     {{nft, reject, attributes, icmp_code}, [no_route, port_unreach, host_unreach, admin_prohibited]},
+
+     {{nft, ct, attributes}, [{unspec,    none},
+			      {dreg,      uint32},
+			      {key,       atom32},
+			      {direction, uint8},
+			      {sreg,      uint32}]},
+     {{nft, ct, attributes, key}, [state,
+				   direction,
+				   status,
+				   mark,
+				   secmark,
+				   expiration,
+				   helper,
+				   l3protocol,
+				   src,
+				   dst,
+				   protocol,
+				   proto_src,
+				   proto_dst,
+				   labels]},
+
+     {{nft, queue, attributes}, [{unspec,  none},
+				 {num,     uint16},
+				 {total,   uint16},
+				 {flags,   flag16}]},
+     {{nft, queue, attributes, flags}, [{bypass,     flag},
+					{cpu_fanout, flag},
+					{mask,       flag}]},
+
+     {{nft, cmp, attributes}, [{unspec,  none},
+			       {sreg,    uint32},
+			       {op,      atom32},
+			       {data,    {nested, {nft, data, attributes}}}]},
+
+     {{nft, cmp, attributes, op}, [eq, neq, lt, lte, gt, gte]},
+
+     {{nft, match, attributes}, [{unspec,  none},
+				 {name,    string},
+				 {rev,     uint32},
+				 {info,    binary}]},
+
+     {{nft, target, attributes}, [{unspec,  none},
+				  {name,    string},
+				  {rev,     uint32},
+				  {info,    binary}]},
+
+     {{nft, list, attributes, expr}, [{unspec, none},
+				      {expr,   {nested, {nft, expr, attributes}}}]},
+
+     {{nft, counter, attributes}, [{unspec,  none},
+				   {bytes,   uint64},
+				   {packets, uint64}]},
+
+     {{nft, table, attributes}, [{unspec,   none},
+				 {name,     string},
+				 {flags,    flag32},
+				 {use,      uint32}
+				]},
+     {{nft, table, attributes, flags}, [{dormant, flag}]},
+
+     {{nft, chain, attributes}, [{unspec,   none},
+				 {table,    string},
+				 {handle,   uint64},
+				 {name,     string},
+				 {hook,     {nested, hook}},
+				 {policy,   atom32},
+				 {use,      uint32},
+				 {type,     string},
+				 {counters, {nested, {nft, counter, attributes}}}
+				]},
+     {{nft, chain, attributes, hook}, [{unspec,   none},
+				       {hooknum,  uint32},
+				       {priority, int32},
+				       {dev,      string}]},
+     {{nft, chain, attributes, policy}, [drop, accept, stolen, queue, repeat, stop]},
+
+     {{nft, rule, attributes}, [{unspec,      none},
+				{table,       string},
+				{chain,       string},
+				{handle,      uint64},
+				{expressions, {nested, {nft, list, attributes, expr}}},
+				{compat,      binary},
+				{position,    uint64},
+				{userdata,    binary}
+			       ]},
+
+     {{nft, set, attributes}, [{unspec,      none},
+			       {table,       string},
+			       {name,        string},
+			       {flags,       flag32},
+			       {key_type,    binary},
+			       {key_len,     uint32},
+			       {data_type,   binary},
+			       {data_len,    uint32},
+			       {policy,      atom32},
+			       {desc,        binary},
+			       {id,          uint32},
+			       {timeout,     uint64},
+			       {gc_interval, uint32}
+			      ]},
+     {{nft, set, attributes, policy}, [drop, accept, stolen, queue, repeat, stop]},
+
+     {{nft, set, attributes, flags}, [{anonymous, flag},
+				      {constant,  flag},
+				      {interval,  flag},
+				      {map,       flag},
+				      {timeout,   flag},
+				      {eval,      flag}]},
+
+     {{nft, set_elem, attributes}, [{unspec,     none},
+				    {key,        binary},
+				    {data,       binary},
+				    {flags,      flag32},
+				    {timeout,    uint64},
+				    {expiration, uint64},
+				    {userdata,   binary},
+				    {expr,       {nested, {nft, expr, attributes}}}
+				   ]},
+     {{nft, set_elem, attributes, flags}, [{interval_end, flag}]},
+
+     {{nft, gen, attributes}, [{unspec, none},
+			       {id,     uint32}
+			       ]}
     ].
 
 make_prefix(Id) when is_atom(Id) ->
@@ -502,7 +735,12 @@ make_name(Prefix, Name) ->
     Prefix ++ [Name].
 
 format_name(Name) ->
-    string:join([atom_to_list(X) || X <- Name], "_").
+    case lists:last(Name) of
+	L when is_tuple(L) ->
+	    format_name(tuple_to_list(L));
+	L when is_atom(L) ->
+	    string:join([atom_to_list(X) || X <- Name], "_")
+    end.
 
 linarize(_Prefix, [], _Count, Acc) ->
     lists:reverse(Acc);
@@ -548,6 +786,8 @@ format_id(Id) ->
 
 make_decoder({Name, Attr, Pos, atom}) ->
     io_lib:format("decode_~s(_Family, ~w, <<Value:8>>) ->~n    {~s, decode_~s(Value)}", [format_name(Name), Pos, Attr, format_name(make_name(Name, Attr))]);
+make_decoder({Name, Attr, Pos, atom32}) ->
+    io_lib:format("decode_~s(_Family, ~w, <<Value:32>>) ->~n    {~s, decode_~s(Value)}", [format_name(Name), Pos, Attr, format_name(make_name(Name, Attr))]);
 
 make_decoder({Name, Attr, Pos, Type})
   when Type == flag8;  Type == flag16;  Type == flag32 ->
@@ -575,6 +815,8 @@ make_decoder({Name, Attr, Pos, Type})
   when Type == binary; Type == none; Type == string;
        Type == uint8;  Type == uint16;  Type == uint32;  Type == uint64;
        Type == huint8; Type == huint16; Type == huint32; Type == huint64;
+       Type == int8;  Type == int16;  Type == int32;  Type == int64;
+       Type == hint8; Type == hint16; Type == hint32; Type == hint64;
        Type == protocol; Type == mac; Type == addr ->
     %% built ins
     io_lib:format("decode_~s(_Family, ~w, Value) ->~n    {~p, decode_~p(Value)}", [format_name(Name), Pos, Attr, Type]);
@@ -604,6 +846,8 @@ make_element_decoder(List) ->
 
 make_encoder({Name, Attr, Pos, atom}) ->
     io_lib:format("encode_~s(_Family, {~w, Value}) ->~n    encode_uint8(~s, encode_~s(Value))", [format_name(Name), Attr, format_id(Pos), format_name(make_name(Name, Attr))]);
+make_encoder({Name, Attr, Pos, atom32}) ->
+    io_lib:format("encode_~s(_Family, {~w, Value}) ->~n    encode_uint32(~s, encode_~s(Value))", [format_name(Name), Attr, format_id(Pos), format_name(make_name(Name, Attr))]);
 
 make_encoder({Name, Attr, Pos, Type})
   when Type == flag8;  Type == flag16;  Type == flag32;
@@ -632,6 +876,8 @@ make_encoder({Name, Attr, Pos, Type})
   when Type == binary; Type == none; Type == string;
        Type == uint8;  Type == uint16;  Type == uint32;  Type == uint64;
        Type == huint8; Type == huint16; Type == huint32; Type == huint64;
+       Type == int8;  Type == int16;  Type == int32;  Type == int64;
+       Type == hint8; Type == hint16; Type == hint32; Type == hint64;
        Type == protocol; Type == mac; Type == addr ->
     %% built ins
     io_lib:format("encode_~s(_Family, {~p, Value}) ->~n    encode_~p(~s, Value)", [format_name(Name), Attr, Type, format_id(Pos)]);

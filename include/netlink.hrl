@@ -22,6 +22,24 @@
 -define(NETLINK_SCSITRANSPORT, 18).
 -define(NETLINK_ECRYPTFS, 19).
 
+-define(NUD_INCOMPLETE, 16#01).
+-define(NUD_REACHABLE,  16#02).
+-define(NUD_STALE,      16#04).
+-define(NUD_DELAY,      16#08).
+-define(NUD_PROBE,      16#10).
+-define(NUD_FAILED,     16#20).
+%% Dummy states
+-define(NUD_NOARP,      16#40).
+-define(NUD_PERMANENT,  16#80).
+-define(NUD_NONE,       16#00).
+
+-define(NF_DROP,   0).
+-define(NF_ACCEPT, 1).
+-define(NF_STOLEN, 2).
+-define(NF_QUEUE,  3).
+-define(NF_REPEAT, 4).
+-define(NF_STOP,   5).
+
 -type nl_flags() :: list(atom()).
 -type family() :: atom().
 -type protocol() :: atom().
@@ -69,6 +87,67 @@
 		  pid           ::non_neg_integer(),
 		  msg           ::ctnetlink_msg()
 		 }).
+
+-record(nda_cacheinfo, {
+	  confirmed :: integer(),
+	  used      :: integer(),
+	  updated   :: integer(),
+	  refcnt    :: integer()
+	 }).
+
+-record(ifa_cacheinfo, {
+	  prefered :: integer(),
+	  valid    :: integer(),
+	  cstamp   :: integer(),             %% created timestamp, hundredths of seconds
+	  tstamp   :: integer()              %% updated timestamp, hundredths of seconds
+	 }).
+
+-record(ifla_cacheinfo, {
+	  max_reasm_len  :: integer(),
+	  tstamp         :: integer(),       %% ipv6InterfaceTable updated timestamp
+	  reachable_time :: integer(),
+	  retrans_time   :: integer()
+	 }).
+
+-record(rta_cacheinfo, {
+	  rta_clntref :: integer(),
+	  rta_lastuse :: integer(),
+	  rta_expires :: integer(),
+	  rta_error   :: integer(),
+	  rta_used    :: integer(),
+	  rta_id      :: integer(),
+	  rta_ts      :: integer(),
+	  rta_tsage   :: integer()
+	 }).
+
+-record(prefix_cacheinfo, {
+	  preferred_time :: integer(),
+	  valid_time     :: integer()
+	 }).
+
+-record(neighbour_cache_entry, {
+	  key,                    %% {if_index, dst}
+	  if_index,
+	  dst,
+	  lladdr
+	 }).
+
+-record(route_cache_entry, {
+	  key,
+	  dst,
+	  dst_len,
+	  table,
+	  gateway,
+	  oif
+	 }).
+
+-record(ifinfomsg, {
+	  family,
+	  type,
+	  index,
+	  flags,
+	  change
+	 }).
 
 -type netlink_record() :: #rtnetlink{} | #ctnetlink{} | #ctnetlink_exp{}.
 

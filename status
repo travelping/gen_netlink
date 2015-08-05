@@ -10,8 +10,7 @@ netlink:gen_const(netlink:define_consts()).
 netlink:start_link().
 
 %% request all interfaces:
-netlink:send(netlink:rtnl_wilddump(packet, getlink)).
-
+netlink:send(rt, netlink:rtnl_wilddump(packet, getlink)).
 
 
 Testdata:

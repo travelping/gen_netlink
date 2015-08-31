@@ -3,7 +3,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1, start_link/2]).
+-export([start_link/1, start_link/2, start_link/3]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -29,7 +29,10 @@ start_link(Queue) ->
     start_link(Queue, []).
 
 start_link(Queue, Opts) ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [Queue, Opts], []).
+    gen_server:start_link(?MODULE, [Queue, Opts], []).
+
+start_link(ServerName, Queue, Opts) ->
+    gen_server:start_link(ServerName, ?MODULE, [Queue, Opts], []).
 
 %%%===================================================================
 %%% nfq callbacks

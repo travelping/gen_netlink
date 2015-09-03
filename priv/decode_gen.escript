@@ -500,9 +500,19 @@ define_consts() ->
 			   {cmd,          struct},        %% nfqnl_msg_config_cmd
 			   {params,       struct},        %% nfqnl_msg_config_params
 			   {queue_maxlen, none},          %% __u32
-			   {mask,         none},          %% identify which flags to change
-			   {flags,        none}           %% value of these flags (__u32)
+			   {mask,         flag32},          %% identify which flags to change
+			   {flags,        flag32}         %% value of these flags (__u32)
 		     ]},
+     {{ nfqnl, cfg, msg, mask },  [{fail_open, flag},
+				   {conntrack, flag},
+				   {gso,       flag},
+				   {uid_gid,   flag},
+				   {secctx,    flag}]},
+     {{ nfqnl, cfg, msg, flags }, [{fail_open, flag},
+				   {conntrack, flag},
+				   {gso,       flag},
+				   {uid_gid,   flag},
+				   {secctx,    flag}]},
 
      {{ nfqnl, attr }, [
 		       {unspec,             none},
@@ -516,8 +526,8 @@ define_consts() ->
 		       {ifindex_physoutdev, uint32},                                    %% __u32 ifindex
 		       {hwaddr,             struct},                                    %% nfqnl_msg_packet_hw
 		       {payload,            binary},                                    %% opaque data payload
-		       {ct,                 none},                                      %% nf_conntrack_netlink.h
-		       {ct_info,            none},                                      %% enum ip_conntrack_info
+		       {ct,                 {nested, {ctnetlink}}},                     %% nf_conntrack_netlink.h
+		       {ct_info,            atom32},                                    %% enum ip_conntrack_info
 		       {cap_len,            uint32},                                    %% __u32 length of captured packet
 		       {skb_info,           uint32},                                    %% __u32 skb meta information
 		       {exp,                none},                                      %% nf_conntrack_netlink.h
@@ -525,6 +535,12 @@ define_consts() ->
 		       {gid,                uint32}                                     %% __u32 sk gid
 		      ]},
 
+     {{ nfqnl, attr, ct_info }, [established,
+				 related,
+				 new,
+				 established_reply,
+				 related_reply,
+				 new_reply]},
 
      {{nft, expr, attributes}, [{unspec, none},
 				{name,   string},

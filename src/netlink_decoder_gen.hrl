@@ -75,6 +75,12 @@ flag_info_rtnetlink_link_protinfo_inet6_flags() ->
      {128,ra_othercon},
      {2147483648,ready}].
 
+flag_info_nfqnl_cfg_msg_mask() ->
+    [{1,fail_open},{2,conntrack},{4,gso},{8,uid_gid},{16,secctx}].
+
+flag_info_nfqnl_cfg_msg_flags() ->
+    [{1,fail_open},{2,conntrack},{4,gso},{8,uid_gid},{16,secctx}].
+
 flag_info_nft_queue_attributes_flags() ->
     [{1,bypass},{2,cpu_fanout},{4,mask}].
 
@@ -1291,11 +1297,11 @@ decode_nfqnl_cfg_msg(_Family, 2, Value) ->
 decode_nfqnl_cfg_msg(_Family, 3, Value) ->
     {queue_maxlen, decode_none(Value)};
 
-decode_nfqnl_cfg_msg(_Family, 4, Value) ->
-    {mask, decode_none(Value)};
+decode_nfqnl_cfg_msg(_Family, 4, <<Value:32>>) ->
+    {mask, decode_flag(flag_info_nfqnl_cfg_msg_mask(), Value)};
 
-decode_nfqnl_cfg_msg(_Family, 5, Value) ->
-    {flags, decode_none(Value)};
+decode_nfqnl_cfg_msg(_Family, 5, <<Value:32>>) ->
+    {flags, decode_flag(flag_info_nfqnl_cfg_msg_flags(), Value)};
 
 decode_nfqnl_cfg_msg(_Family, Id, Value) ->
     {Id, Value}.
@@ -1335,11 +1341,11 @@ decode_nfqnl_attr(_Family, 9, Value) ->
 decode_nfqnl_attr(_Family, 10, Value) ->
     {payload, decode_binary(Value)};
 
-decode_nfqnl_attr(_Family, 11, Value) ->
-    {ct, decode_none(Value)};
+decode_nfqnl_attr(Family, 11, Value) ->
+    {ct, nl_dec_nla(Family, fun decode_ctnetlink/3, Value)};
 
-decode_nfqnl_attr(_Family, 12, Value) ->
-    {ct_info, decode_none(Value)};
+decode_nfqnl_attr(_Family, 12, <<Value:32>>) ->
+    {ct_info, decode_nfqnl_attr_ct_info(Value)};
 
 decode_nfqnl_attr(_Family, 13, Value) ->
     {cap_len, decode_uint32(Value)};
@@ -1358,6 +1364,29 @@ decode_nfqnl_attr(_Family, 17, Value) ->
 
 decode_nfqnl_attr(_Family, Id, Value) ->
     {Id, Value}.
+
+%% ============================
+
+decode_nfqnl_attr_ct_info(0) ->
+    established;
+
+decode_nfqnl_attr_ct_info(1) ->
+    related;
+
+decode_nfqnl_attr_ct_info(2) ->
+    new;
+
+decode_nfqnl_attr_ct_info(3) ->
+    established_reply;
+
+decode_nfqnl_attr_ct_info(4) ->
+    related_reply;
+
+decode_nfqnl_attr_ct_info(5) ->
+    new_reply;
+
+decode_nfqnl_attr_ct_info(Value) ->
+    Value.
 
 %% ============================
 
@@ -3298,10 +3327,10 @@ encode_nfqnl_cfg_msg(_Family, {queue_maxlen, Value}) ->
     encode_none(3, Value);
 
 encode_nfqnl_cfg_msg(_Family, {mask, Value}) ->
-    encode_none(4, Value);
+    encode_uint32(4, encode_flag(flag_info_nfqnl_cfg_msg_mask(), Value));
 
 encode_nfqnl_cfg_msg(_Family, {flags, Value}) ->
-    encode_none(5, Value);
+    encode_uint32(5, encode_flag(flag_info_nfqnl_cfg_msg_flags(), Value));
 
 encode_nfqnl_cfg_msg(_Family, {Type, Value})
   when is_integer(Type), is_binary(Value) ->
@@ -3346,11 +3375,11 @@ encode_nfqnl_attr(_Family, Value)
 encode_nfqnl_attr(_Family, {payload, Value}) ->
     encode_binary(10, Value);
 
-encode_nfqnl_attr(_Family, {ct, Value}) ->
-    encode_none(11, Value);
+encode_nfqnl_attr(Family, {ct, Value}) ->
+    enc_nla(11, nl_enc_nla(Family, fun encode_ctnetlink/2, Value));
 
 encode_nfqnl_attr(_Family, {ct_info, Value}) ->
-    encode_none(12, Value);
+    encode_uint32(12, encode_nfqnl_attr_ct_info(Value));
 
 encode_nfqnl_attr(_Family, {cap_len, Value}) ->
     encode_uint32(13, Value);
@@ -3370,6 +3399,29 @@ encode_nfqnl_attr(_Family, {gid, Value}) ->
 encode_nfqnl_attr(_Family, {Type, Value})
   when is_integer(Type), is_binary(Value) ->
     enc_nla(Type, Value).
+
+%% ============================
+
+encode_nfqnl_attr_ct_info(established) ->
+    0;
+
+encode_nfqnl_attr_ct_info(related) ->
+    1;
+
+encode_nfqnl_attr_ct_info(new) ->
+    2;
+
+encode_nfqnl_attr_ct_info(established_reply) ->
+    3;
+
+encode_nfqnl_attr_ct_info(related_reply) ->
+    4;
+
+encode_nfqnl_attr_ct_info(new_reply) ->
+    5;
+
+encode_nfqnl_attr_ct_info(Value) when is_integer(Value) ->
+    Value.
 
 %% ============================
 

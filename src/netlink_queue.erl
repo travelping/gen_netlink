@@ -56,6 +56,7 @@ init([Queue, Opts]) ->
     ok = nfq_bind_pf(Socket, inet),
     ok = nfq_create_queue(Socket, Queue),
     ok = nfq_set_mode(Socket, Queue, ?NFQNL_COPY_PACKET, 65535),
+    ok = nfq_set_flags(Socket, Queue, [conntrack], [conntrack]),
 
     ok = gen_socket:input_event(Socket, true),
 
@@ -144,6 +145,11 @@ nfq_set_mode(Socket, Queue, CopyMode, CopyLen) ->
     Msg = {queue, config, [ack,request], 0, 0, {unspec, 0, Queue, [Cmd]}},
     nfnl_query(Socket, Msg).
 
+nfq_set_flags(Socket, Queue, Flags, Mask) ->
+    Cmd = [{mask, Mask}, {flags, Flags}],
+    Msg = {queue, config, [ack,request], 0, 0, {unspec, 0, Queue, Cmd}},
+    nfnl_query(Socket, Msg).
+
 process_nfq_msgs([], _State) ->
     ok;
 process_nfq_msgs([Msg|Rest], State) ->
@@ -161,9 +167,16 @@ process_nfq_packet({inet, _Version, _Queue, Info},
     {_, Id, _, _} = lists:keyfind(packet_hdr, 1, Info),
     netlink:debug("Verdict for ~p~n", [Id]),
 
-    Verdict = Cb:nfq_verdict(Info, CbState),
-    NLA = {verdict_hdr, Verdict, Id},
-    Msg = {queue, verdict, [request], 0, 0, {unspec, 0, Queue, [NLA]}},
+    NLA = case Cb:nfq_verdict(Info, CbState) of
+	      {Verdict, Attrs} when is_list(Attrs) ->
+		  [{verdict_hdr, Verdict, Id} | Attrs];
+	      Verdict when is_integer(Verdict) ->
+		  [{verdict_hdr, Verdict, Id}];
+	      _ ->
+		  [{verdict_hdr, ?NF_ACCEPT, Id}]
+	  end,
+    lager:warning("NLA: ~p", [NLA]),
+    Msg = {queue, verdict, [request], 0, 0, {unspec, 0, Queue, NLA}},
     Request = netlink:nl_ct_enc(Msg),
     gen_socket:sendto(Socket, netlink:sockaddr_nl(netlink, 0, 0), Request).
 

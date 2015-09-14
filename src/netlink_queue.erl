@@ -10,7 +10,7 @@
 	 terminate/2, code_change/3]).
 
 %% nfq callbacks
--export([nfq_init/1, nfq_verdict/2]).
+-export([nfq_init/1, nfq_verdict/3]).
 
 -include_lib("gen_socket/include/gen_socket.hrl").
 -include("netlink.hrl").
@@ -40,7 +40,7 @@ start_link(ServerName, Queue, Opts) ->
 nfq_init(_Opts) ->
     {}.
 
-nfq_verdict(_Info, _State) ->
+nfq_verdict(_Family, _Info, _State) ->
     ?NF_ACCEPT.
 
 %%%===================================================================
@@ -160,21 +160,35 @@ process_nfq_msgs([Msg|Rest], State) ->
 process_nfq_msg({queue, packet, _Flags, _Seq, _Pid, Packet}, State) ->
     process_nfq_packet(Packet, State).
 
-process_nfq_packet({inet, _Version, _Queue, Info},
+process_nfq_packet({Family, _Version, _Queue, Info},
 		   #state{socket = Socket, queue = Queue,
-			  cb = Cb, cb_state = CbState}) ->
+			  cb = Cb, cb_state = CbState})
+  when Family == inet; Family == inet6 ->
     dump_packet(Info),
     {_, Id, _, _} = lists:keyfind(packet_hdr, 1, Info),
     netlink:debug("Verdict for ~p~n", [Id]),
 
-    NLA = case Cb:nfq_verdict(Info, CbState) of
+    NLA = try Cb:nfq_verdict(Family, Info, CbState) of
 	      {Verdict, Attrs} when is_list(Attrs) ->
 		  [{verdict_hdr, Verdict, Id} | Attrs];
 	      Verdict when is_integer(Verdict) ->
 		  [{verdict_hdr, Verdict, Id}];
 	      _ ->
 		  [{verdict_hdr, ?NF_ACCEPT, Id}]
+	  catch
+	      _:_ ->
+		  [{verdict_hdr, ?NF_ACCEPT, Id}]
 	  end,
+    lager:warning("NLA: ~p", [NLA]),
+    Msg = {queue, verdict, [request], 0, 0, {unspec, 0, Queue, NLA}},
+    Request = netlink:nl_ct_enc(Msg),
+    gen_socket:sendto(Socket, netlink:sockaddr_nl(netlink, 0, 0), Request);
+
+process_nfq_packet({_Family, _Version, _Queue, Info},
+		   #state{socket = Socket, queue = Queue}) ->
+    dump_packet(Info),
+    {_, Id, _, _} = lists:keyfind(packet_hdr, 1, Info),
+    NLA = [{verdict_hdr, ?NF_ACCEPT, Id}],
     lager:warning("NLA: ~p", [NLA]),
     Msg = {queue, verdict, [request], 0, 0, {unspec, 0, Queue, NLA}},
     Request = netlink:nl_ct_enc(Msg),

@@ -90,283 +90,311 @@ flag_info_nft_table_attributes_flags() ->
 flag_info_nft_set_attributes_flags() ->
     [{1,anonymous},{2,constant},{4,interval},{8,map},{16,timeout},{32,eval}].
 
-flag_info_nft_set_elem_attributes_flags() ->
+flag_info_nft_set_ext_attributes_flags() ->
     [{1,interval_end}].
 
 %% ============================
 
-decode_nfnl_subsys(0) ->
+decode_nl_subsys(0) ->
     netlink;
 
-decode_nfnl_subsys(1) ->
+decode_nl_subsys(1) ->
     ctnetlink;
 
-decode_nfnl_subsys(2) ->
+decode_nl_subsys(2) ->
     ctnetlink_exp;
 
-decode_nfnl_subsys(3) ->
+decode_nl_subsys(3) ->
     queue;
 
-decode_nfnl_subsys(4) ->
+decode_nl_subsys(4) ->
     ulog;
 
-decode_nfnl_subsys(5) ->
+decode_nl_subsys(5) ->
     osf;
 
-decode_nfnl_subsys(6) ->
+decode_nl_subsys(6) ->
     ipset;
 
-decode_nfnl_subsys(7) ->
+decode_nl_subsys(7) ->
     acct;
 
-decode_nfnl_subsys(8) ->
+decode_nl_subsys(8) ->
     ctnetlink_timeout;
 
-decode_nfnl_subsys(9) ->
+decode_nl_subsys(9) ->
     cthelper;
 
-decode_nfnl_subsys(10) ->
+decode_nl_subsys(10) ->
     nftables;
 
-decode_nfnl_subsys(11) ->
+decode_nl_subsys(11) ->
     nft_compat;
 
-decode_nfnl_subsys(12) ->
+decode_nl_subsys(12) ->
     count;
 
-decode_nfnl_subsys(Value) ->
+decode_nl_subsys(Value) ->
     Value.
 
 %% ============================
 
-decode_ctm_msgtype_netlink(?NLMSG_NOOP) ->
+decode_rtm_msgtype_rtnetlink(?NLMSG_NOOP) ->
     noop;
 
-decode_ctm_msgtype_netlink(?NLMSG_ERROR) ->
+decode_rtm_msgtype_rtnetlink(?NLMSG_ERROR) ->
     error;
 
-decode_ctm_msgtype_netlink(?NLMSG_DONE) ->
+decode_rtm_msgtype_rtnetlink(?NLMSG_DONE) ->
     done;
 
-decode_ctm_msgtype_netlink(?NLMSG_OVERRUN) ->
+decode_rtm_msgtype_rtnetlink(?NLMSG_OVERRUN) ->
     overrun;
 
-decode_ctm_msgtype_netlink(?RTM_NEWLINK) ->
+decode_rtm_msgtype_rtnetlink(?RTM_NEWLINK) ->
     newlink;
 
-decode_ctm_msgtype_netlink(?RTM_DELLINK) ->
+decode_rtm_msgtype_rtnetlink(?RTM_DELLINK) ->
     dellink;
 
-decode_ctm_msgtype_netlink(?RTM_GETLINK) ->
+decode_rtm_msgtype_rtnetlink(?RTM_GETLINK) ->
     getlink;
 
-decode_ctm_msgtype_netlink(?RTM_SETLINK) ->
+decode_rtm_msgtype_rtnetlink(?RTM_SETLINK) ->
     setlink;
 
-decode_ctm_msgtype_netlink(?RTM_NEWADDR) ->
+decode_rtm_msgtype_rtnetlink(?RTM_NEWADDR) ->
     newaddr;
 
-decode_ctm_msgtype_netlink(?RTM_DELADDR) ->
+decode_rtm_msgtype_rtnetlink(?RTM_DELADDR) ->
     deladdr;
 
-decode_ctm_msgtype_netlink(?RTM_GETADDR) ->
+decode_rtm_msgtype_rtnetlink(?RTM_GETADDR) ->
     getaddr;
 
-decode_ctm_msgtype_netlink(?RTM_NEWROUTE) ->
+decode_rtm_msgtype_rtnetlink(?RTM_NEWROUTE) ->
     newroute;
 
-decode_ctm_msgtype_netlink(?RTM_DELROUTE) ->
+decode_rtm_msgtype_rtnetlink(?RTM_DELROUTE) ->
     delroute;
 
-decode_ctm_msgtype_netlink(?RTM_GETROUTE) ->
+decode_rtm_msgtype_rtnetlink(?RTM_GETROUTE) ->
     getroute;
 
-decode_ctm_msgtype_netlink(?RTM_NEWNEIGH) ->
+decode_rtm_msgtype_rtnetlink(?RTM_NEWNEIGH) ->
     newneigh;
 
-decode_ctm_msgtype_netlink(?RTM_DELNEIGH) ->
+decode_rtm_msgtype_rtnetlink(?RTM_DELNEIGH) ->
     delneigh;
 
-decode_ctm_msgtype_netlink(?RTM_GETNEIGH) ->
+decode_rtm_msgtype_rtnetlink(?RTM_GETNEIGH) ->
     getneigh;
 
-decode_ctm_msgtype_netlink(?RTM_NEWRULE) ->
+decode_rtm_msgtype_rtnetlink(?RTM_NEWRULE) ->
     newrule;
 
-decode_ctm_msgtype_netlink(?RTM_DELRULE) ->
+decode_rtm_msgtype_rtnetlink(?RTM_DELRULE) ->
     delrule;
 
-decode_ctm_msgtype_netlink(?RTM_GETRULE) ->
+decode_rtm_msgtype_rtnetlink(?RTM_GETRULE) ->
     getrule;
 
-decode_ctm_msgtype_netlink(?RTM_NEWQDISC) ->
+decode_rtm_msgtype_rtnetlink(?RTM_NEWQDISC) ->
     newqdisc;
 
-decode_ctm_msgtype_netlink(?RTM_DELQDISC) ->
+decode_rtm_msgtype_rtnetlink(?RTM_DELQDISC) ->
     delqdisc;
 
-decode_ctm_msgtype_netlink(?RTM_GETQDISC) ->
+decode_rtm_msgtype_rtnetlink(?RTM_GETQDISC) ->
     getqdisc;
 
-decode_ctm_msgtype_netlink(?RTM_NEWTCLASS) ->
+decode_rtm_msgtype_rtnetlink(?RTM_NEWTCLASS) ->
     newtclass;
 
-decode_ctm_msgtype_netlink(?RTM_DELTCLASS) ->
+decode_rtm_msgtype_rtnetlink(?RTM_DELTCLASS) ->
     deltclass;
 
-decode_ctm_msgtype_netlink(?RTM_GETTCLASS) ->
+decode_rtm_msgtype_rtnetlink(?RTM_GETTCLASS) ->
     gettclass;
 
-decode_ctm_msgtype_netlink(?RTM_NEWTFILTER) ->
+decode_rtm_msgtype_rtnetlink(?RTM_NEWTFILTER) ->
     newtfilter;
 
-decode_ctm_msgtype_netlink(?RTM_DELTFILTER) ->
+decode_rtm_msgtype_rtnetlink(?RTM_DELTFILTER) ->
     deltfilter;
 
-decode_ctm_msgtype_netlink(?RTM_GETTFILTER) ->
+decode_rtm_msgtype_rtnetlink(?RTM_GETTFILTER) ->
     gettfilter;
 
-decode_ctm_msgtype_netlink(?RTM_NEWACTION) ->
+decode_rtm_msgtype_rtnetlink(?RTM_NEWACTION) ->
     newaction;
 
-decode_ctm_msgtype_netlink(?RTM_DELACTION) ->
+decode_rtm_msgtype_rtnetlink(?RTM_DELACTION) ->
     delaction;
 
-decode_ctm_msgtype_netlink(?RTM_GETACTION) ->
+decode_rtm_msgtype_rtnetlink(?RTM_GETACTION) ->
     getaction;
 
-decode_ctm_msgtype_netlink(?RTM_NEWPREFIX) ->
+decode_rtm_msgtype_rtnetlink(?RTM_NEWPREFIX) ->
     newprefix;
 
-decode_ctm_msgtype_netlink(?RTM_GETMULTICAST) ->
+decode_rtm_msgtype_rtnetlink(?RTM_GETMULTICAST) ->
     getmulticast;
 
-decode_ctm_msgtype_netlink(?RTM_GETANYCAST) ->
+decode_rtm_msgtype_rtnetlink(?RTM_GETANYCAST) ->
     getanycast;
 
-decode_ctm_msgtype_netlink(?RTM_NEWNEIGHTBL) ->
+decode_rtm_msgtype_rtnetlink(?RTM_NEWNEIGHTBL) ->
     newneightbl;
 
-decode_ctm_msgtype_netlink(?RTM_GETNEIGHTBL) ->
+decode_rtm_msgtype_rtnetlink(?RTM_GETNEIGHTBL) ->
     getneightbl;
 
-decode_ctm_msgtype_netlink(?RTM_SETNEIGHTBL) ->
+decode_rtm_msgtype_rtnetlink(?RTM_SETNEIGHTBL) ->
     setneightbl;
 
-decode_ctm_msgtype_netlink(?RTM_NEWNDUSEROPT) ->
+decode_rtm_msgtype_rtnetlink(?RTM_NEWNDUSEROPT) ->
     newnduseropt;
 
-decode_ctm_msgtype_netlink(?RTM_NEWADDRLABEL) ->
+decode_rtm_msgtype_rtnetlink(?RTM_NEWADDRLABEL) ->
     newaddrlabel;
 
-decode_ctm_msgtype_netlink(?RTM_DELADDRLABEL) ->
+decode_rtm_msgtype_rtnetlink(?RTM_DELADDRLABEL) ->
     deladdrlabel;
 
-decode_ctm_msgtype_netlink(?RTM_GETADDRLABEL) ->
+decode_rtm_msgtype_rtnetlink(?RTM_GETADDRLABEL) ->
     getaddrlabel;
 
-decode_ctm_msgtype_netlink(?RTM_GETDCB) ->
+decode_rtm_msgtype_rtnetlink(?RTM_GETDCB) ->
     getdcb;
 
-decode_ctm_msgtype_netlink(?RTM_SETDCB) ->
+decode_rtm_msgtype_rtnetlink(?RTM_SETDCB) ->
     setdcb;
 
-decode_ctm_msgtype_netlink(Value) ->
+decode_rtm_msgtype_rtnetlink(Value) ->
     Value.
 
 %% ============================
 
-decode_ctm_msgtype_ctnetlink(?IPCTNL_MSG_CT_NEW) ->
+decode_nl_msgtype_nlmsg(?NLMSG_NOOP) ->
+    noop;
+
+decode_nl_msgtype_nlmsg(?NLMSG_ERROR) ->
+    error;
+
+decode_nl_msgtype_nlmsg(?NLMSG_DONE) ->
+    done;
+
+decode_nl_msgtype_nlmsg(?NLMSG_OVERRUN) ->
+    overrun;
+
+decode_nl_msgtype_nlmsg(Value) ->
+    Value.
+
+%% ============================
+
+decode_nl_msgtype_nfnl(?NFNL_MSG_BATCH_BEGIN) ->
+    'begin';
+
+decode_nl_msgtype_nfnl(?NFNL_MSG_BATCH_END) ->
+    'end';
+
+decode_nl_msgtype_nfnl(Value) ->
+    Value.
+
+%% ============================
+
+decode_nl_msgtype_ctnetlink(?IPCTNL_MSG_CT_NEW) ->
     new;
 
-decode_ctm_msgtype_ctnetlink(?IPCTNL_MSG_CT_GET) ->
+decode_nl_msgtype_ctnetlink(?IPCTNL_MSG_CT_GET) ->
     get;
 
-decode_ctm_msgtype_ctnetlink(?IPCTNL_MSG_CT_DELETE) ->
+decode_nl_msgtype_ctnetlink(?IPCTNL_MSG_CT_DELETE) ->
     delete;
 
-decode_ctm_msgtype_ctnetlink(?IPCTNL_MSG_CT_GET_CTRZERO) ->
+decode_nl_msgtype_ctnetlink(?IPCTNL_MSG_CT_GET_CTRZERO) ->
     get_ctrzero;
 
-decode_ctm_msgtype_ctnetlink(Value) ->
+decode_nl_msgtype_ctnetlink(Value) ->
     Value.
 
 %% ============================
 
-decode_ctm_msgtype_ctnetlink_exp(?IPCTNL_MSG_EXP_NEW) ->
+decode_nl_msgtype_ctnetlink_exp(?IPCTNL_MSG_EXP_NEW) ->
     new;
 
-decode_ctm_msgtype_ctnetlink_exp(?IPCTNL_MSG_EXP_GET) ->
+decode_nl_msgtype_ctnetlink_exp(?IPCTNL_MSG_EXP_GET) ->
     get;
 
-decode_ctm_msgtype_ctnetlink_exp(?IPCTNL_MSG_EXP_DELETE) ->
+decode_nl_msgtype_ctnetlink_exp(?IPCTNL_MSG_EXP_DELETE) ->
     delete;
 
-decode_ctm_msgtype_ctnetlink_exp(Value) ->
+decode_nl_msgtype_ctnetlink_exp(Value) ->
     Value.
 
 %% ============================
 
-decode_ctm_msgtype_nftables(0) ->
+decode_nl_msgtype_nftables(0) ->
     newtable;
 
-decode_ctm_msgtype_nftables(1) ->
+decode_nl_msgtype_nftables(1) ->
     gettable;
 
-decode_ctm_msgtype_nftables(2) ->
+decode_nl_msgtype_nftables(2) ->
     deltable;
 
-decode_ctm_msgtype_nftables(3) ->
+decode_nl_msgtype_nftables(3) ->
     newchain;
 
-decode_ctm_msgtype_nftables(4) ->
+decode_nl_msgtype_nftables(4) ->
     getchain;
 
-decode_ctm_msgtype_nftables(5) ->
+decode_nl_msgtype_nftables(5) ->
     delchain;
 
-decode_ctm_msgtype_nftables(6) ->
+decode_nl_msgtype_nftables(6) ->
     newrule;
 
-decode_ctm_msgtype_nftables(7) ->
+decode_nl_msgtype_nftables(7) ->
     getrule;
 
-decode_ctm_msgtype_nftables(8) ->
+decode_nl_msgtype_nftables(8) ->
     delrule;
 
-decode_ctm_msgtype_nftables(9) ->
+decode_nl_msgtype_nftables(9) ->
     newset;
 
-decode_ctm_msgtype_nftables(10) ->
+decode_nl_msgtype_nftables(10) ->
     getset;
 
-decode_ctm_msgtype_nftables(11) ->
+decode_nl_msgtype_nftables(11) ->
     delset;
 
-decode_ctm_msgtype_nftables(12) ->
+decode_nl_msgtype_nftables(12) ->
     newsetelem;
 
-decode_ctm_msgtype_nftables(13) ->
+decode_nl_msgtype_nftables(13) ->
     getsetelem;
 
-decode_ctm_msgtype_nftables(14) ->
+decode_nl_msgtype_nftables(14) ->
     delsetelem;
 
-decode_ctm_msgtype_nftables(15) ->
+decode_nl_msgtype_nftables(15) ->
     newgen;
 
-decode_ctm_msgtype_nftables(16) ->
+decode_nl_msgtype_nftables(16) ->
     getgen;
 
-decode_ctm_msgtype_nftables(Value) ->
+decode_nl_msgtype_nftables(Value) ->
     Value.
 
 %% ============================
 
-decode_ctm_msgtype_nft_compat(0) ->
+decode_nl_msgtype_nft_compat(0) ->
     get;
 
-decode_ctm_msgtype_nft_compat(Value) ->
+decode_nl_msgtype_nft_compat(Value) ->
     Value.
 
 %% ============================
@@ -1248,19 +1276,19 @@ decode_rtnetlink_prefix(_Family, Id, Value) ->
 
 %% ============================
 
-decode_ctm_msgtype_queue(?NFQNL_MSG_PACKET) ->
+decode_nl_msgtype_queue(?NFQNL_MSG_PACKET) ->
     packet;
 
-decode_ctm_msgtype_queue(?NFQNL_MSG_VERDICT) ->
+decode_nl_msgtype_queue(?NFQNL_MSG_VERDICT) ->
     verdict;
 
-decode_ctm_msgtype_queue(?NFQNL_MSG_CONFIG) ->
+decode_nl_msgtype_queue(?NFQNL_MSG_CONFIG) ->
     config;
 
-decode_ctm_msgtype_queue(?NFQNL_MSG_VERDICT_BATCH) ->
+decode_nl_msgtype_queue(?NFQNL_MSG_VERDICT_BATCH) ->
     verdict_batch;
 
-decode_ctm_msgtype_queue(Value) ->
+decode_nl_msgtype_queue(Value) ->
     Value.
 
 %% ============================
@@ -2050,31 +2078,62 @@ decode_nft_set_attributes_policy(Value) ->
 
 %% ============================
 
-decode_nft_set_elem_attributes(_Family, 0, Value) ->
+decode_nft_set_elem_list_attributes(_Family, 0, Value) ->
     {unspec, decode_none(Value)};
 
-decode_nft_set_elem_attributes(_Family, 1, Value) ->
-    {key, decode_binary(Value)};
+decode_nft_set_elem_list_attributes(_Family, 1, Value) ->
+    {table, decode_string(Value)};
 
-decode_nft_set_elem_attributes(_Family, 2, Value) ->
-    {data, decode_binary(Value)};
+decode_nft_set_elem_list_attributes(_Family, 2, Value) ->
+    {set, decode_string(Value)};
 
-decode_nft_set_elem_attributes(_Family, 3, <<Value:32>>) ->
-    {flags, decode_flag(flag_info_nft_set_elem_attributes_flags(), Value)};
+decode_nft_set_elem_list_attributes(Family, 3, Value) ->
+    {elements, nl_dec_nla(Family, fun decode_nft_set_elem_list_elements/3, Value)};
 
-decode_nft_set_elem_attributes(_Family, 4, Value) ->
+decode_nft_set_elem_list_attributes(_Family, 4, Value) ->
+    {set_id, decode_uint32(Value)};
+
+decode_nft_set_elem_list_attributes(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_set_elem_list_elements(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_set_elem_list_elements(Family, 1, Value) ->
+    {element, nl_dec_nla(Family, fun decode_nft_set_ext_attributes/3, Value)};
+
+decode_nft_set_elem_list_elements(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_nft_set_ext_attributes(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_nft_set_ext_attributes(Family, 1, Value) ->
+    {key, nl_dec_nla(Family, fun decode_nft_data_attributes/3, Value)};
+
+decode_nft_set_ext_attributes(Family, 2, Value) ->
+    {data, nl_dec_nla(Family, fun decode_nft_data_attributes/3, Value)};
+
+decode_nft_set_ext_attributes(_Family, 3, <<Value:32>>) ->
+    {flags, decode_flag(flag_info_nft_set_ext_attributes_flags(), Value)};
+
+decode_nft_set_ext_attributes(_Family, 4, Value) ->
     {timeout, decode_uint64(Value)};
 
-decode_nft_set_elem_attributes(_Family, 5, Value) ->
+decode_nft_set_ext_attributes(_Family, 5, Value) ->
     {expiration, decode_uint64(Value)};
 
-decode_nft_set_elem_attributes(_Family, 6, Value) ->
+decode_nft_set_ext_attributes(_Family, 6, Value) ->
     {userdata, decode_binary(Value)};
 
-decode_nft_set_elem_attributes(Family, 7, Value) ->
+decode_nft_set_ext_attributes(Family, 7, Value) ->
     {expr, nl_dec_nla(Family, fun decode_nft_expr_attributes/3, Value)};
 
-decode_nft_set_elem_attributes(_Family, Id, Value) ->
+decode_nft_set_ext_attributes(_Family, Id, Value) ->
     {Id, Value}.
 
 %% ============================
@@ -2090,278 +2149,306 @@ decode_nft_gen_attributes(_Family, Id, Value) ->
 
 %% ============================
 
-encode_nfnl_subsys(netlink) ->
+encode_nl_subsys(netlink) ->
     0;
 
-encode_nfnl_subsys(ctnetlink) ->
+encode_nl_subsys(ctnetlink) ->
     1;
 
-encode_nfnl_subsys(ctnetlink_exp) ->
+encode_nl_subsys(ctnetlink_exp) ->
     2;
 
-encode_nfnl_subsys(queue) ->
+encode_nl_subsys(queue) ->
     3;
 
-encode_nfnl_subsys(ulog) ->
+encode_nl_subsys(ulog) ->
     4;
 
-encode_nfnl_subsys(osf) ->
+encode_nl_subsys(osf) ->
     5;
 
-encode_nfnl_subsys(ipset) ->
+encode_nl_subsys(ipset) ->
     6;
 
-encode_nfnl_subsys(acct) ->
+encode_nl_subsys(acct) ->
     7;
 
-encode_nfnl_subsys(ctnetlink_timeout) ->
+encode_nl_subsys(ctnetlink_timeout) ->
     8;
 
-encode_nfnl_subsys(cthelper) ->
+encode_nl_subsys(cthelper) ->
     9;
 
-encode_nfnl_subsys(nftables) ->
+encode_nl_subsys(nftables) ->
     10;
 
-encode_nfnl_subsys(nft_compat) ->
+encode_nl_subsys(nft_compat) ->
     11;
 
-encode_nfnl_subsys(count) ->
+encode_nl_subsys(count) ->
     12;
 
-encode_nfnl_subsys(Value) when is_integer(Value) ->
+encode_nl_subsys(Value) when is_integer(Value) ->
     Value.
 
 %% ============================
 
-encode_ctm_msgtype_netlink(noop) ->
+encode_rtm_msgtype_rtnetlink(noop) ->
     ?NLMSG_NOOP;
 
-encode_ctm_msgtype_netlink(error) ->
+encode_rtm_msgtype_rtnetlink(error) ->
     ?NLMSG_ERROR;
 
-encode_ctm_msgtype_netlink(done) ->
+encode_rtm_msgtype_rtnetlink(done) ->
     ?NLMSG_DONE;
 
-encode_ctm_msgtype_netlink(overrun) ->
+encode_rtm_msgtype_rtnetlink(overrun) ->
     ?NLMSG_OVERRUN;
 
-encode_ctm_msgtype_netlink(newlink) ->
+encode_rtm_msgtype_rtnetlink(newlink) ->
     ?RTM_NEWLINK;
 
-encode_ctm_msgtype_netlink(dellink) ->
+encode_rtm_msgtype_rtnetlink(dellink) ->
     ?RTM_DELLINK;
 
-encode_ctm_msgtype_netlink(getlink) ->
+encode_rtm_msgtype_rtnetlink(getlink) ->
     ?RTM_GETLINK;
 
-encode_ctm_msgtype_netlink(setlink) ->
+encode_rtm_msgtype_rtnetlink(setlink) ->
     ?RTM_SETLINK;
 
-encode_ctm_msgtype_netlink(newaddr) ->
+encode_rtm_msgtype_rtnetlink(newaddr) ->
     ?RTM_NEWADDR;
 
-encode_ctm_msgtype_netlink(deladdr) ->
+encode_rtm_msgtype_rtnetlink(deladdr) ->
     ?RTM_DELADDR;
 
-encode_ctm_msgtype_netlink(getaddr) ->
+encode_rtm_msgtype_rtnetlink(getaddr) ->
     ?RTM_GETADDR;
 
-encode_ctm_msgtype_netlink(newroute) ->
+encode_rtm_msgtype_rtnetlink(newroute) ->
     ?RTM_NEWROUTE;
 
-encode_ctm_msgtype_netlink(delroute) ->
+encode_rtm_msgtype_rtnetlink(delroute) ->
     ?RTM_DELROUTE;
 
-encode_ctm_msgtype_netlink(getroute) ->
+encode_rtm_msgtype_rtnetlink(getroute) ->
     ?RTM_GETROUTE;
 
-encode_ctm_msgtype_netlink(newneigh) ->
+encode_rtm_msgtype_rtnetlink(newneigh) ->
     ?RTM_NEWNEIGH;
 
-encode_ctm_msgtype_netlink(delneigh) ->
+encode_rtm_msgtype_rtnetlink(delneigh) ->
     ?RTM_DELNEIGH;
 
-encode_ctm_msgtype_netlink(getneigh) ->
+encode_rtm_msgtype_rtnetlink(getneigh) ->
     ?RTM_GETNEIGH;
 
-encode_ctm_msgtype_netlink(newrule) ->
+encode_rtm_msgtype_rtnetlink(newrule) ->
     ?RTM_NEWRULE;
 
-encode_ctm_msgtype_netlink(delrule) ->
+encode_rtm_msgtype_rtnetlink(delrule) ->
     ?RTM_DELRULE;
 
-encode_ctm_msgtype_netlink(getrule) ->
+encode_rtm_msgtype_rtnetlink(getrule) ->
     ?RTM_GETRULE;
 
-encode_ctm_msgtype_netlink(newqdisc) ->
+encode_rtm_msgtype_rtnetlink(newqdisc) ->
     ?RTM_NEWQDISC;
 
-encode_ctm_msgtype_netlink(delqdisc) ->
+encode_rtm_msgtype_rtnetlink(delqdisc) ->
     ?RTM_DELQDISC;
 
-encode_ctm_msgtype_netlink(getqdisc) ->
+encode_rtm_msgtype_rtnetlink(getqdisc) ->
     ?RTM_GETQDISC;
 
-encode_ctm_msgtype_netlink(newtclass) ->
+encode_rtm_msgtype_rtnetlink(newtclass) ->
     ?RTM_NEWTCLASS;
 
-encode_ctm_msgtype_netlink(deltclass) ->
+encode_rtm_msgtype_rtnetlink(deltclass) ->
     ?RTM_DELTCLASS;
 
-encode_ctm_msgtype_netlink(gettclass) ->
+encode_rtm_msgtype_rtnetlink(gettclass) ->
     ?RTM_GETTCLASS;
 
-encode_ctm_msgtype_netlink(newtfilter) ->
+encode_rtm_msgtype_rtnetlink(newtfilter) ->
     ?RTM_NEWTFILTER;
 
-encode_ctm_msgtype_netlink(deltfilter) ->
+encode_rtm_msgtype_rtnetlink(deltfilter) ->
     ?RTM_DELTFILTER;
 
-encode_ctm_msgtype_netlink(gettfilter) ->
+encode_rtm_msgtype_rtnetlink(gettfilter) ->
     ?RTM_GETTFILTER;
 
-encode_ctm_msgtype_netlink(newaction) ->
+encode_rtm_msgtype_rtnetlink(newaction) ->
     ?RTM_NEWACTION;
 
-encode_ctm_msgtype_netlink(delaction) ->
+encode_rtm_msgtype_rtnetlink(delaction) ->
     ?RTM_DELACTION;
 
-encode_ctm_msgtype_netlink(getaction) ->
+encode_rtm_msgtype_rtnetlink(getaction) ->
     ?RTM_GETACTION;
 
-encode_ctm_msgtype_netlink(newprefix) ->
+encode_rtm_msgtype_rtnetlink(newprefix) ->
     ?RTM_NEWPREFIX;
 
-encode_ctm_msgtype_netlink(getmulticast) ->
+encode_rtm_msgtype_rtnetlink(getmulticast) ->
     ?RTM_GETMULTICAST;
 
-encode_ctm_msgtype_netlink(getanycast) ->
+encode_rtm_msgtype_rtnetlink(getanycast) ->
     ?RTM_GETANYCAST;
 
-encode_ctm_msgtype_netlink(newneightbl) ->
+encode_rtm_msgtype_rtnetlink(newneightbl) ->
     ?RTM_NEWNEIGHTBL;
 
-encode_ctm_msgtype_netlink(getneightbl) ->
+encode_rtm_msgtype_rtnetlink(getneightbl) ->
     ?RTM_GETNEIGHTBL;
 
-encode_ctm_msgtype_netlink(setneightbl) ->
+encode_rtm_msgtype_rtnetlink(setneightbl) ->
     ?RTM_SETNEIGHTBL;
 
-encode_ctm_msgtype_netlink(newnduseropt) ->
+encode_rtm_msgtype_rtnetlink(newnduseropt) ->
     ?RTM_NEWNDUSEROPT;
 
-encode_ctm_msgtype_netlink(newaddrlabel) ->
+encode_rtm_msgtype_rtnetlink(newaddrlabel) ->
     ?RTM_NEWADDRLABEL;
 
-encode_ctm_msgtype_netlink(deladdrlabel) ->
+encode_rtm_msgtype_rtnetlink(deladdrlabel) ->
     ?RTM_DELADDRLABEL;
 
-encode_ctm_msgtype_netlink(getaddrlabel) ->
+encode_rtm_msgtype_rtnetlink(getaddrlabel) ->
     ?RTM_GETADDRLABEL;
 
-encode_ctm_msgtype_netlink(getdcb) ->
+encode_rtm_msgtype_rtnetlink(getdcb) ->
     ?RTM_GETDCB;
 
-encode_ctm_msgtype_netlink(setdcb) ->
+encode_rtm_msgtype_rtnetlink(setdcb) ->
     ?RTM_SETDCB;
 
-encode_ctm_msgtype_netlink(Value) when is_integer(Value) ->
+encode_rtm_msgtype_rtnetlink(Value) when is_integer(Value) ->
     Value.
 
 %% ============================
 
-encode_ctm_msgtype_ctnetlink(new) ->
+encode_nl_msgtype_nlmsg(noop) ->
+    ?NLMSG_NOOP;
+
+encode_nl_msgtype_nlmsg(error) ->
+    ?NLMSG_ERROR;
+
+encode_nl_msgtype_nlmsg(done) ->
+    ?NLMSG_DONE;
+
+encode_nl_msgtype_nlmsg(overrun) ->
+    ?NLMSG_OVERRUN;
+
+encode_nl_msgtype_nlmsg(Value) when is_integer(Value) ->
+    Value.
+
+%% ============================
+
+encode_nl_msgtype_nfnl('begin') ->
+    ?NFNL_MSG_BATCH_BEGIN;
+
+encode_nl_msgtype_nfnl('end') ->
+    ?NFNL_MSG_BATCH_END;
+
+encode_nl_msgtype_nfnl(Value) when is_integer(Value) ->
+    Value.
+
+%% ============================
+
+encode_nl_msgtype_ctnetlink(new) ->
     ?IPCTNL_MSG_CT_NEW;
 
-encode_ctm_msgtype_ctnetlink(get) ->
+encode_nl_msgtype_ctnetlink(get) ->
     ?IPCTNL_MSG_CT_GET;
 
-encode_ctm_msgtype_ctnetlink(delete) ->
+encode_nl_msgtype_ctnetlink(delete) ->
     ?IPCTNL_MSG_CT_DELETE;
 
-encode_ctm_msgtype_ctnetlink(get_ctrzero) ->
+encode_nl_msgtype_ctnetlink(get_ctrzero) ->
     ?IPCTNL_MSG_CT_GET_CTRZERO;
 
-encode_ctm_msgtype_ctnetlink(Value) when is_integer(Value) ->
+encode_nl_msgtype_ctnetlink(Value) when is_integer(Value) ->
     Value.
 
 %% ============================
 
-encode_ctm_msgtype_ctnetlink_exp(new) ->
+encode_nl_msgtype_ctnetlink_exp(new) ->
     ?IPCTNL_MSG_EXP_NEW;
 
-encode_ctm_msgtype_ctnetlink_exp(get) ->
+encode_nl_msgtype_ctnetlink_exp(get) ->
     ?IPCTNL_MSG_EXP_GET;
 
-encode_ctm_msgtype_ctnetlink_exp(delete) ->
+encode_nl_msgtype_ctnetlink_exp(delete) ->
     ?IPCTNL_MSG_EXP_DELETE;
 
-encode_ctm_msgtype_ctnetlink_exp(Value) when is_integer(Value) ->
+encode_nl_msgtype_ctnetlink_exp(Value) when is_integer(Value) ->
     Value.
 
 %% ============================
 
-encode_ctm_msgtype_nftables(newtable) ->
+encode_nl_msgtype_nftables(newtable) ->
     0;
 
-encode_ctm_msgtype_nftables(gettable) ->
+encode_nl_msgtype_nftables(gettable) ->
     1;
 
-encode_ctm_msgtype_nftables(deltable) ->
+encode_nl_msgtype_nftables(deltable) ->
     2;
 
-encode_ctm_msgtype_nftables(newchain) ->
+encode_nl_msgtype_nftables(newchain) ->
     3;
 
-encode_ctm_msgtype_nftables(getchain) ->
+encode_nl_msgtype_nftables(getchain) ->
     4;
 
-encode_ctm_msgtype_nftables(delchain) ->
+encode_nl_msgtype_nftables(delchain) ->
     5;
 
-encode_ctm_msgtype_nftables(newrule) ->
+encode_nl_msgtype_nftables(newrule) ->
     6;
 
-encode_ctm_msgtype_nftables(getrule) ->
+encode_nl_msgtype_nftables(getrule) ->
     7;
 
-encode_ctm_msgtype_nftables(delrule) ->
+encode_nl_msgtype_nftables(delrule) ->
     8;
 
-encode_ctm_msgtype_nftables(newset) ->
+encode_nl_msgtype_nftables(newset) ->
     9;
 
-encode_ctm_msgtype_nftables(getset) ->
+encode_nl_msgtype_nftables(getset) ->
     10;
 
-encode_ctm_msgtype_nftables(delset) ->
+encode_nl_msgtype_nftables(delset) ->
     11;
 
-encode_ctm_msgtype_nftables(newsetelem) ->
+encode_nl_msgtype_nftables(newsetelem) ->
     12;
 
-encode_ctm_msgtype_nftables(getsetelem) ->
+encode_nl_msgtype_nftables(getsetelem) ->
     13;
 
-encode_ctm_msgtype_nftables(delsetelem) ->
+encode_nl_msgtype_nftables(delsetelem) ->
     14;
 
-encode_ctm_msgtype_nftables(newgen) ->
+encode_nl_msgtype_nftables(newgen) ->
     15;
 
-encode_ctm_msgtype_nftables(getgen) ->
+encode_nl_msgtype_nftables(getgen) ->
     16;
 
-encode_ctm_msgtype_nftables(Value) when is_integer(Value) ->
+encode_nl_msgtype_nftables(Value) when is_integer(Value) ->
     Value.
 
 %% ============================
 
-encode_ctm_msgtype_nft_compat(get) ->
+encode_nl_msgtype_nft_compat(get) ->
     0;
 
-encode_ctm_msgtype_nft_compat(Value) when is_integer(Value) ->
+encode_nl_msgtype_nft_compat(Value) when is_integer(Value) ->
     Value.
 
 %% ============================
@@ -3275,19 +3362,19 @@ encode_rtnetlink_prefix(_Family, {Type, Value})
 
 %% ============================
 
-encode_ctm_msgtype_queue(packet) ->
+encode_nl_msgtype_queue(packet) ->
     ?NFQNL_MSG_PACKET;
 
-encode_ctm_msgtype_queue(verdict) ->
+encode_nl_msgtype_queue(verdict) ->
     ?NFQNL_MSG_VERDICT;
 
-encode_ctm_msgtype_queue(config) ->
+encode_nl_msgtype_queue(config) ->
     ?NFQNL_MSG_CONFIG;
 
-encode_ctm_msgtype_queue(verdict_batch) ->
+encode_nl_msgtype_queue(verdict_batch) ->
     ?NFQNL_MSG_VERDICT_BATCH;
 
-encode_ctm_msgtype_queue(Value) when is_integer(Value) ->
+encode_nl_msgtype_queue(Value) when is_integer(Value) ->
     Value.
 
 %% ============================
@@ -4106,31 +4193,64 @@ encode_nft_set_attributes_policy(Value) when is_integer(Value) ->
 
 %% ============================
 
-encode_nft_set_elem_attributes(_Family, {unspec, Value}) ->
+encode_nft_set_elem_list_attributes(_Family, {unspec, Value}) ->
     encode_none(0, Value);
 
-encode_nft_set_elem_attributes(_Family, {key, Value}) ->
-    encode_binary(1, Value);
+encode_nft_set_elem_list_attributes(_Family, {table, Value}) ->
+    encode_string(1, Value);
 
-encode_nft_set_elem_attributes(_Family, {data, Value}) ->
-    encode_binary(2, Value);
+encode_nft_set_elem_list_attributes(_Family, {set, Value}) ->
+    encode_string(2, Value);
 
-encode_nft_set_elem_attributes(_Family, {flags, Value}) ->
-    encode_uint32(3, encode_flag(flag_info_nft_set_elem_attributes_flags(), Value));
+encode_nft_set_elem_list_attributes(Family, {elements, Value}) ->
+    enc_nla(3, nl_enc_nla(Family, fun encode_nft_set_elem_list_elements/2, Value));
 
-encode_nft_set_elem_attributes(_Family, {timeout, Value}) ->
+encode_nft_set_elem_list_attributes(_Family, {set_id, Value}) ->
+    encode_uint32(4, Value);
+
+encode_nft_set_elem_list_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_set_elem_list_elements(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_set_elem_list_elements(Family, {element, Value}) ->
+    enc_nla(1, nl_enc_nla(Family, fun encode_nft_set_ext_attributes/2, Value));
+
+encode_nft_set_elem_list_elements(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_nft_set_ext_attributes(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_nft_set_ext_attributes(Family, {key, Value}) ->
+    enc_nla(1, nl_enc_nla(Family, fun encode_nft_data_attributes/2, Value));
+
+encode_nft_set_ext_attributes(Family, {data, Value}) ->
+    enc_nla(2, nl_enc_nla(Family, fun encode_nft_data_attributes/2, Value));
+
+encode_nft_set_ext_attributes(_Family, {flags, Value}) ->
+    encode_uint32(3, encode_flag(flag_info_nft_set_ext_attributes_flags(), Value));
+
+encode_nft_set_ext_attributes(_Family, {timeout, Value}) ->
     encode_uint64(4, Value);
 
-encode_nft_set_elem_attributes(_Family, {expiration, Value}) ->
+encode_nft_set_ext_attributes(_Family, {expiration, Value}) ->
     encode_uint64(5, Value);
 
-encode_nft_set_elem_attributes(_Family, {userdata, Value}) ->
+encode_nft_set_ext_attributes(_Family, {userdata, Value}) ->
     encode_binary(6, Value);
 
-encode_nft_set_elem_attributes(Family, {expr, Value}) ->
+encode_nft_set_ext_attributes(Family, {expr, Value}) ->
     enc_nla(7, nl_enc_nla(Family, fun encode_nft_expr_attributes/2, Value));
 
-encode_nft_set_elem_attributes(_Family, {Type, Value})
+encode_nft_set_ext_attributes(_Family, {Type, Value})
   when is_integer(Type), is_binary(Value) ->
     enc_nla(Type, Value).
 

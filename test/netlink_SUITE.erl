@@ -300,8 +300,9 @@ nft_requests() ->
      <<16#2c, 16#00, 16#00, 16#00, 16#00, 16#0b, 16#05, 16#00, 16#f5, 16#c0, 16#c1, 16#55, 16#00, 16#00, 16#00, 16#00,
        16#02, 16#00, 16#00, 16#00, 16#08, 16#00, 16#01, 16#00, 16#73, 16#65, 16#74, 16#00, 16#08, 16#00, 16#02, 16#00,
        16#00, 16#00, 16#00, 16#04, 16#08, 16#00, 16#03, 16#00, 16#00, 16#00, 16#00, 16#00>>,
-     <<16#14, 16#00, 16#00, 16#00, 16#12, 16#00, 16#01, 16#03, 16#f5, 16#c0, 16#c1, 16#55, 16#00, 16#00, 16#00, 16#00,
-       16#11, 16#00, 16#00, 16#00>>,
+     %% RTM_GETLINK
+     %% <<16#14, 16#00, 16#00, 16#00, 16#12, 16#00, 16#01, 16#03, 16#f5, 16#c0, 16#c1, 16#55, 16#00, 16#00, 16#00, 16#00,
+     %%   16#11, 16#00, 16#00, 16#00>>,
      <<16#1c, 16#00, 16#00, 16#00, 16#01, 16#0a, 16#05, 16#00, 16#05, 16#00, 16#00, 16#00, 16#00, 16#00, 16#00, 16#00,
        16#02, 16#00, 16#00, 16#00, 16#08, 16#00, 16#01, 16#00, 16#6e, 16#61, 16#74, 16#00>>,
      <<16#1c, 16#00, 16#00, 16#00, 16#0a, 16#0a, 16#05, 16#03, 16#05, 16#00, 16#00, 16#00, 16#00, 16#00, 16#00, 16#00,
@@ -353,66 +354,81 @@ suite() ->
 
 test_conntrack_new(_Config) ->
 	Msg = conntrack_new(),
-	Msg = netlink:nl_ct_enc(netlink:nl_ct_dec(Msg)).
+	Msg = netlink:nl_ct_enc(netlink:nl_ct_dec(Msg)),
+    ok.
 
 test_rt_newneigh_1(_Config) ->
 	Msg = rt_newneigh_1(),
-	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)).
+	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)),
+    ok.
 
 test_rt_newneigh_2(_Config) ->
 	Msg = rt_newneigh_2(),
-	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)).
+	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)),
+    ok.
 
 test_rt_delroute(_Config) ->
 	Msg = rt_delroute(),
-	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)).
+	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)),
+    ok.
 
 test_rt_newprefix(_Config) ->
 	Msg = rt_newprefix(),
-	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)).
+	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)),
+    ok.
 
 test_rt_newlink_1(_Config) ->
 	Msg = rt_newlink_1(),
-	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)).
+	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)),
+    ok.
 
 test_rt_newlink_2(_Config) ->
 	Msg = rt_newlink_2(),
-	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)).
+	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)),
+    ok.
 
 test_rt_linkinfo_1(_Config) ->
 	Msg = rt_linkinfo_1(),
-	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)).
+	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)),
+    ok.
 
 test_rt_linkinfo_complex(_Config) ->
 	Msg = rt_linkinfo_complex(),
-	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)).
+	Msg = netlink:nl_rt_enc(netlink:nl_rt_dec(Msg)),
+    ok.
 
 test_nfq_unbind(_Config) ->
     Msg = nfq_unbind(),
-    Msg = netlink:nl_ct_enc(netlink:nl_ct_dec(Msg)).
+    Msg = netlink:nl_ct_enc(netlink:nl_ct_dec(Msg)),
+    ok.
 
 test_nfq_bind_queue(_Config) ->
     Msg = nfq_bind_queue(),
-    Msg = netlink:nl_ct_enc(netlink:nl_ct_dec(Msg)).
+    Msg = netlink:nl_ct_enc(netlink:nl_ct_dec(Msg)),
+    ok.
 
 test_nfq_bind_socket(_Config) ->
     Msg = nfq_bind_socket(),
-    Msg = netlink:nl_ct_enc(netlink:nl_ct_dec(Msg)).
+    Msg = netlink:nl_ct_enc(netlink:nl_ct_dec(Msg)),
+    ok.
 
 test_nfq_set_copy_mode(_Config) ->
     Msg = nfq_set_copy_mode(),
-    Msg = netlink:nl_ct_enc(netlink:nl_ct_dec(Msg)).
+    Msg = netlink:nl_ct_enc(netlink:nl_ct_dec(Msg)),
+    ok.
 
 test_nfq_set_verdict(_Config) ->
     Msg = nfq_set_verdict(),
-    Msg = netlink:nl_ct_enc(netlink:nl_ct_dec(Msg)).
+    Msg = netlink:nl_ct_enc(netlink:nl_ct_dec(Msg)),
+    ok.
 
 test_nft_requests(_Config) ->
     lists:foreach(fun(Msg) ->
 			  D = netlink:nl_ct_dec(Msg),
 			  ct:pal("D: ~p", [D]),
 			  ?equal(Msg, netlink:nl_ct_enc(D))
-		  end, nft_requests()).
+		  end, nft_requests()),
+    ok.
 
 all() ->
 	[test_conntrack_new,

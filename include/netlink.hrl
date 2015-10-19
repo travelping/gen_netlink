@@ -40,6 +40,26 @@
 -define(NF_REPEAT, 4).
 -define(NF_STOP,   5).
 
+%% Flags values */
+
+-define(NLM_F_REQUEST,           1).       %% It is request message.
+-define(NLM_F_MULTI,             2).       %% Multipart message, terminated by NLMSG_DONE
+-define(NLM_F_ACK,               4).       %% Reply with ack, with zero or error code
+-define(NLM_F_ECHO,              8).       %% Echo this request
+-define(NLM_F_DUMP_INTR,         16).      %% Dump was inconsistent due to sequence change
+
+%% Modifiers to GET request
+-define(NLM_F_ROOT,      16#100).   %% specify tree root
+-define(NLM_F_MATCH,     16#200).   %% return all matching
+-define(NLM_F_ATOMIC,    16#400).   %% atomic GET
+-define(NLM_F_DUMP,      (?NLM_F_ROOT bor ?NLM_F_MATCH)).
+
+%% Modifiers to NEW request
+-define(NLM_F_REPLACE,   16#100).   %% Override existing
+-define(NLM_F_EXCL,      16#200).   %% Do not touch, if it exists
+-define(NLM_F_CREATE,    16#400).   %% Create, if it does not exist
+-define(NLM_F_APPEND,    16#800).   %% Add to end of list
+
 -type nl_flags() :: list(atom()).
 -type family() :: atom().
 -type protocol() :: atom().

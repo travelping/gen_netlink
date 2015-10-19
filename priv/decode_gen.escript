@@ -5,7 +5,27 @@
 -mode(compile).
 
 define_consts() ->
-    [{nl_subsys, [{netlink,           {atom,  0}},
+    [{{protocol, subsys}, [{rtnetlink,      {atom, "?NETLINK_ROUTE"}},
+			   {usersock,       {atom, "?NETLINK_USERSOCK"}},
+			   {firewall,       {atom, "?NETLINK_FIREWALL"}},
+			   {inet_diag,      {atom, "?NETLINK_INET_DIAG"}},
+			   {nflog,          {atom, "?NETLINK_NFLOG"}},
+			   {xfrm,           {atom, "?NETLINK_XFRM"}},
+			   {selinux,        {atom, "?NETLINK_SELINUX"}},
+			   {iscsi,          {atom, "?NETLINK_ISCSI"}},
+			   {audit,          {atom, "?NETLINK_AUDIT"}},
+			   {fib_lookup,     {atom, "?NETLINK_FIB_LOOKUP"}},
+			   {connector,      {atom, "?NETLINK_CONNECTOR"}},
+			   {netfilter,      {atom, "?NETLINK_NETFILTER"}},
+			   {ip6_fw,         {atom, "?NETLINK_IP6_FW"}},
+			   {dnrtmsg,        {atom, "?NETLINK_DNRTMSG"}},
+			   {kobject_uevent, {atom, "?NETLINK_KOBJECT_UEVENT"}},
+			   {generic,        {atom, "?NETLINK_GENERIC"}},
+			   {scsitransport,  {atom, "?NETLINK_SCSITRANSPORT"}},
+			   {ecryptfs,       {atom, "?NETLINK_ECRYPTFS"}}
+			  ]},
+
+     {nl_subsys, [{netlink,           {atom,  0}},
 		  {ctnetlink,         {atom,  1}},
 		  {ctnetlink_exp,     {atom,  2}},
 		  {queue,             {atom,  3}},
@@ -155,6 +175,12 @@ define_consts() ->
 			      ]},
 
      {{nl_msgtype, nft_compat}, [get]},
+     {{nl_msgtype, generic}, [{generate,  {atom, 0}},
+			      {ctrl,      {atom, "?NLMSG_MIN_TYPE"}},
+			      {vfs_dquot, {atom, "?NLMSG_MIN_TYPE + 1"}},
+			      {pmcraid,   {atom, "?NLMSG_MIN_TYPE + 2"}}
+			     ]},
+
      {{ctnetlink}, [
                     {unspec, none},
                     {tuple_orig, tuple},
@@ -441,7 +467,7 @@ define_consts() ->
 			  {port_self, none},
 			  {af_spec, none},
 			  {group, none},
-			  {net_ns_fd, none},
+			  {net_ns_fd, huint32},
 			  {ext_mask, huint32},
 			  {promiscuity, none},
 			  {num_tx_queues, none},
@@ -760,8 +786,39 @@ define_consts() ->
 
      {{nft, gen, attributes}, [{unspec, none},
 			       {id,     uint32}
-			       ]}
-    ].
+			       ]},
+
+
+     {{genl, ctrl, cmd}, [unspec,
+			  newfamily,
+			  delfamily,
+			  getfamily,
+			  newops,
+			  delops,
+			  getops,
+			  newmcast_grp,
+			  delmcast_grp,
+			  getmcast_grp]},
+
+     {{genl, ctrl, attr}, [{unspec,       none},
+			   {family_id,    {hatom16, {protocol, subsys}}},
+			   {family_name,  string},
+			   {version,      huint32},
+			   {hdrsize,      huint32},
+			   {maxattr,      huint32},
+			   {ops,          {nested, ops}},
+			   {mcast_groups, {nested, mcast_groups}}
+			  ]},
+
+     {{genl, ctrl, attr, op}, [{unspec, none},
+			       {id,     huint32},
+			       {flags,  huint32}
+			       ]},
+     {{genl, ctrl, attr, mcast_grp}, [{unspec, none},
+				      {name,   string},
+				      {id,     huint32}
+				     ]}
+     ].
 
 make_prefix(Id) when is_atom(Id) ->
     [Id];
@@ -821,10 +878,17 @@ format_id(Id) when is_atom(Id) ->
 format_id(Id) ->
     Id.
 
-make_decoder({Name, Attr, Pos, atom}) ->
-    io_lib:format("decode_~s(_Family, ~w, <<Value:8>>) ->~n    {~s, decode_~s(Value)}", [format_name(Name), Pos, Attr, format_name(make_name(Name, Attr))]);
-make_decoder({Name, Attr, Pos, atom32}) ->
-    io_lib:format("decode_~s(_Family, ~w, <<Value:32>>) ->~n    {~s, decode_~s(Value)}", [format_name(Name), Pos, Attr, format_name(make_name(Name, Attr))]);
+make_decoder({Name, Attr, Pos, {atom, Next}}) ->
+    io_lib:format("decode_~s(_Family, ~w, <<Value:8>>) ->~n    {~s, decode_~s(Value)}", [format_name(Name), Pos, Attr, format_name(make_name(Name, Next))]);
+make_decoder({Name, Attr, Pos, {hatom16, Next}}) ->
+    io_lib:format("decode_~s(_Family, ~w, Value) ->~n    {~s, decode_~s(decode_huint16(Value))}", [format_name(Name), Pos, Attr, format_name(make_name(Name, Next))]);
+make_decoder({Name, Attr, Pos, {atom32, Next}}) ->
+    io_lib:format("decode_~s(_Family, ~w, <<Value:32>>) ->~n    {~s, decode_~s(Value)}", [format_name(Name), Pos, Attr, format_name(make_name(Name, Next))]);
+
+make_decoder({Name, Attr, Pos, Atom})
+  when Atom == atom; Atom == hatom16; Atom == atom32 ->
+    make_decoder({Name, Attr, Pos, {Atom, Attr}});
+
 
 make_decoder({Name, Attr, Pos, Type})
   when Type == flag8;  Type == flag16;  Type == flag32 ->
@@ -881,10 +945,16 @@ make_element_decoder(List) ->
 %%
 %%
 
-make_encoder({Name, Attr, Pos, atom}) ->
-    io_lib:format("encode_~s(_Family, {~w, Value}) ->~n    encode_uint8(~s, encode_~s(Value))", [format_name(Name), Attr, format_id(Pos), format_name(make_name(Name, Attr))]);
-make_encoder({Name, Attr, Pos, atom32}) ->
-    io_lib:format("encode_~s(_Family, {~w, Value}) ->~n    encode_uint32(~s, encode_~s(Value))", [format_name(Name), Attr, format_id(Pos), format_name(make_name(Name, Attr))]);
+make_encoder({Name, Attr, Pos, {atom, Next}}) ->
+    io_lib:format("encode_~s(_Family, {~w, Value}) ->~n    encode_uint8(~s, encode_~s(Value))", [format_name(Name), Attr, format_id(Pos), format_name(make_name(Name, Next))]);
+make_encoder({Name, Attr, Pos, {hatom16, Next}}) ->
+    io_lib:format("encode_~s(_Family, {~w, Value}) ->~n    encode_huint16(~s, encode_~s(Value))", [format_name(Name), Attr, format_id(Pos), format_name(make_name(Name, Next))]);
+make_encoder({Name, Attr, Pos, {atom32, Next}}) ->
+    io_lib:format("encode_~s(_Family, {~w, Value}) ->~n    encode_uint32(~s, encode_~s(Value))", [format_name(Name), Attr, format_id(Pos), format_name(make_name(Name, Next))]);
+
+make_encoder({Name, Attr, Pos, Atom})
+  when Atom == atom; Atom == hatom16; Atom == atom32 ->
+    make_encoder({Name, Attr, Pos, {Atom, Attr}});
 
 make_encoder({Name, Attr, Pos, Type})
   when Type == flag8;  Type == flag16;  Type == flag32;

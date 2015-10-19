@@ -95,6 +95,65 @@ flag_info_nft_set_ext_attributes_flags() ->
 
 %% ============================
 
+decode_protocol_subsys(?NETLINK_ROUTE) ->
+    rtnetlink;
+
+decode_protocol_subsys(?NETLINK_USERSOCK) ->
+    usersock;
+
+decode_protocol_subsys(?NETLINK_FIREWALL) ->
+    firewall;
+
+decode_protocol_subsys(?NETLINK_INET_DIAG) ->
+    inet_diag;
+
+decode_protocol_subsys(?NETLINK_NFLOG) ->
+    nflog;
+
+decode_protocol_subsys(?NETLINK_XFRM) ->
+    xfrm;
+
+decode_protocol_subsys(?NETLINK_SELINUX) ->
+    selinux;
+
+decode_protocol_subsys(?NETLINK_ISCSI) ->
+    iscsi;
+
+decode_protocol_subsys(?NETLINK_AUDIT) ->
+    audit;
+
+decode_protocol_subsys(?NETLINK_FIB_LOOKUP) ->
+    fib_lookup;
+
+decode_protocol_subsys(?NETLINK_CONNECTOR) ->
+    connector;
+
+decode_protocol_subsys(?NETLINK_NETFILTER) ->
+    netfilter;
+
+decode_protocol_subsys(?NETLINK_IP6_FW) ->
+    ip6_fw;
+
+decode_protocol_subsys(?NETLINK_DNRTMSG) ->
+    dnrtmsg;
+
+decode_protocol_subsys(?NETLINK_KOBJECT_UEVENT) ->
+    kobject_uevent;
+
+decode_protocol_subsys(?NETLINK_GENERIC) ->
+    generic;
+
+decode_protocol_subsys(?NETLINK_SCSITRANSPORT) ->
+    scsitransport;
+
+decode_protocol_subsys(?NETLINK_ECRYPTFS) ->
+    ecryptfs;
+
+decode_protocol_subsys(Value) ->
+    Value.
+
+%% ============================
+
 decode_nl_subsys(0) ->
     netlink;
 
@@ -395,6 +454,23 @@ decode_nl_msgtype_nft_compat(0) ->
     get;
 
 decode_nl_msgtype_nft_compat(Value) ->
+    Value.
+
+%% ============================
+
+decode_nl_msgtype_generic(0) ->
+    generate;
+
+decode_nl_msgtype_generic(?NLMSG_MIN_TYPE) ->
+    ctrl;
+
+decode_nl_msgtype_generic(?NLMSG_MIN_TYPE + 1) ->
+    vfs_dquot;
+
+decode_nl_msgtype_generic(?NLMSG_MIN_TYPE + 2) ->
+    pmcraid;
+
+decode_nl_msgtype_generic(Value) ->
     Value.
 
 %% ============================
@@ -1154,7 +1230,7 @@ decode_rtnetlink_link(_Family, 27, Value) ->
     {group, decode_none(Value)};
 
 decode_rtnetlink_link(_Family, 28, Value) ->
-    {net_ns_fd, decode_none(Value)};
+    {net_ns_fd, decode_huint32(Value)};
 
 decode_rtnetlink_link(_Family, 29, Value) ->
     {ext_mask, decode_huint32(Value)};
@@ -2149,6 +2225,157 @@ decode_nft_gen_attributes(_Family, Id, Value) ->
 
 %% ============================
 
+decode_genl_ctrl_cmd(0) ->
+    unspec;
+
+decode_genl_ctrl_cmd(1) ->
+    newfamily;
+
+decode_genl_ctrl_cmd(2) ->
+    delfamily;
+
+decode_genl_ctrl_cmd(3) ->
+    getfamily;
+
+decode_genl_ctrl_cmd(4) ->
+    newops;
+
+decode_genl_ctrl_cmd(5) ->
+    delops;
+
+decode_genl_ctrl_cmd(6) ->
+    getops;
+
+decode_genl_ctrl_cmd(7) ->
+    newmcast_grp;
+
+decode_genl_ctrl_cmd(8) ->
+    delmcast_grp;
+
+decode_genl_ctrl_cmd(9) ->
+    getmcast_grp;
+
+decode_genl_ctrl_cmd(Value) ->
+    Value.
+
+%% ============================
+
+decode_genl_ctrl_attr(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_genl_ctrl_attr(_Family, 1, Value) ->
+    {family_id, decode_protocol_subsys(decode_huint16(Value))};
+
+decode_genl_ctrl_attr(_Family, 2, Value) ->
+    {family_name, decode_string(Value)};
+
+decode_genl_ctrl_attr(_Family, 3, Value) ->
+    {version, decode_huint32(Value)};
+
+decode_genl_ctrl_attr(_Family, 4, Value) ->
+    {hdrsize, decode_huint32(Value)};
+
+decode_genl_ctrl_attr(_Family, 5, Value) ->
+    {maxattr, decode_huint32(Value)};
+
+decode_genl_ctrl_attr(Family, 6, Value) ->
+    {ops, nl_dec_nla(Family, fun decode_genl_ctrl_attr_ops/3, Value)};
+
+decode_genl_ctrl_attr(Family, 7, Value) ->
+    {mcast_groups, nl_dec_nla(Family, fun decode_genl_ctrl_attr_mcast_groups/3, Value)};
+
+decode_genl_ctrl_attr(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_genl_ctrl_attr_op(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_genl_ctrl_attr_op(_Family, 1, Value) ->
+    {id, decode_huint32(Value)};
+
+decode_genl_ctrl_attr_op(_Family, 2, Value) ->
+    {flags, decode_huint32(Value)};
+
+decode_genl_ctrl_attr_op(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_genl_ctrl_attr_mcast_grp(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_genl_ctrl_attr_mcast_grp(_Family, 1, Value) ->
+    {name, decode_string(Value)};
+
+decode_genl_ctrl_attr_mcast_grp(_Family, 2, Value) ->
+    {id, decode_huint32(Value)};
+
+decode_genl_ctrl_attr_mcast_grp(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+encode_protocol_subsys(rtnetlink) ->
+    ?NETLINK_ROUTE;
+
+encode_protocol_subsys(usersock) ->
+    ?NETLINK_USERSOCK;
+
+encode_protocol_subsys(firewall) ->
+    ?NETLINK_FIREWALL;
+
+encode_protocol_subsys(inet_diag) ->
+    ?NETLINK_INET_DIAG;
+
+encode_protocol_subsys(nflog) ->
+    ?NETLINK_NFLOG;
+
+encode_protocol_subsys(xfrm) ->
+    ?NETLINK_XFRM;
+
+encode_protocol_subsys(selinux) ->
+    ?NETLINK_SELINUX;
+
+encode_protocol_subsys(iscsi) ->
+    ?NETLINK_ISCSI;
+
+encode_protocol_subsys(audit) ->
+    ?NETLINK_AUDIT;
+
+encode_protocol_subsys(fib_lookup) ->
+    ?NETLINK_FIB_LOOKUP;
+
+encode_protocol_subsys(connector) ->
+    ?NETLINK_CONNECTOR;
+
+encode_protocol_subsys(netfilter) ->
+    ?NETLINK_NETFILTER;
+
+encode_protocol_subsys(ip6_fw) ->
+    ?NETLINK_IP6_FW;
+
+encode_protocol_subsys(dnrtmsg) ->
+    ?NETLINK_DNRTMSG;
+
+encode_protocol_subsys(kobject_uevent) ->
+    ?NETLINK_KOBJECT_UEVENT;
+
+encode_protocol_subsys(generic) ->
+    ?NETLINK_GENERIC;
+
+encode_protocol_subsys(scsitransport) ->
+    ?NETLINK_SCSITRANSPORT;
+
+encode_protocol_subsys(ecryptfs) ->
+    ?NETLINK_ECRYPTFS;
+
+encode_protocol_subsys(Value) when is_integer(Value) ->
+    Value.
+
+%% ============================
+
 encode_nl_subsys(netlink) ->
     0;
 
@@ -2449,6 +2676,23 @@ encode_nl_msgtype_nft_compat(get) ->
     0;
 
 encode_nl_msgtype_nft_compat(Value) when is_integer(Value) ->
+    Value.
+
+%% ============================
+
+encode_nl_msgtype_generic(generate) ->
+    0;
+
+encode_nl_msgtype_generic(ctrl) ->
+    ?NLMSG_MIN_TYPE;
+
+encode_nl_msgtype_generic(vfs_dquot) ->
+    ?NLMSG_MIN_TYPE + 1;
+
+encode_nl_msgtype_generic(pmcraid) ->
+    ?NLMSG_MIN_TYPE + 2;
+
+encode_nl_msgtype_generic(Value) when is_integer(Value) ->
     Value.
 
 %% ============================
@@ -3231,7 +3475,7 @@ encode_rtnetlink_link(_Family, {group, Value}) ->
     encode_none(27, Value);
 
 encode_rtnetlink_link(_Family, {net_ns_fd, Value}) ->
-    encode_none(28, Value);
+    encode_huint32(28, Value);
 
 encode_rtnetlink_link(_Family, {ext_mask, Value}) ->
     encode_huint32(29, Value);
@@ -4263,5 +4507,100 @@ encode_nft_gen_attributes(_Family, {id, Value}) ->
     encode_uint32(1, Value);
 
 encode_nft_gen_attributes(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_genl_ctrl_cmd(unspec) ->
+    0;
+
+encode_genl_ctrl_cmd(newfamily) ->
+    1;
+
+encode_genl_ctrl_cmd(delfamily) ->
+    2;
+
+encode_genl_ctrl_cmd(getfamily) ->
+    3;
+
+encode_genl_ctrl_cmd(newops) ->
+    4;
+
+encode_genl_ctrl_cmd(delops) ->
+    5;
+
+encode_genl_ctrl_cmd(getops) ->
+    6;
+
+encode_genl_ctrl_cmd(newmcast_grp) ->
+    7;
+
+encode_genl_ctrl_cmd(delmcast_grp) ->
+    8;
+
+encode_genl_ctrl_cmd(getmcast_grp) ->
+    9;
+
+encode_genl_ctrl_cmd(Value) when is_integer(Value) ->
+    Value.
+
+%% ============================
+
+encode_genl_ctrl_attr(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_genl_ctrl_attr(_Family, {family_id, Value}) ->
+    encode_huint16(1, encode_protocol_subsys(Value));
+
+encode_genl_ctrl_attr(_Family, {family_name, Value}) ->
+    encode_string(2, Value);
+
+encode_genl_ctrl_attr(_Family, {version, Value}) ->
+    encode_huint32(3, Value);
+
+encode_genl_ctrl_attr(_Family, {hdrsize, Value}) ->
+    encode_huint32(4, Value);
+
+encode_genl_ctrl_attr(_Family, {maxattr, Value}) ->
+    encode_huint32(5, Value);
+
+encode_genl_ctrl_attr(Family, {ops, Value}) ->
+    enc_nla(6, nl_enc_nla(Family, fun encode_genl_ctrl_attr_ops/2, Value));
+
+encode_genl_ctrl_attr(Family, {mcast_groups, Value}) ->
+    enc_nla(7, nl_enc_nla(Family, fun encode_genl_ctrl_attr_mcast_groups/2, Value));
+
+encode_genl_ctrl_attr(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_genl_ctrl_attr_op(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_genl_ctrl_attr_op(_Family, {id, Value}) ->
+    encode_huint32(1, Value);
+
+encode_genl_ctrl_attr_op(_Family, {flags, Value}) ->
+    encode_huint32(2, Value);
+
+encode_genl_ctrl_attr_op(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_genl_ctrl_attr_mcast_grp(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_genl_ctrl_attr_mcast_grp(_Family, {name, Value}) ->
+    encode_string(1, Value);
+
+encode_genl_ctrl_attr_mcast_grp(_Family, {id, Value}) ->
+    encode_huint32(2, Value);
+
+encode_genl_ctrl_attr_mcast_grp(_Family, {Type, Value})
   when is_integer(Type), is_binary(Value) ->
     enc_nla(Type, Value).

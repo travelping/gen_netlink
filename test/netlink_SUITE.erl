@@ -11,6 +11,7 @@
 -compile(export_all).
 
 -include_lib("common_test/include/ct.hrl").
+-include("../include/netlink.hrl").
 
 -define(equal(Expected, Actual),
     (fun (Expected@@@, Expected@@@) -> true;
@@ -344,6 +345,11 @@ nft_requests() ->
      <<16#14, 16#00, 16#00, 16#00, 16#07, 16#0a, 16#01, 16#03, 16#05, 16#00, 16#00, 16#00, 16#00, 16#00, 16#00, 16#00,
        16#02, 16#00, 16#00, 16#00>>].
 
+genl_request() ->
+    <<16#24, 16#00, 16#00, 16#00, 16#10, 16#00, 16#05, 16#00, 16#77, 16#ce, 16#08, 16#56, 16#00, 16#00, 16#00, 16#00,
+      16#03, 16#01, 16#00, 16#00, 16#06, 16#00, 16#01, 16#00, 16#10, 16#00, 16#00, 16#00, 16#08, 16#00, 16#02, 16#00,
+      16#67, 16#74, 16#70, 16#00>>.
+
 %%--------------------------------------------------------------------
 %% @spec suite() -> Info
 %% Info = [tuple()]
@@ -430,6 +436,11 @@ test_nft_requests(_Config) ->
 		  end, nft_requests()),
     ok.
 
+test_genl(_Config) ->
+    Msg = genl_request(),
+    Msg = netlink:nl_enc(?NETLINK_GENERIC, netlink:nl_dec(?NETLINK_GENERIC, Msg)),
+    ok.
+
 all() ->
 	[test_conntrack_new,
 	 test_rt_newneigh_1, test_rt_newneigh_2, test_rt_delroute,
@@ -439,7 +450,8 @@ all() ->
 	 test_nfq_unbind, test_nfq_bind_queue,
 	 test_nfq_bind_socket, test_nfq_set_copy_mode,
 	 test_nfq_set_verdict,
-	 test_nft_requests
+	 test_nft_requests,
+	 test_genl
 	].
 
 init_per_suite(Config) ->

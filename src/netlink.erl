@@ -49,6 +49,8 @@
 -define(SERVER, ?MODULE).
 -define(TAB, ?MODULE).
 
+-type genl_family() :: integer() | {term(), integer()}.
+
 -record(subscription, {
     pid                 :: pid(),
     types               :: [ct | rt | s]
@@ -108,6 +110,8 @@
 		       Type == getgen)).
 
 
+-define(NLMSG_MIN_TYPE, 16#10).
+
 %% netlink info
 -define(NETLINK_ADD_MEMBERSHIP, 1).
 -define(NETLINK_DROP_MEMBERSHIP, 2).
@@ -125,8 +129,8 @@
 -define(NFNLGRP_CONNTRACK_EXP_UPDATE, 5).
 -define(NFNLGRP_CONNTRACK_EXP_DESTROY, 6).
 
--define(NFNL_MSG_BATCH_BEGIN, 16#10).
--define(NFNL_MSG_BATCH_END, ?NFNL_MSG_BATCH_BEGIN + 1).
+-define(NFNL_MSG_BATCH_BEGIN, ?NLMSG_MIN_TYPE).
+-define(NFNL_MSG_BATCH_END,   ?NFNL_MSG_BATCH_BEGIN + 1).
 
 -define(RTNLGRP_NONE, 0).
 -define(RTNLGRP_LINK, 1).
@@ -247,25 +251,6 @@ enc_opt(rtnlgrp_phonet_route)          -> ?RTNLGRP_PHONET_ROUTE.
 %% dec_opt(?NFNLGRP_CONNTRACK_EXP_UPDATE)  -> nfnlgrp_conntrack_exp_update;
 %% dec_opt(?NFNLGRP_CONNTRACK_EXP_DESTROY) -> nfnlgrp_conntrack_exp_destroy.
 
-protocol_subsys(?NETLINK_ROUTE)                 -> rtnetlink;
-protocol_subsys(?NETLINK_USERSOCK)              -> usersock;
-protocol_subsys(?NETLINK_FIREWALL)              -> firewall;
-protocol_subsys(?NETLINK_INET_DIAG)             -> inet_diag;
-protocol_subsys(?NETLINK_NFLOG)                 -> nflog;
-protocol_subsys(?NETLINK_XFRM)                  -> xfrm;
-protocol_subsys(?NETLINK_SELINUX)               -> selinux;
-protocol_subsys(?NETLINK_ISCSI)                 -> iscsi;
-protocol_subsys(?NETLINK_AUDIT)                 -> audit;
-protocol_subsys(?NETLINK_FIB_LOOKUP)            -> fib_lookup;
-protocol_subsys(?NETLINK_CONNECTOR)             -> connector;
-protocol_subsys(?NETLINK_NETFILTER)             -> netfilter;
-protocol_subsys(?NETLINK_IP6_FW)                -> ip6_fw;
-protocol_subsys(?NETLINK_DNRTMSG)               -> dnrtmsg;
-protocol_subsys(?NETLINK_KOBJECT_UEVENT)        -> kobject_uevent;
-protocol_subsys(?NETLINK_GENERIC)               -> generic;
-protocol_subsys(?NETLINK_SCSITRANSPORT)         -> scsitransport;
-protocol_subsys(?NETLINK_ECRYPTFS)              -> ecryptfs.
-
 -define(NLMSG_NOOP, 1).
 -define(NLMSG_ERROR, 2).
 -define(NLMSG_DONE, 3).
@@ -321,8 +306,6 @@ protocol_subsys(?NETLINK_ECRYPTFS)              -> ecryptfs.
 -define(IPCTNL_MSG_EXP_GET, 1).
 -define(IPCTNL_MSG_EXP_DELETE, 2).
 
--define(NLM_F_DUMP, 16#0300).
-
 -define(NFQNL_MSG_PACKET, 0).              %% packet from kernel to userspace
 -define(NFQNL_MSG_VERDICT, 1).             %% verdict from userspace to kernel
 -define(NFQNL_MSG_CONFIG, 2).              %% connect to a particular queue
@@ -365,19 +348,24 @@ decode_ctnetlink_protoinfo_dccp(Family, Type, Value) ->
 decode_ctnetlink_protoinfo_sctp(Family, Type, Value) ->
     {decode_ctnetlink_protoinfo_sctp, Family, Type, Value}.
 
-decode_nl_msg_type(nlmsg, Type) ->
+decode_nl_msg_type(SubSys, Type) ->
+    {SubSys, decode_nl_msg_type_1(SubSys, Type)}.
+
+decode_nl_msg_type_1(nlmsg, Type) ->
     decode_nl_msgtype_nlmsg(Type);
-decode_nl_msg_type(ctnetlink, Type) ->
+decode_nl_msg_type_1(ctnetlink, Type) ->
     decode_nl_msgtype_ctnetlink(Type);
-decode_nl_msg_type(ctnetlink_exp, Type) ->
+decode_nl_msg_type_1(ctnetlink_exp, Type) ->
     decode_nl_msgtype_ctnetlink_exp(Type);
-decode_nl_msg_type(nftables, Type) ->
+decode_nl_msg_type_1(nftables, Type) ->
     decode_nl_msgtype_nftables(Type);
-decode_nl_msg_type({netlink, netfilter}, Type) ->
+decode_nl_msg_type_1({netlink, netfilter}, Type) ->
     decode_nl_msgtype_nfnl(Type);
-decode_nl_msg_type(nft_compat, Type) ->
+decode_nl_msg_type_1({netlink, generic}, Type) ->
+    decode_nl_msgtype_generic(Type);
+decode_nl_msg_type_1(nft_compat, Type) ->
     decode_nl_msgtype_nft_compat(Type);
-decode_nl_msg_type(queue, Type) ->
+decode_nl_msg_type_1(queue, Type) ->
     decode_nl_msgtype_queue(Type).
 
 decode_rtnetlink_rtm_flags(Flags) ->
@@ -414,6 +402,8 @@ encode_ctnetlink_protoinfo_sctp(Family, Value) ->
 
 encode_nl_msg(netfilter, netlink, Type) ->
     encode_nl_msgtype_nfnl(Type);
+encode_nl_msg(generic, netlink, Type) ->
+    encode_nl_msgtype_generic(Type);
 
 encode_nl_msg(_Protocol, rtnetlink, Type) ->
     encode_rtm_msgtype_rtnetlink(Type);
@@ -511,12 +501,12 @@ encode_uint32(NlaType, Val) ->
 	enc_nla(NlaType, <<Val:32>>).
 encode_uint64(NlaType, Val) ->
 	enc_nla(NlaType, <<Val:64>>).
-%% encode_huint16(NlaType, Val) ->
-%% 	enc_nla(NlaType, <<Val:16/native-integer>>).
+encode_huint16(NlaType, Val) ->
+	enc_nla(NlaType, <<Val:16/native-integer>>).
 encode_huint32(NlaType, Val) ->
 	enc_nla(NlaType, <<Val:32/native-integer>>).
-%% encode_huint64(NlaType, Val) ->
-%% 	enc_nla(NlaType, <<Val:64/native-integer>>).
+encode_huint64(NlaType, Val) ->
+    enc_nla(NlaType, <<Val:64/native-integer>>).
 
 %% encode_int8(NlaType, Val) ->
 %% 	enc_nla(NlaType, <<Val:8/signed-integer>>).
@@ -576,6 +566,12 @@ encode_nfqnl_attr({hwaddr, HwAddr}) ->
 encode_nfqnl_attr({_Type, Data}) when is_binary(Data) ->
     Data.
 
+encode_genl_ctrl_attr_ops(Family, {Idx, Value}) ->
+    enc_nla(Idx, nl_enc_nla(Family, fun encode_genl_ctrl_attr_op/2, Value)).
+
+encode_genl_ctrl_attr_mcast_groups(Family, {Idx, Value}) ->
+    enc_nla(Idx, nl_enc_nla(Family, fun encode_genl_ctrl_attr_mcast_grp/2, Value)).
+
 %%
 %% decoder
 %%
@@ -585,7 +581,7 @@ decode_binary(Val) ->
 decode_none(Val) ->
     Val.
 decode_string(Val) ->
-    binary_to_list(binary:part(Val, 0, size(Val) - 1)).
+    binary_to_list(hd(binary:split(Val, <<0>>))).
 decode_uint8(<< Val:8 >>) ->
     Val.
 decode_uint16(<< Val:16 >>) ->
@@ -594,12 +590,12 @@ decode_uint32(<< Val:32 >>) ->
     Val.
 decode_uint64(<< Val:64 >>) ->
     Val.
-%% decode_huint16(<< Val:16/native-integer >>) ->
-%%     Val.
+decode_huint16(<< Val:16/native-integer, _/binary >>) ->
+    Val.
 decode_huint32(<< Val:32/native-integer >>) ->
     Val.
-%% decode_huint64(<< Val:64/native-integer >>) ->
-%%     Val.
+decode_huint64(<< Val:64/native-integer >>) ->
+    Val.
 
 %% decode_int8(<< Val:8/signed-integer >>) ->
 %%     Val.
@@ -656,6 +652,12 @@ decode_nfqnl_attr(hwaddr, <<Len:16, _Pad:16, HwAddr:Len/binary, _/binary>>) ->
     {hwaddr, HwAddr};
 decode_nfqnl_attr(Type, Data) ->
     {Type, Data}.
+
+decode_genl_ctrl_attr_ops(Family, Idx, Value) ->
+    {Idx, nl_dec_nla(Family, fun decode_genl_ctrl_attr_op/3, Value)}.
+
+decode_genl_ctrl_attr_mcast_groups(Family, Idx, Value) ->
+    {Idx, nl_dec_nla(Family, fun decode_genl_ctrl_attr_mcast_grp/3, Value)}.
 
 %%
 %% pad binary to specific length
@@ -782,6 +784,11 @@ nl_enc_payload(queue, MsgType, {Family, Version, ResId, Req}) ->
     Data = nl_enc_nla(Family, Fun, Req),
     << Fam:8, Version:8, ResId:16/native-integer, Data/binary >>;
 
+nl_enc_payload({netlink, generic}, MsgType, {CtrlCmd, Version, ResId, Req}) ->
+    Cmd = encode_genl_ctrl_cmd(CtrlCmd),
+    Data = nl_enc_nla(CtrlCmd, fun encode_genl_ctrl_attr/2, Req),
+    << Cmd:8, Version:8, ResId:16/native-integer, Data/binary >>;
+
 %% Other
 nl_enc_payload(_, _, Data)
   when is_binary(Data) ->
@@ -789,6 +796,10 @@ nl_enc_payload(_, _, Data)
 
 nl_dec_payload(_Type, done, << Length:32/native-integer >>) ->
 	Length;
+
+%% Error
+nl_dec_payload(_Type, error, <<Error:32, Msg/binary>>) ->
+    {Error, Msg};
 
 nl_dec_payload(ctnetlink, _MsgType, << Family:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
     Fam = gen_socket:family(Family),
@@ -843,18 +854,20 @@ nl_dec_payload(queue, MsgType, << Family:8, Version:8, ResId:16/native-integer, 
 	  end,
     { Fam, Version, ResId, nl_dec_nla(Fam, Fun, Data) };
 
-%% Error
-nl_dec_payload(nlmsg, error, <<Error:32, Msg/binary>>) ->
-    {Error, Msg};
+nl_dec_payload({netlink, generic}, MsgType, << Cmd:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
+    CtrlCmd = decode_genl_ctrl_cmd(Cmd),
+    { CtrlCmd, Version, ResId, nl_dec_nla(CtrlCmd, fun decode_genl_ctrl_attr/3, Data) };
 
 %% Other
 nl_dec_payload(_SubSys, _MsgType, Data) ->
+    io:format("unknown SubSys/MsgType: ~p/~p~n", [_SubSys, _MsgType]),
+    netlink:warning("unknown SubSys/MsgType: ~p/~p", [_SubSys, _MsgType]),
     Data.
 
 nlmsg_ok(DataLen, MsgLen) ->
     (DataLen >= 16) andalso (MsgLen >= 16) andalso (MsgLen =< DataLen).
 
--spec nl_dec(integer(), binary()) -> [{'error',_} | #ctnetlink{} | #ctnetlink_exp{}].
+-spec nl_dec(genl_family(), binary()) -> [{'error',_} | #ctnetlink{} | #ctnetlink_exp{}].
 nl_dec(?NETLINK_ROUTE, Msg) ->
     nl_rt_dec(?NETLINK_ROUTE, Msg, []);
 nl_dec(Protocol, Msg) ->
@@ -870,18 +883,18 @@ nl_ct_dec(Protocol, << Len:32/native-integer, Type:16/native-integer, Flags:16/n
                                  PayLoadLen = Len - 16,
                                  << PayLoad:PayLoadLen/bytes, NextMsg/binary >> = Data,
 
-				 SubSys = decode_nl_subsys(Type bsr 8),
-				 %% MsgType = decode_nl_msg_type(SubSys, Type band 16#00FF),
-				 MsgType = case {SubSys, (Type band 16#00FF)} of
-					       {netlink, Reserved} when Reserved < 16#10 ->
-						   decode_nl_msg_type(nlmsg, Reserved);
-					       {netlink, Other} ->
-						   decode_nl_msg_type({SubSys, protocol_subsys(Protocol)}, Other);
-					       {_, Other} ->
-						   decode_nl_msg_type(SubSys, Other)
-					   end,
+				 SubSys0 = decode_nl_subsys(Type bsr 8),
+				 {SubSys1, MsgType} =
+				     case {SubSys0, (Type band 16#00FF)} of
+					 {netlink, Reserved} when Reserved < 16#10 ->
+					     decode_nl_msg_type(nlmsg, Reserved);
+					 {netlink, Other} ->
+					     decode_nl_msg_type({SubSys0, decode_protocol_subsys(Protocol)}, Other);
+					 {_, Other} ->
+					     decode_nl_msg_type(SubSys0, Other)
+				     end,
 				 Flags0 = decode_nlm_flags(MsgType, Flags),
-				 {{ SubSys, MsgType, Flags0, Seq, Pid, nl_dec_payload(SubSys, MsgType, PayLoad) }, NextMsg};
+				 {{ SubSys0, MsgType, Flags0, Seq, Pid, nl_dec_payload(SubSys1, MsgType, PayLoad) }, NextMsg};
 			     _ ->
 				 {{ error, format }, << >>}
 			 end,
@@ -947,7 +960,7 @@ enc_nlmsghdr(Protocol, SubSys, MsgType, Flags, Seq, Pid, Req) when is_list(Flags
 enc_nlmsghdr(Protocol, SubSys, MsgType, Flags, Seq, Pid, Req) when is_integer(Flags), is_binary(Req) ->
     Payload = pad_to(4, Req),
     Len = 16 + byte_size(Payload),
-    Type = (encode_nl_subsys1(SubSys) bsl 8) bor encode_nl_msg(protocol_subsys(Protocol), SubSys, MsgType),
+    Type = (encode_nl_subsys1(SubSys) bsl 8) bor encode_nl_msg(decode_protocol_subsys(Protocol), SubSys, MsgType),
     << Len:32/native-integer, Type:16/native-integer, Flags:16/native-integer, Seq:32/native-integer, Pid:32/native-integer, Payload/binary >>.
 
 nl_enc(?NETLINK_ROUTE, Msg) ->
@@ -969,12 +982,12 @@ nl_rt_enc(Protocol, Msg)
 nl_rt_enc(_Protocol, [], Acc) ->
     list_to_binary(lists:reverse(Acc));
 nl_rt_enc(Protocol, [Head|Rest], Acc) ->
-    nl_rt_enc(Protocol, Rest, [nl_rt_enc(Head)|Acc]).
+    nl_rt_enc(Protocol, Rest, [nl_rt_enc(Protocol, Head)|Acc]).
 
 nl_ct_enc(_Protocol, [], Acc) ->
     list_to_binary(lists:reverse(Acc));
 nl_ct_enc(Protocol, [Head|Rest], Acc) ->
-    nl_ct_enc(Protocol, Rest, [nl_ct_enc(Head)|Acc]).
+    nl_ct_enc(Protocol, Rest, [nl_ct_enc(Protocol, Head)|Acc]).
 
 nl_ct_enc(Msg) ->
     nl_ct_enc(?NETLINK_NETFILTER, Msg).
@@ -982,6 +995,11 @@ nl_ct_enc(Msg) ->
 nl_ct_enc(Protocol, Msg)
   when is_list(Msg) ->
     nl_ct_enc(Protocol, Msg, []);
+
+nl_ct_enc(Protocol, {netlink, MsgType, Flags, Seq, Pid, PayLoad}) ->
+    SubSys = {netlink, decode_protocol_subsys(Protocol)},
+    Data = nl_enc_payload(SubSys, MsgType, PayLoad),
+    enc_nlmsghdr(Protocol, netlink, MsgType, Flags, Seq, Pid, Data);
 
 nl_ct_enc(Protocol, {SubSys, MsgType, Flags, Seq, Pid, PayLoad}) ->
     Data = nl_enc_payload(SubSys, MsgType, PayLoad),

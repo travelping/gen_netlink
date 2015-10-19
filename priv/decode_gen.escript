@@ -817,7 +817,25 @@ define_consts() ->
      {{genl, ctrl, attr, mcast_grp}, [{unspec, none},
 				      {name,   string},
 				      {id,     huint32}
-				     ]}
+				     ]},
+
+     {{linkinfo, gtp}, [{unspec, none},
+			{fd0, huint32},
+			{fd1, huint32},
+			{hashsize, huint32}]},
+
+     {{gtp, cmd}, [new, delete, get]},
+
+     {{gtp, attrs}, [{unspec,       none},
+		     {link,         huint32},
+		     {version,      huint32},
+		     {tid,          huint64},
+		     {sgsn_address, addr},
+		     {ms_address,   addr},
+		     {flow,         huint16},
+		     {net_ns_fd,    huint32},
+		     {i_tid,        huint32},
+		     {o_tid,        huint32}]}
      ].
 
 make_prefix(Id) when is_atom(Id) ->

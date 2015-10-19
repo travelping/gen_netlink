@@ -2317,6 +2317,72 @@ decode_genl_ctrl_attr_mcast_grp(_Family, Id, Value) ->
 
 %% ============================
 
+decode_linkinfo_gtp(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_linkinfo_gtp(_Family, 1, Value) ->
+    {fd0, decode_huint32(Value)};
+
+decode_linkinfo_gtp(_Family, 2, Value) ->
+    {fd1, decode_huint32(Value)};
+
+decode_linkinfo_gtp(_Family, 3, Value) ->
+    {hashsize, decode_huint32(Value)};
+
+decode_linkinfo_gtp(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_gtp_cmd(0) ->
+    new;
+
+decode_gtp_cmd(1) ->
+    delete;
+
+decode_gtp_cmd(2) ->
+    get;
+
+decode_gtp_cmd(Value) ->
+    Value.
+
+%% ============================
+
+decode_gtp_attrs(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_gtp_attrs(_Family, 1, Value) ->
+    {link, decode_huint32(Value)};
+
+decode_gtp_attrs(_Family, 2, Value) ->
+    {version, decode_huint32(Value)};
+
+decode_gtp_attrs(_Family, 3, Value) ->
+    {tid, decode_huint64(Value)};
+
+decode_gtp_attrs(_Family, 4, Value) ->
+    {sgsn_address, decode_addr(Value)};
+
+decode_gtp_attrs(_Family, 5, Value) ->
+    {ms_address, decode_addr(Value)};
+
+decode_gtp_attrs(_Family, 6, Value) ->
+    {flow, decode_huint16(Value)};
+
+decode_gtp_attrs(_Family, 7, Value) ->
+    {net_ns_fd, decode_huint32(Value)};
+
+decode_gtp_attrs(_Family, 8, Value) ->
+    {i_tid, decode_huint32(Value)};
+
+decode_gtp_attrs(_Family, 9, Value) ->
+    {o_tid, decode_huint32(Value)};
+
+decode_gtp_attrs(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
 encode_protocol_subsys(rtnetlink) ->
     ?NETLINK_ROUTE;
 
@@ -4602,5 +4668,73 @@ encode_genl_ctrl_attr_mcast_grp(_Family, {id, Value}) ->
     encode_huint32(2, Value);
 
 encode_genl_ctrl_attr_mcast_grp(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_linkinfo_gtp(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_linkinfo_gtp(_Family, {fd0, Value}) ->
+    encode_huint32(1, Value);
+
+encode_linkinfo_gtp(_Family, {fd1, Value}) ->
+    encode_huint32(2, Value);
+
+encode_linkinfo_gtp(_Family, {hashsize, Value}) ->
+    encode_huint32(3, Value);
+
+encode_linkinfo_gtp(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_gtp_cmd(new) ->
+    0;
+
+encode_gtp_cmd(delete) ->
+    1;
+
+encode_gtp_cmd(get) ->
+    2;
+
+encode_gtp_cmd(Value) when is_integer(Value) ->
+    Value.
+
+%% ============================
+
+encode_gtp_attrs(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_gtp_attrs(_Family, {link, Value}) ->
+    encode_huint32(1, Value);
+
+encode_gtp_attrs(_Family, {version, Value}) ->
+    encode_huint32(2, Value);
+
+encode_gtp_attrs(_Family, {tid, Value}) ->
+    encode_huint64(3, Value);
+
+encode_gtp_attrs(_Family, {sgsn_address, Value}) ->
+    encode_addr(4, Value);
+
+encode_gtp_attrs(_Family, {ms_address, Value}) ->
+    encode_addr(5, Value);
+
+encode_gtp_attrs(_Family, {flow, Value}) ->
+    encode_huint16(6, Value);
+
+encode_gtp_attrs(_Family, {net_ns_fd, Value}) ->
+    encode_huint32(7, Value);
+
+encode_gtp_attrs(_Family, {i_tid, Value}) ->
+    encode_huint32(8, Value);
+
+encode_gtp_attrs(_Family, {o_tid, Value}) ->
+    encode_huint32(9, Value);
+
+encode_gtp_attrs(_Family, {Type, Value})
   when is_integer(Type), is_binary(Value) ->
     enc_nla(Type, Value).

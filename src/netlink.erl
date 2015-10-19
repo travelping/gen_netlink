@@ -36,6 +36,7 @@
 -export([nl_ct_dec/1, nl_rt_dec/1,
 	 nl_rt_enc/1, nl_ct_enc/1,
 	 nl_dec/2, nl_enc/2,
+	 linkinfo_enc/3, linkinfo_dec/3,
 	 rtnl_wilddump/2]).
 -export([sockaddr_nl/3, setsockopt/4]).
 -export([rcvbufsiz/2]).
@@ -366,7 +367,9 @@ decode_nl_msg_type_1({netlink, generic}, Type) ->
 decode_nl_msg_type_1(nft_compat, Type) ->
     decode_nl_msgtype_nft_compat(Type);
 decode_nl_msg_type_1(queue, Type) ->
-    decode_nl_msgtype_queue(Type).
+    decode_nl_msgtype_queue(Type);
+decode_nl_msg_type_1({netlink, gtp}, _Type) ->
+    gtp.
 
 decode_rtnetlink_rtm_flags(Flags) ->
     decode_flag(flag_info_rtnetlink_rtm_flags(), Flags).
@@ -407,6 +410,8 @@ encode_nl_msg(generic, netlink, Type) ->
 
 encode_nl_msg(_Protocol, rtnetlink, Type) ->
     encode_rtm_msgtype_rtnetlink(Type);
+encode_nl_msg(Protocol, netlink, gtp) ->
+    Protocol;
 
 encode_nl_msg(_Protocol, nlmsg, Type) ->
     encode_nl_msgtype_nlmsg(Type);
@@ -789,6 +794,11 @@ nl_enc_payload({netlink, generic}, MsgType, {CtrlCmd, Version, ResId, Req}) ->
     Data = nl_enc_nla(CtrlCmd, fun encode_genl_ctrl_attr/2, Req),
     << Cmd:8, Version:8, ResId:16/native-integer, Data/binary >>;
 
+nl_enc_payload({netlink, GenlType}, gtp, {GtpCmd, Version, ResId, Req}) ->
+    Cmd = encode_gtp_cmd(GtpCmd),
+    Data = nl_enc_nla(GtpCmd, fun encode_gtp_attrs/2, Req),
+    << Cmd:8, Version:8, ResId:16/native-integer, Data/binary >>;
+
 %% Other
 nl_enc_payload(_, _, Data)
   when is_binary(Data) ->
@@ -857,6 +867,10 @@ nl_dec_payload(queue, MsgType, << Family:8, Version:8, ResId:16/native-integer, 
 nl_dec_payload({netlink, generic}, MsgType, << Cmd:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
     CtrlCmd = decode_genl_ctrl_cmd(Cmd),
     { CtrlCmd, Version, ResId, nl_dec_nla(CtrlCmd, fun decode_genl_ctrl_attr/3, Data) };
+
+nl_dec_payload({netlink, gtp}, _MsgType, << Cmd:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
+    GtpCmd = decode_gtp_cmd(Cmd),
+    { GtpCmd, Version, ResId, nl_dec_nla(GtpCmd, fun decode_gtp_attrs/3, Data) };
 
 %% Other
 nl_dec_payload(_SubSys, _MsgType, Data) ->
@@ -942,6 +956,14 @@ nl_rt_dec(Protocol, << Len:32/native-integer, Type:16/native-integer, Flags:16/n
 
 nl_rt_dec(_Protocol, << >>, Acc) ->
     lists:reverse(Acc).
+
+linkinfo_dec(Family, "gtp", Data) ->
+    nl_dec_nla(Family, fun decode_linkinfo_gtp/3, Data);
+linkinfo_dec(_Family, _Kind, Data) ->
+    Data.
+
+linkinfo_enc(Family, "gtp", Data) ->
+    nl_enc_nla(Family, fun encode_linkinfo_gtp/2, Data).
 
 enc_nlmsghdr_flags(Type, Flags) when ?IS_GET(Type) ->
     encode_flag(flag_info_nlm_get_flags(), Flags);

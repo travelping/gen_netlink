@@ -1,5 +1,6 @@
 gen_netlink
 ===========
+[![Build Status](https://travis-ci.org/travelping/gen_netlink.svg?branch=master)](https://travis-ci.org/travelping/gen_netlink)
 
 gen_netlink is a encoder, decoder and tool library for talking to the
 Linux kernel netlink interface.
@@ -10,8 +11,15 @@ a recent gen_socket is required.
 
 BUILDING
 --------
-Try running: tetrapak build
 
+Using tetrapak:
+
+    # tetrapak build check
+
+Using rebar:
+
+    # rebar get-deps
+    # rebar compile
 
 En/Decoder
 ----------

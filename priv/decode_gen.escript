@@ -188,14 +188,14 @@ define_consts() ->
                     {status, flag32},
                     {protoinfo, protoinfo},
                     {help, help},
-                    {nat_src, none},
+                    {nat_src, snat_entry},
                     {timeout, uint32},
                     {mark, uint32},
                     {counters_orig, counters},
                     {counters_reply, counters},
                     {use, uint32},
                     {id, uint32},
-                    {nat_dst, none},
+                    {nat_dst, dnat_entry},
                     {tuple_master, tuple},
                     {nat_seq_adj_orig, nat_seq_adj},
                     {nat_seq_adj_reply, nat_seq_adj},
@@ -207,6 +207,28 @@ define_consts() ->
                     {labels, binary},
                     {labels_mask, binary}
                  ]},
+     {{ctnetlink, snat_entry}, [
+                                {unspec, none},
+                                {v4_src, addr},
+                                {unspec, none},
+                                {src_port, ports}
+                               ]},
+     {{ctnetlink, snat_entry, ports}, [
+                                       {unspec, none},
+                                       {min_port, uint16},
+                                       {max_port, uint16}
+                                      ]},
+     {{ctnetlink, dnat_entry}, [
+                                {unspec, none},
+                                {v4_dst, addr},
+                                {unspec, none},
+                                {dst_port, ports}
+                               ]},
+     {{ctnetlink, dnat_entry, ports}, [
+                                       {unspec, none},
+                                       {min_port, uint16},
+                                       {max_port, uint16}
+                                      ]},
      {{ctnetlink, status}, [
                             {expected, flag},
                             {seen_reply, flag},

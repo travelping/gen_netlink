@@ -102,7 +102,7 @@ get_cache_handle(Server) ->
 %% @end
 %%--------------------------------------------------------------------
 init(Options) ->
-    netlink:debug("Options: ~p~n", [Options]),
+    lager:debug("Options: ~p~n", [Options]),
     NeighbourTable = new_table([ordered_set, protected, {keypos, #neighbour_cache_entry.key}], neighbour_table, Options),
     RouteTable = new_table([ordered_set, protected, {keypos, #route_cache_entry.key}], route_table, Options),
 

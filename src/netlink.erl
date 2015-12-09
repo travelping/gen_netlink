@@ -27,6 +27,7 @@
 -export([start/0, start/2, start/3,
 	 start_link/0, start_link/2, start_link/3,
 	 stop/0, stop/1]).
+
 -export([subscribe/2, subscribe/3,
 	 send/2, send/3,
 	 request/2, request/3]).
@@ -468,7 +469,7 @@ encode_flag(Type, [Flag|Next], Value) when is_atom(Flag) ->
     end.
 
 encode_flag(Type, Flag) ->
-    netlink:debug("encode_flag: ~p, ~p~n", [Type, Flag]),
+    lager:debug("encode_flag: ~p, ~p~n", [Type, Flag]),
     encode_flag(Type, Flag, 0).
 
 
@@ -705,7 +706,7 @@ nl_dec_nla(Family, Fun, Data)
 nl_enc_nla(_Family, _Fun, [], Acc) ->
     list_to_binary(lists:reverse(Acc));
 nl_enc_nla(Family, Fun, [Head|Rest], Acc) ->
-    netlink:debug("nl_enc_nla: ~w, ~w~n", [Family, Head]),
+    lager:debug("nl_enc_nla: ~w, ~w~n", [Family, Head]),
     H = Fun(Family, Head),
     nl_enc_nla(Family, Fun, Rest, [H|Acc]).
 
@@ -737,8 +738,8 @@ nl_enc_payload(rtnetlink, MsgType, {Family, PrefixLen, Flags, Scope, Index, Req}
 nl_enc_payload(rtnetlink, MsgType, {Family, DstLen, SrcLen, Tos, Table, Protocol, Scope, RtmType, Flags, Req})
   when MsgType == newroute; MsgType == delroute ; MsgType == getroute ->
     Fam = gen_socket:family(Family),
-    netlink:debug("nl_enc_payload: ~p~n", [{Family, DstLen, SrcLen, Tos, Table, Protocol, Scope, RtmType, Flags, Req}]),
-    netlink:debug("~p, ~p, ~p, ~p, ~p~n", [encode_rtnetlink_rtm_table(Table),
+    lager:debug("nl_enc_payload: ~p~n", [{Family, DstLen, SrcLen, Tos, Table, Protocol, Scope, RtmType, Flags, Req}]),
+    lager:debug("~p, ~p, ~p, ~p, ~p~n", [encode_rtnetlink_rtm_table(Table),
 					 encode_rtnetlink_rtm_protocol(Protocol),
 					 encode_rtnetlink_rtm_scope(Scope),
 					 encode_rtnetlink_rtm_type(RtmType),
@@ -1186,7 +1187,7 @@ handle_call({subscribe, #subscription{pid = Pid} = Subscription}, _From, #state{
             NewSub = lists:keyreplace(Pid, #subscription.pid, Sub, Subscription),
             {reply, ok, State#state{subscribers = NewSub}};
         false ->
-            netlink:debug("~p:Subscribe ~p~n", [?MODULE, Pid]),
+            lager:debug("~p:Subscribe ~p~n", [?MODULE, Pid]),
             monitor(process, Pid),
             {reply, ok, State#state{subscribers = [Subscription|Sub]}}
     end;
@@ -1230,7 +1231,7 @@ handle_info({Socket, input_ready}, State0) ->
     {noreply, State};
 
 handle_info({'DOWN', _Ref, process, Pid, _Reason}, #state{subscribers = Sub} = State) ->
-    netlink:debug("~p:Unsubscribe ~p~n", [?MODULE, Pid]),
+    lager:debug("~p:Unsubscribe ~p~n", [?MODULE, Pid]),
     {noreply, State#state{subscribers = lists:delete(Pid, Sub)}};
 
 handle_info(Msg, State) ->
@@ -1238,7 +1239,7 @@ handle_info(Msg, State) ->
     {noreply, State}.
 
 terminate(Reason, _State) ->
-    netlink:debug("~p terminate:~p~n", [?MODULE, Reason]),
+    lager:debug("~p terminate:~p~n", [?MODULE, Reason]),
     ok.
 
 code_change(_OldVsn, State, _Extra) ->
@@ -1247,7 +1248,7 @@ code_change(_OldVsn, State, _Extra) ->
 handle_socket_data(Socket, NlType, SubscriptionType, Decode, #state{subscribers = Sub} = State) ->
     case gen_socket:recvfrom(Socket, 128 * 1024) of
 	{ok, _Sender, Data} ->
-	    %%  netlink:debug("~p got: ~p~n", [NlType, Decode(Data)]),
+	    %%  lager:debug("~p got: ~p~n", [NlType, Decode(Data)]),
 	    Subs = lists:filter(fun(Elem) ->
 					lists:member(NlType, Elem#subscription.types)
 				end, Sub),

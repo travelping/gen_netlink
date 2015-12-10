@@ -83,7 +83,7 @@ handle_info({Socket, input_ready}, State = #state{socket = Socket}) ->
     {noreply, State};
 
 handle_info(Info, State) ->
-    netlink:warning("got Info: ~p~n", [Info]),
+    lager:error("got Info: ~p~n", [Info]),
     {noreply, State}.
 
 terminate(_Reason, _State) ->

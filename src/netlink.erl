@@ -396,13 +396,13 @@ encode_rtnetlink_rtm_flags(Flags) ->
 encode_rtnetlink_link_protinfo(inet6, Value) ->
     encode_rtnetlink_link_protinfo_inet6(inet6, Value);
 encode_rtnetlink_link_protinfo(Family, Value) ->
-    netlink:error("encode_rtnetlink_link_protinfo: ~p~n", {Family, Value}).
+    lager:error("encode_rtnetlink_link_protinfo: ~p~n", {Family, Value}).
 
 encode_ctnetlink_protoinfo_dccp(Family, Value) ->
-    netlink:error("encode_ctnetlink: ~p~n", {Family, Value}).
+    lager:error("encode_ctnetlink: ~p~n", {Family, Value}).
 
 encode_ctnetlink_protoinfo_sctp(Family, Value) ->
-    netlink:error("encode_ctnetlink_protoinfo_sctp: ~p~n", {Family, Value}).
+    lager:error("encode_ctnetlink_protoinfo_sctp: ~p~n", {Family, Value}).
 
 encode_nl_msg(netfilter, netlink, Type) ->
     encode_nl_msgtype_nfnl(Type);
@@ -692,7 +692,7 @@ nl_dec_nla(Family, Fun, << Len:16/native-integer, NlaType:16/native-integer, Res
 		{<<>>, Fun(Family, NlaType band 16#7FFF, Data)};
 
 	    _ ->
-		netlink:warning("nl_dec_nla: unable to decode pay load of ~p", [RawNla]),
+		lager:warning("nl_dec_nla: unable to decode pay load of ~p", [RawNla]),
 		{<<>>, {rawdata, RawNla}}
     end,
     nl_dec_nla(Family, Fun, Next, [NLA | Acc]);
@@ -876,7 +876,7 @@ nl_dec_payload({netlink, gtp}, _MsgType, << Cmd:8, Version:8, ResId:16/native-in
 %% Other
 nl_dec_payload(_SubSys, _MsgType, Data) ->
     io:format("unknown SubSys/MsgType: ~p/~p~n", [_SubSys, _MsgType]),
-    netlink:warning("unknown SubSys/MsgType: ~p/~p", [_SubSys, _MsgType]),
+    lager:warning("unknown SubSys/MsgType: ~p/~p", [_SubSys, _MsgType]),
     Data.
 
 nlmsg_ok(DataLen, MsgLen) ->
@@ -1235,7 +1235,7 @@ handle_info({'DOWN', _Ref, process, Pid, _Reason}, #state{subscribers = Sub} = S
     {noreply, State#state{subscribers = lists:delete(Pid, Sub)}};
 
 handle_info(Msg, State) ->
-    netlink:warning("got Message ~p~n", [Msg]),
+    lager:warning("got Message ~p~n", [Msg]),
     {noreply, State}.
 
 terminate(Reason, _State) ->
@@ -1255,7 +1255,7 @@ handle_socket_data(Socket, NlType, SubscriptionType, Decode, #state{subscribers 
 	    handle_messages(SubscriptionType, Decode(Data), Subs, State);
 
 	Other ->
-	    netlink:error("~p: ~p~n", [NlType, Other]),
+	    lager:error("~p: ~p~n", [NlType, Other]),
 	    State
     end.
 

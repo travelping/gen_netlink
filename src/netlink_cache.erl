@@ -144,7 +144,7 @@ handle_call(get_cache_handle, _From, State) ->
     {reply, state_to_handle(State), State};
 
 handle_call(Request, _From, State) ->
-    netlink:warning("unhandled call: ~p", [Request]),
+    lager:warning("unhandled call: ~p", [Request]),
     {reply, ok, State}.
 
 %%--------------------------------------------------------------------
@@ -158,7 +158,7 @@ handle_call(Request, _From, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast(Msg, State) ->
-    netlink:warning("unhandled cast: ~p", [Msg]),
+    lager:warning("unhandled cast: ~p", [Msg]),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -175,7 +175,7 @@ handle_info({rtnetlink, Infos}, State0) ->
     State = handle_rtnetlink(Infos, State0),
     {noreply, State};
 handle_info(Info, State) ->
-    netlink:warning("unhandled info: ~p", [Info]),
+    lager:warning("unhandled info: ~p", [Info]),
     {noreply, State}.
 
 %%--------------------------------------------------------------------

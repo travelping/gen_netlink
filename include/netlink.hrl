@@ -60,6 +60,9 @@
 -define(NLM_F_CREATE,    16#400).   %% Create, if it does not exist
 -define(NLM_F_APPEND,    16#800).   %% Add to end of list
 
+-type scope() :: universe | site | link | host | nowhere | non_neg_integer().
+-type rtm_type() :: unspec | unicast | local | broadcast | anycast | multicast | blackhole | unreachable | prohibit | throw | nat | xresolve | non_neg_integer().
+-type table() :: unspec | compat | main | local | non_neg_integer().
 -type nl_flags() :: list(atom()).
 -type family() :: atom().
 -type protocol() :: atom().
@@ -69,7 +72,8 @@
 -type nla() :: list({atom(),term()}).
 -type ctnetlink_msg() :: {family(),non_neg_integer(),non_neg_integer(),list()}.
 -type rtnetlink_neigh() :: {family(),ifindex(),non_neg_integer(),nl_flags(),non_neg_integer(),nla()}.
--type rtnetlink_route() :: {family(),non_neg_integer(),non_neg_integer(),non_neg_integer(),non_neg_integer(),protocol(),non_neg_integer(),non_neg_integer(),nl_flags(),nla()}.
+-type rtnetlink_route() :: {family(),non_neg_integer(),non_neg_integer(),non_neg_integer(),table(),protocol(),scope(),rtm_type(),nl_flags(),nla()}.
+
 -type rtnetlink_addr() :: {family(),non_neg_integer(),nl_flags(),non_neg_integer(),non_neg_integer(),nla()}.
 -type rtnetlink_link() :: {family(),arphdr(),non_neg_integer(),nl_flags(),nl_flags(),nla()}.
 -type rtnetlink_prefix() :: {family(),ifindex(),non_neg_integer(),non_neg_integer(),nl_flags(),nla()}.

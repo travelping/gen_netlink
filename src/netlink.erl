@@ -788,7 +788,7 @@ nl_enc_payload(queue, MsgType, {Family, Version, ResId, Req}) ->
 	      _      -> fun encode_nfqnl_attr/2
 	  end,
     Data = nl_enc_nla(Family, Fun, Req),
-    << Fam:8, Version:8, ResId:16/native-integer, Data/binary >>;
+    << Fam:8, Version:8, ResId:16/integer, Data/binary >>;
 
 nl_enc_payload({netlink, generic}, MsgType, {CtrlCmd, Version, ResId, Req}) ->
     Cmd = encode_genl_ctrl_cmd(CtrlCmd),
@@ -1151,8 +1151,8 @@ init(Opts) ->
     ok = gen_socket:bind(CtNl, sockaddr_nl(netlink, 0, -1)),
     ok = gen_socket:input_event(CtNl, true),
 
-    ok = gen_socket:setsockopt(CtNl, sol_socket, sndbuf, 32768),
-    ok = rcvbufsiz(CtNl, 128 * 1024),
+    ok = gen_socket:setsockopt(CtNl, sol_socket, sndbuf, 32768*1024),
+    ok = rcvbufsiz(CtNl, 128 * 1024 * 1024),
 
     ok = setsockopt(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_new),
     ok = setsockopt(CtNl, sol_netlink, netlink_add_membership, nfnlgrp_conntrack_update),
@@ -1165,8 +1165,8 @@ init(Opts) ->
     ok = gen_socket:bind(RtNl, sockaddr_nl(netlink, 0, -1)),
     ok = gen_socket:input_event(RtNl, true),
 
-    ok = gen_socket:setsockopt(RtNl, sol_socket, sndbuf, 32768),
-    ok = rcvbufsiz(RtNl, 128 * 1024),
+    ok = gen_socket:setsockopt(RtNl, sol_socket, sndbuf, 32768*1024),
+    ok = rcvbufsiz(RtNl, 128 * 1024 *1024 ),
 
     ok = setsockopt(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_link),
     ok = setsockopt(RtNl, sol_netlink, netlink_add_membership, rtnlgrp_notify),

@@ -190,3 +190,10 @@
 -type rtnetlink_ev() :: {rtnetlink, [#rtnetlink{}, ...]}.
                      %% netlink event message sent to `rt' subscriber
 
+
+
+%-define(LOG(Formatting, Args), lager:debug(Formatting, Args)).
+-define(LOG(Formatting, Args), ok).
+
+%-define(LOG(Formatting), lager:debug(Formatting)).
+-define(LOG(Formatting), ok).

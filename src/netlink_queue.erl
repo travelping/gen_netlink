@@ -77,7 +77,7 @@ handle_info({Socket, input_ready}, State = #state{socket = Socket}) ->
 	    Msg = netlink:nl_ct_dec(Data),
 	    process_nfq_msgs(Msg, State);
 	Other ->
-	    lager:debug("Other: ~p~n", [Other])
+	    ?LOG("Other: ~p~n", [Other])
     end,
     ok = gen_socket:input_event(Socket, true),
     {noreply, State};
@@ -108,10 +108,10 @@ nfnl_query(Socket, Query) ->
     Request = netlink:nl_ct_enc(Query),
     gen_socket:sendto(Socket, netlink:sockaddr_nl(netlink, 0, 0), Request),
     Answer = gen_socket:recv(Socket, 8192),
-    lager:debug("Answer: ~p~n", [Answer]),
+    ?LOG("Answer: ~p~n", [Answer]),
     case Answer of
 	{ok, Reply} ->
-	    lager:debug("Reply: ~p~n", [netlink:nl_ct_dec(Reply)]),
+	    ?LOG("Reply: ~p~n", [netlink:nl_ct_dec(Reply)]),
 	    case netlink:nl_ct_dec(Reply) of
 		[{netlink,error,[],_,_,{ErrNo, _}}|_] when ErrNo == 0 ->
 		    ok;
@@ -153,7 +153,7 @@ nfq_set_flags(Socket, Queue, Flags, Mask) ->
 process_nfq_msgs([], _State) ->
     ok;
 process_nfq_msgs([Msg|Rest], State) ->
-    lager:debug("NFQ-Msg: ~p~n", [Msg]),
+    ?LOG("NFQ-Msg: ~p~n", [Msg]),
     process_nfq_msg(Msg, State),
     process_nfq_msgs(Rest, State).
 
@@ -166,7 +166,7 @@ process_nfq_packet({Family, _Version, _Queue, Info},
   when Family == inet; Family == inet6 ->
     dump_packet(Info),
     {_, Id, _, _} = lists:keyfind(packet_hdr, 1, Info),
-    lager:debug("Verdict for ~p~n", [Id]),
+    ?LOG("Verdict for ~p~n", [Id]),
 
     NLA = try Cb:nfq_verdict(Family, Info, CbState) of
 	      {Verdict, Attrs} when is_list(Attrs) ->
@@ -198,12 +198,12 @@ dump_packet(PktInfo) ->
     lists:foreach(fun dump_packet_1/1, PktInfo).
 
 dump_packet_1({ifindex_indev, IfIdx}) ->
-    lager:debug("InDev: ~w", [IfIdx]);
+    ?LOG("InDev: ~w", [IfIdx]);
 dump_packet_1({hwaddr, Mac}) ->
-    lager:debug("HwAddr: ~s", [flower_tools:format_mac(Mac)]);
+    ?LOG("HwAddr: ~s", [flower_tools:format_mac(Mac)]);
 dump_packet_1({mark, Mark}) ->
-    lager:debug("Mark: ~8.16.0B", [Mark]);
+    ?LOG("Mark: ~8.16.0B", [Mark]);
 dump_packet_1({payload, Data}) ->
-    lager:debug(flower_tools:hexdump(Data));
+    ?LOG(flower_tools:hexdump(Data));
 dump_packet_1(_) ->
     ok.

@@ -77,13 +77,13 @@ handle_info({Socket, input_ready}, State = #state{socket = Socket}) ->
 	    Msg = netlink:nl_ct_dec(Data),
 	    process_nfq_msgs(Msg, State);
 	Other ->
-	    netlink:debug("Other: ~p~n", [Other])
+	    lager:debug("Other: ~p~n", [Other])
     end,
     ok = gen_socket:input_event(Socket, true),
     {noreply, State};
 
 handle_info(Info, State) ->
-    netlink:warning("got Info: ~p~n", [Info]),
+    lager:warning("got Info: ~p~n", [Info]),
     {noreply, State}.
 
 terminate(_Reason, _State) ->
@@ -108,10 +108,10 @@ nfnl_query(Socket, Query) ->
     Request = netlink:nl_ct_enc(Query),
     gen_socket:sendto(Socket, netlink:sockaddr_nl(netlink, 0, 0), Request),
     Answer = gen_socket:recv(Socket, 8192),
-    netlink:debug("Answer: ~p~n", [Answer]),
+    lager:debug("Answer: ~p~n", [Answer]),
     case Answer of
 	{ok, Reply} ->
-	    netlink:debug("Reply: ~p~n", [netlink:nl_ct_dec(Reply)]),
+	    lager:debug("Reply: ~p~n", [netlink:nl_ct_dec(Reply)]),
 	    case netlink:nl_ct_dec(Reply) of
 		[{netlink,error,[],_,_,{ErrNo, _}}|_] when ErrNo == 0 ->
 		    ok;
@@ -153,7 +153,7 @@ nfq_set_flags(Socket, Queue, Flags, Mask) ->
 process_nfq_msgs([], _State) ->
     ok;
 process_nfq_msgs([Msg|Rest], State) ->
-    netlink:debug("NFQ-Msg: ~p~n", [Msg]),
+    lager:debug("NFQ-Msg: ~p~n", [Msg]),
     process_nfq_msg(Msg, State),
     process_nfq_msgs(Rest, State).
 
@@ -166,7 +166,7 @@ process_nfq_packet({Family, _Version, _Queue, Info},
   when Family == inet; Family == inet6 ->
     dump_packet(Info),
     {_, Id, _, _} = lists:keyfind(packet_hdr, 1, Info),
-    netlink:debug("Verdict for ~p~n", [Id]),
+    lager:debug("Verdict for ~p~n", [Id]),
 
     NLA = try Cb:nfq_verdict(Family, Info, CbState) of
 	      {Verdict, Attrs} when is_list(Attrs) ->
@@ -198,12 +198,12 @@ dump_packet(PktInfo) ->
     lists:foreach(fun dump_packet_1/1, PktInfo).
 
 dump_packet_1({ifindex_indev, IfIdx}) ->
-    netlink:debug("InDev: ~w", [IfIdx]);
+    lager:debug("InDev: ~w", [IfIdx]);
 dump_packet_1({hwaddr, Mac}) ->
-    netlink:debug("HwAddr: ~s", [flower_tools:format_mac(Mac)]);
+    lager:debug("HwAddr: ~s", [flower_tools:format_mac(Mac)]);
 dump_packet_1({mark, Mark}) ->
-    netlink:debug("Mark: ~8.16.0B", [Mark]);
+    lager:debug("Mark: ~8.16.0B", [Mark]);
 dump_packet_1({payload, Data}) ->
-    netlink:debug(flower_tools:hexdump(Data));
+    lager:debug(flower_tools:hexdump(Data));
 dump_packet_1(_) ->
     ok.

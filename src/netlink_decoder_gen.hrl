@@ -493,8 +493,8 @@ decode_ctnetlink(Family, 4, Value) ->
 decode_ctnetlink(Family, 5, Value) ->
     {help, nl_dec_nla(Family, fun decode_ctnetlink_help/3, Value)};
 
-decode_ctnetlink(_Family, 6, Value) ->
-    {nat_src, decode_none(Value)};
+decode_ctnetlink(Family, 6, Value) ->
+    {nat_src, nl_dec_nla(Family, fun decode_ctnetlink_snat_entry/3, Value)};
 
 decode_ctnetlink(_Family, 7, Value) ->
     {timeout, decode_uint32(Value)};
@@ -514,8 +514,8 @@ decode_ctnetlink(_Family, 11, Value) ->
 decode_ctnetlink(_Family, 12, Value) ->
     {id, decode_uint32(Value)};
 
-decode_ctnetlink(_Family, 13, Value) ->
-    {nat_dst, decode_none(Value)};
+decode_ctnetlink(Family, 13, Value) ->
+    {nat_dst, nl_dec_nla(Family, fun decode_ctnetlink_dnat_entry/3, Value)};
 
 decode_ctnetlink(Family, 14, Value) ->
     {tuple_master, nl_dec_nla(Family, fun decode_ctnetlink_tuple/3, Value)};
@@ -548,6 +548,68 @@ decode_ctnetlink(_Family, 23, Value) ->
     {labels_mask, decode_binary(Value)};
 
 decode_ctnetlink(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_ctnetlink_snat_entry(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_ctnetlink_snat_entry(_Family, 1, Value) ->
+    {v4_src, decode_addr(Value)};
+
+decode_ctnetlink_snat_entry(_Family, 2, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_ctnetlink_snat_entry(Family, 3, Value) ->
+    {src_port, nl_dec_nla(Family, fun decode_ctnetlink_snat_entry_ports/3, Value)};
+
+decode_ctnetlink_snat_entry(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_ctnetlink_snat_entry_ports(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_ctnetlink_snat_entry_ports(_Family, 1, Value) ->
+    {min_port, decode_uint16(Value)};
+
+decode_ctnetlink_snat_entry_ports(_Family, 2, Value) ->
+    {max_port, decode_uint16(Value)};
+
+decode_ctnetlink_snat_entry_ports(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_ctnetlink_dnat_entry(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_ctnetlink_dnat_entry(_Family, 1, Value) ->
+    {v4_dst, decode_addr(Value)};
+
+decode_ctnetlink_dnat_entry(_Family, 2, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_ctnetlink_dnat_entry(Family, 3, Value) ->
+    {dst_port, nl_dec_nla(Family, fun decode_ctnetlink_dnat_entry_ports/3, Value)};
+
+decode_ctnetlink_dnat_entry(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_ctnetlink_dnat_entry_ports(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_ctnetlink_dnat_entry_ports(_Family, 1, Value) ->
+    {min_port, decode_uint16(Value)};
+
+decode_ctnetlink_dnat_entry_ports(_Family, 2, Value) ->
+    {max_port, decode_uint16(Value)};
+
+decode_ctnetlink_dnat_entry_ports(_Family, Id, Value) ->
     {Id, Value}.
 
 %% ============================
@@ -2781,8 +2843,8 @@ encode_ctnetlink(Family, {protoinfo, Value}) ->
 encode_ctnetlink(Family, {help, Value}) ->
     enc_nla(5 bor 16#8000, nl_enc_nla(Family, fun encode_ctnetlink_help/2, Value));
 
-encode_ctnetlink(_Family, {nat_src, Value}) ->
-    encode_none(6, Value);
+encode_ctnetlink(Family, {nat_src, Value}) ->
+    enc_nla(6 bor 16#8000, nl_enc_nla(Family, fun encode_ctnetlink_snat_entry/2, Value));
 
 encode_ctnetlink(_Family, {timeout, Value}) ->
     encode_uint32(7, Value);
@@ -2802,8 +2864,8 @@ encode_ctnetlink(_Family, {use, Value}) ->
 encode_ctnetlink(_Family, {id, Value}) ->
     encode_uint32(12, Value);
 
-encode_ctnetlink(_Family, {nat_dst, Value}) ->
-    encode_none(13, Value);
+encode_ctnetlink(Family, {nat_dst, Value}) ->
+    enc_nla(13 bor 16#8000, nl_enc_nla(Family, fun encode_ctnetlink_dnat_entry/2, Value));
 
 encode_ctnetlink(Family, {tuple_master, Value}) ->
     enc_nla(14 bor 16#8000, nl_enc_nla(Family, fun encode_ctnetlink_tuple/2, Value));
@@ -2836,6 +2898,72 @@ encode_ctnetlink(_Family, {labels_mask, Value}) ->
     encode_binary(23, Value);
 
 encode_ctnetlink(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_ctnetlink_snat_entry(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_ctnetlink_snat_entry(_Family, {v4_src, Value}) ->
+    encode_addr(1, Value);
+
+encode_ctnetlink_snat_entry(_Family, {unspec, Value}) ->
+    encode_none(2, Value);
+
+encode_ctnetlink_snat_entry(Family, {src_port, Value}) ->
+    enc_nla(3 bor 16#8000, nl_enc_nla(Family, fun encode_ctnetlink_snat_entry_ports/2, Value));
+
+encode_ctnetlink_snat_entry(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_ctnetlink_snat_entry_ports(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_ctnetlink_snat_entry_ports(_Family, {min_port, Value}) ->
+    encode_uint16(1, Value);
+
+encode_ctnetlink_snat_entry_ports(_Family, {max_port, Value}) ->
+    encode_uint16(2, Value);
+
+encode_ctnetlink_snat_entry_ports(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_ctnetlink_dnat_entry(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_ctnetlink_dnat_entry(_Family, {v4_dst, Value}) ->
+    encode_addr(1, Value);
+
+encode_ctnetlink_dnat_entry(_Family, {unspec, Value}) ->
+    encode_none(2, Value);
+
+encode_ctnetlink_dnat_entry(Family, {dst_port, Value}) ->
+    enc_nla(3 bor 16#8000, nl_enc_nla(Family, fun encode_ctnetlink_dnat_entry_ports/2, Value));
+
+encode_ctnetlink_dnat_entry(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_ctnetlink_dnat_entry_ports(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_ctnetlink_dnat_entry_ports(_Family, {min_port, Value}) ->
+    encode_uint16(1, Value);
+
+encode_ctnetlink_dnat_entry_ports(_Family, {max_port, Value}) ->
+    encode_uint16(2, Value);
+
+encode_ctnetlink_dnat_entry_ports(_Family, {Type, Value})
   when is_integer(Type), is_binary(Value) ->
     enc_nla(Type, Value).
 

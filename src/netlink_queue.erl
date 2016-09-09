@@ -200,10 +200,35 @@ dump_packet(PktInfo) ->
 dump_packet_1({ifindex_indev, IfIdx}) ->
     netlink:debug("InDev: ~w", [IfIdx]);
 dump_packet_1({hwaddr, Mac}) ->
-    netlink:debug("HwAddr: ~s", [flower_tools:format_mac(Mac)]);
+    netlink:debug("HwAddr: ~s", [format_mac(Mac)]);
 dump_packet_1({mark, Mark}) ->
     netlink:debug("Mark: ~8.16.0B", [Mark]);
 dump_packet_1({payload, Data}) ->
-    netlink:debug(flower_tools:hexdump(Data));
+    netlink:debug(hexdump(Data));
 dump_packet_1(_) ->
     ok.
+
+flat_format(Format, Data) ->
+    lists:flatten(io_lib:format(Format, Data)).
+
+format_mac(<<A:8, B:8, C:8, D:8, E:8, F:8>>) ->
+    flat_format("~2.16.0B:~2.16.0B:~2.16.0B:~2.16.0B:~2.16.0B:~2.16.0B", [A, B, C, D, E, F]);
+format_mac(MAC) ->
+    flat_format("~w", MAC).
+hexdump(Line, Part) ->
+    L0 = [io_lib:format(" ~2.16.0B", [X]) || <<X:8>> <= Part],
+    io_lib:format("~4.16.0B:~s~n", [Line * 16, L0]).
+
+hexdump(_, <<>>, Out) ->
+    lists:flatten(lists:reverse(Out));
+hexdump(Line, <<Part:16/bytes, Rest/binary>>, Out) ->
+    L1 = hexdump(Line, Part),
+    hexdump(Line + 1, Rest, [L1|Out]);
+hexdump(Line, <<Part/binary>>, Out) ->
+    L1 = hexdump(Line, Part),
+    hexdump(Line + 1, <<>>, [L1|Out]).
+
+hexdump(List) when is_list(List) ->
+    hexdump(0, list_to_binary(List), []);
+hexdump(Bin) when is_binary(Bin)->
+    hexdump(0, Bin, []).

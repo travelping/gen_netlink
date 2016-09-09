@@ -471,7 +471,7 @@ define_consts() ->
                           {stats, huint32_array},
                           {cost, none},
                           {priority, none},
-                          {master, none},
+                          {master, huint32},
                           {wireless, none},
                           {protinfo, {nested, protinfo}},
                           {txqlen, huint32},

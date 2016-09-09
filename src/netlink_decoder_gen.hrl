@@ -1238,7 +1238,7 @@ decode_rtnetlink_link(_Family, 9, Value) ->
     {priority, decode_none(Value)};
 
 decode_rtnetlink_link(_Family, 10, Value) ->
-    {master, decode_none(Value)};
+    {master, decode_huint32(Value)};
 
 decode_rtnetlink_link(_Family, 11, Value) ->
     {wireless, decode_none(Value)};
@@ -3614,7 +3614,7 @@ encode_rtnetlink_link(_Family, {priority, Value}) ->
     encode_none(9, Value);
 
 encode_rtnetlink_link(_Family, {master, Value}) ->
-    encode_none(10, Value);
+    encode_huint32(10, Value);
 
 encode_rtnetlink_link(_Family, {wireless, Value}) ->
     encode_none(11, Value);

@@ -197,3 +197,5 @@
 
 %-define(LOG(Formatting), lager:debug(Formatting)).
 -define(LOG(Formatting), ok).
+
+-define(getfamily, {version = 1, reserved = 0, request}).

@@ -44,7 +44,10 @@ define_consts() ->
                   {multi,     {flag,  1}},
                   {ack,       {flag,  2}},
                   {echo,      {flag,  3}},
-                  {dump_intr, {flag,  4}}
+                  {dump_intr, {flag,  4}},
+                  {root,      {flag,  8}},
+                  {match,     {flag,  9}},
+                  {atomic,    {flag, 10}}
                  ]},
      {nlm_get_flags, [
                       {request,   {flag,  0}},
@@ -848,6 +851,7 @@ define_consts() ->
 
      {{gtp, cmd}, [new, delete, get]},
 
+
      {{gtp, attrs}, [{unspec,       none},
 		     {link,         huint32},
 		     {version,      huint32},
@@ -857,7 +861,60 @@ define_consts() ->
 		     {flow,         huint16},
 		     {net_ns_fd,    huint32},
 		     {i_tid,        huint32},
-		     {o_tid,        huint32}]}
+		     {o_tid,        huint32}]},
+
+     {{ipvs, cmd}, [unspec, new_service, set_service, del_service, get_service, new_dest, set_dest, del_dest, get_dest]},
+
+     {{ipvs, attrs}, [
+        {unspec,          none},
+        {service,         {nested, {ipvs, service, attributes}}},
+        {dest,            {nested, {ipvs, dest, attributes}}},
+        {daemon,          {nested, {ipvs, daemon, attributes}}},
+        {timeout_tcp,     huint32},
+        {timeout_tcp_fin, huint32},
+        {timeout_udp,     huint32}
+     ]},
+
+     {{ipvs, service, attributes}, [
+        {unspec,            none},
+        {address_family,    huint16},
+        {protocol,          huint16},
+        {address,           binary},
+        {port,              uint16},
+        {fwmark,            huint32},
+        {sched_name,        string},
+        {flags,             struct},
+        {timeout,           huint32},
+        {netmask,           huint32},
+        {stats,             none},
+        {pe_name,           string},
+        {stats64,           none}
+     ]},
+     {{ipvs, dest, attributes}, [
+        {unspec,            none},
+        {address,           binary},
+        {port,              uint16},
+        {fwd_method,        huint32},
+        {weight,            huint32},
+        {u_threshold,       huint32},
+        {l_threshold,       huint32},
+        {active_conns,      huint32},
+        {inact_conns,       huint32},
+        {persist_conns,     huint32},
+        {stats,             none},
+        {addr_family,       huint16},
+        {stats64,           none}
+     ]},
+     {{ipvs, daemon, attributes}, [
+        {state,             huint32},
+        {mcast_ifn,         string},
+        {sync_id,           huint32},
+        {sync_maxlen,       huint16},
+        {mcast_group,       huint32},
+        {mcast_group6,      none},
+        {mcast_port,        huint16},
+        {ttl,               uint8}
+     ]}
      ].
 
 make_prefix(Id) when is_atom(Id) ->

@@ -22,8 +22,8 @@
 -behaviour(gen_server).
 
 
--compile(inline).
--compile(inline_list_funcs).
+%-compile(inline).
+%-compile(inline_list_funcs).
 
 -export([start/0, start/2, start/3,
 	 start_link/0, start_link/2, start_link/3,
@@ -371,7 +371,9 @@ decode_nl_msg_type_1(nft_compat, Type) ->
 decode_nl_msg_type_1(queue, Type) ->
     decode_nl_msgtype_queue(Type);
 decode_nl_msg_type_1({netlink, gtp}, _Type) ->
-    gtp.
+    gtp;
+decode_nl_msg_type_1({netlink, ipvs}, _Type) ->
+    ipvs.
 
 decode_rtnetlink_rtm_flags(Flags) ->
     decode_flag(flag_info_rtnetlink_rtm_flags(), Flags).
@@ -412,6 +414,8 @@ encode_nl_msg(generic, netlink, Type) ->
 
 encode_nl_msg(_Protocol, rtnetlink, Type) ->
     encode_rtm_msgtype_rtnetlink(Type);
+encode_nl_msg(Protocol, netlink, ipvs) ->
+    Protocol;
 encode_nl_msg(Protocol, netlink, gtp) ->
     Protocol;
 
@@ -579,6 +583,8 @@ encode_genl_ctrl_attr_ops(Family, {Idx, Value}) ->
 encode_genl_ctrl_attr_mcast_groups(Family, {Idx, Value}) ->
     enc_nla(Idx, nl_enc_nla(Family, fun encode_genl_ctrl_attr_mcast_grp/2, Value)).
 
+encode_ipvs_service_attributes({flags, Flags, Mask}) ->
+    <<Flags:32/native-integer, Mask:32/native-integer>>.
 %%
 %% decoder
 %%
@@ -665,6 +671,10 @@ decode_genl_ctrl_attr_ops(Family, Idx, Value) ->
 
 decode_genl_ctrl_attr_mcast_groups(Family, Idx, Value) ->
     {Idx, nl_dec_nla(Family, fun decode_genl_ctrl_attr_mcast_grp/3, Value)}.
+
+
+decode_ipvs_service_attributes(flags, <<Flags:32/native-integer, Mask:32/native-integer>>) ->
+    {flags, Flags, Mask}.
 
 %%
 %% pad binary to specific length
@@ -800,6 +810,11 @@ nl_enc_payload({netlink, GenlType}, gtp, {GtpCmd, Version, ResId, Req}) ->
     Cmd = encode_gtp_cmd(GtpCmd),
     Data = nl_enc_nla(GtpCmd, fun encode_gtp_attrs/2, Req),
     << Cmd:8, Version:8, ResId:16/native-integer, Data/binary >>;
+%nl_enc_payload({netlink,27},ipvs,{get_service,1,0,[]})
+nl_enc_payload({netlink, _GenlType}, ipvs, {IPVSCmd, Version, ResId, Req}) ->
+    Cmd = encode_ipvs_cmd(IPVSCmd),
+    Data = nl_enc_nla(IPVSCmd, fun encode_ipvs_attrs/2, Req),
+    <<Cmd:8, Version:8, ResId:16/native-integer, Data/binary>>;
 
 %% Other
 nl_enc_payload(_, _, Data)
@@ -873,6 +888,10 @@ nl_dec_payload({netlink, generic}, MsgType, << Cmd:8, Version:8, ResId:16/native
 nl_dec_payload({netlink, gtp}, _MsgType, << Cmd:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
     GtpCmd = decode_gtp_cmd(Cmd),
     { GtpCmd, Version, ResId, nl_dec_nla(GtpCmd, fun decode_gtp_attrs/3, Data) };
+
+nl_dec_payload({netlink, ipvs}, _MsgType, << Cmd:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
+    GtpCmd = decode_ipvs_cmd(Cmd),
+    { GtpCmd, Version, ResId, nl_dec_nla(GtpCmd, fun decode_ipvs_attrs/3, Data) };
 
 %% Other
 nl_dec_payload(_SubSys, _MsgType, Data) ->

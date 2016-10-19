@@ -619,6 +619,8 @@ decode_int32(<< Val:32/signed-integer >>) ->
 
 decode_protocol(<< Proto:8 >>) ->
     gen_socket:protocol(Proto).
+decode_mac(<<>>) ->
+    <<>>;
 decode_mac(MAC) when size(MAC) == 6 ->
     MAC.
 decode_addr(<< A:8, B:8, C:8, D:8 >>) ->

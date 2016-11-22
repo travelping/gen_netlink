@@ -1424,10 +1424,10 @@ decode_rtnetlink_link_protinfo_inet6(_Family, Id, Value) ->
 
 %% ============================
 
-decode_rtnetlink_link_af_spec(Family, 2, Value) ->
+decode_rtnetlink_link_af_spec(Family, ?PF_INET, Value) ->
     {inet, nl_dec_nla(Family, fun decode_rtnetlink_link_af_spec_inet/3, Value)};
 
-decode_rtnetlink_link_af_spec(Family, 10, Value) ->
+decode_rtnetlink_link_af_spec(Family, ?PF_INET6, Value) ->
     {inet6, nl_dec_nla(Family, fun decode_rtnetlink_link_protinfo_inet6/3, Value)};
 
 decode_rtnetlink_link_af_spec(_Family, Id, Value) ->
@@ -3866,10 +3866,10 @@ encode_rtnetlink_link_protinfo_inet6(_Family, {Type, Value})
 %% ============================
 
 encode_rtnetlink_link_af_spec(Family, {inet, Value}) ->
-    enc_nla(2, nl_enc_nla(Family, fun encode_rtnetlink_link_af_spec_inet/2, Value));
+    enc_nla(?PF_INET, nl_enc_nla(Family, fun encode_rtnetlink_link_af_spec_inet/2, Value));
 
 encode_rtnetlink_link_af_spec(Family, {inet6, Value}) ->
-    enc_nla(10, nl_enc_nla(Family, fun encode_rtnetlink_link_protinfo_inet6/2, Value));
+    enc_nla(?PF_INET6, nl_enc_nla(Family, fun encode_rtnetlink_link_protinfo_inet6/2, Value));
 
 encode_rtnetlink_link_af_spec(_Family, {Type, Value})
   when is_integer(Type), is_binary(Value) ->

@@ -542,8 +542,8 @@ define_consts() ->
                                                   {ready, {flag, 31}}
                                                  ]},
      {{rtnetlink, link, af_spec}, [
-				   {{inet,  2}, {nested, inet}},
-				   {{inet6, 10}, {nested, {rtnetlink, link, protinfo, inet6}}}
+				   {{inet,  "?PF_INET"}, {nested, inet}},
+				   {{inet6, "?PF_INET6"}, {nested, {rtnetlink, link, protinfo, inet6}}}
 				  ]},
      {{rtnetlink, link, af_spec, inet}, [
                                             {unspec, none},
@@ -940,11 +940,11 @@ format_id(Id) ->
     Id.
 
 make_decoder({Name, Attr, Pos, {atom, Next}}) ->
-    io_lib:format("decode_~s(_Family, ~w, <<Value:8>>) ->~n    {~s, decode_~s(Value)}", [format_name(Name), Pos, Attr, format_name(make_name(Name, Next))]);
+    io_lib:format("decode_~s(_Family, ~s, <<Value:8>>) ->~n    {~s, decode_~s(Value)}", [format_name(Name), format_id(Pos), Attr, format_name(make_name(Name, Next))]);
 make_decoder({Name, Attr, Pos, {hatom16, Next}}) ->
-    io_lib:format("decode_~s(_Family, ~w, Value) ->~n    {~s, decode_~s(decode_huint16(Value))}", [format_name(Name), Pos, Attr, format_name(make_name(Name, Next))]);
+    io_lib:format("decode_~s(_Family, ~s, Value) ->~n    {~s, decode_~s(decode_huint16(Value))}", [format_name(Name), format_id(Pos), Attr, format_name(make_name(Name, Next))]);
 make_decoder({Name, Attr, Pos, {atom32, Next}}) ->
-    io_lib:format("decode_~s(_Family, ~w, <<Value:32>>) ->~n    {~s, decode_~s(Value)}", [format_name(Name), Pos, Attr, format_name(make_name(Name, Next))]);
+    io_lib:format("decode_~s(_Family, ~s, <<Value:32>>) ->~n    {~s, decode_~s(Value)}", [format_name(Name), format_id(Pos), Attr, format_name(make_name(Name, Next))]);
 
 make_decoder({Name, Attr, Pos, Atom})
   when Atom == atom; Atom == hatom16; Atom == atom32 ->
@@ -953,10 +953,10 @@ make_decoder({Name, Attr, Pos, Atom})
 
 make_decoder({Name, Attr, Pos, Type})
   when Type == flag8;  Type == flag16;  Type == flag32 ->
-    io_lib:format("decode_~s(_Family, ~w, <<Value:~w>>) ->~n    {~s, decode_flag(flag_info_~s(), Value)}", [format_name(Name), Pos, flag_len(Type), Attr, format_name(make_name(Name, Attr))]);
+    io_lib:format("decode_~s(_Family, ~s, <<Value:~w>>) ->~n    {~s, decode_flag(flag_info_~s(), Value)}", [format_name(Name), format_id(Pos), flag_len(Type), Attr, format_name(make_name(Name, Attr))]);
 make_decoder({Name, Attr, Pos, Type})
   when Type == hflag8; Type == hflag16; Type == hflag32 ->
-    io_lib:format("decode_~s(_Family, ~w, <<Value:~w/native-integer>>) ->~n    {~s, decode_flag(flag_info_~s(), Value)}", [format_name(Name), Pos, flag_len(Type), Attr, format_name(make_name(Name, Attr))]);
+    io_lib:format("decode_~s(_Family, ~s, <<Value:~w/native-integer>>) ->~n    {~s, decode_flag(flag_info_~s(), Value)}", [format_name(Name), format_id(Pos), flag_len(Type), Attr, format_name(make_name(Name, Attr))]);
 
 make_decoder({Name, Attr, Pos, atom_def}) ->
     io_lib:format("decode_~s(~s) ->~n    ~p", [format_name(Name), format_id(Pos), Attr]);
@@ -965,13 +965,13 @@ make_decoder({Name, Attr, Pos, Type})
   when Type == hsint32_array;
        Type == huint32_array;
        Type == huint64_array ->
-    io_lib:format("decode_~s(_Family, ~w, Value) ->~n    decode_~p(~s, Value)", [format_name(Name), Pos, Type, Attr]);
+    io_lib:format("decode_~s(_Family, ~s, Value) ->~n    decode_~p(~s, Value)", [format_name(Name), format_id(Pos), Type, Attr]);
 
 make_decoder({Name, Attr, Pos, if_map}) ->
-    io_lib:format("decode_~s(_Family, ~w, Value) ->~n    decode_if_map(~s, Value)", [format_name(Name), Pos, Attr]);
+    io_lib:format("decode_~s(_Family, ~s, Value) ->~n    decode_if_map(~s, Value)", [format_name(Name), format_id(Pos), Attr]);
 
 make_decoder({Name, Attr, Pos, {nested, Next}}) ->
-    io_lib:format("decode_~s(Family, ~w, Value) ->~n    {~p, nl_dec_nla(Family, fun decode_~s/3, Value)}", [format_name(Name), Pos, Attr, format_name(make_name(Name, Next))]);
+    io_lib:format("decode_~s(Family, ~s, Value) ->~n    {~p, nl_dec_nla(Family, fun decode_~s/3, Value)}", [format_name(Name), format_id(Pos), Attr, format_name(make_name(Name, Next))]);
 
 make_decoder({Name, Attr, Pos, Type})
   when Type == binary; Type == none; Type == string;
@@ -981,14 +981,14 @@ make_decoder({Name, Attr, Pos, Type})
        Type == hint8; Type == hint16; Type == hint32; Type == hint64;
        Type == protocol; Type == mac; Type == addr ->
     %% built ins
-    io_lib:format("decode_~s(_Family, ~w, Value) ->~n    {~p, decode_~p(Value)}", [format_name(Name), Pos, Attr, Type]);
+    io_lib:format("decode_~s(_Family, ~s, Value) ->~n    {~p, decode_~p(Value)}", [format_name(Name), format_id(Pos), Attr, Type]);
 
 make_decoder({Name, Attr, Pos, struct}) ->
     %% built in
-    io_lib:format("decode_~s(_Family, ~w, Value) ->~n    decode_~s(~p, Value)", [format_name(Name), Pos, format_name(Name), Attr]);
+    io_lib:format("decode_~s(_Family, ~s, Value) ->~n    decode_~s(~p, Value)", [format_name(Name), format_id(Pos), format_name(Name), Attr]);
 
 make_decoder({Name, Attr, Pos, Type}) ->
-    io_lib:format("decode_~s(Family, ~w, Value) ->~n    {~p, nl_dec_nla(Family, fun decode_~s/3, Value)}", [format_name(Name), Pos, Attr, format_name(make_name(Name, Type))]).
+    io_lib:format("decode_~s(Family, ~s, Value) ->~n    {~p, nl_dec_nla(Family, fun decode_~s/3, Value)}", [format_name(Name), format_id(Pos), Attr, format_name(make_name(Name, Type))]).
 
 make_element_decoder_last({Name, _Attr, _Pos, Type})
   when Type == atom_def ->
@@ -1007,11 +1007,11 @@ make_element_decoder(List) ->
 %%
 
 make_encoder({Name, Attr, Pos, {atom, Next}}) ->
-    io_lib:format("encode_~s(_Family, {~w, Value}) ->~n    encode_uint8(~s, encode_~s(Value))", [format_name(Name), Attr, format_id(Pos), format_name(make_name(Name, Next))]);
+    io_lib:format("encode_~s(_Family, {~s, Value}) ->~n    encode_uint8(~s, encode_~s(Value))", [format_name(Name), Attr, format_id(Pos), format_name(make_name(Name, Next))]);
 make_encoder({Name, Attr, Pos, {hatom16, Next}}) ->
-    io_lib:format("encode_~s(_Family, {~w, Value}) ->~n    encode_huint16(~s, encode_~s(Value))", [format_name(Name), Attr, format_id(Pos), format_name(make_name(Name, Next))]);
+    io_lib:format("encode_~s(_Family, {~s, Value}) ->~n    encode_huint16(~s, encode_~s(Value))", [format_name(Name), Attr, format_id(Pos), format_name(make_name(Name, Next))]);
 make_encoder({Name, Attr, Pos, {atom32, Next}}) ->
-    io_lib:format("encode_~s(_Family, {~w, Value}) ->~n    encode_uint32(~s, encode_~s(Value))", [format_name(Name), Attr, format_id(Pos), format_name(make_name(Name, Next))]);
+    io_lib:format("encode_~s(_Family, {~s, Value}) ->~n    encode_uint32(~s, encode_~s(Value))", [format_name(Name), Attr, format_id(Pos), format_name(make_name(Name, Next))]);
 
 make_encoder({Name, Attr, Pos, Atom})
   when Atom == atom; Atom == hatom16; Atom == atom32 ->
@@ -1020,10 +1020,10 @@ make_encoder({Name, Attr, Pos, Atom})
 make_encoder({Name, Attr, Pos, Type})
   when Type == flag8;  Type == flag16;  Type == flag32;
        Type == hflag8; Type == hflag16; Type == hflag32 ->
-    io_lib:format("encode_~s(_Family, {~w, Value}) ->~n    encode_~w(~w, encode_flag(flag_info_~s(), Value))", [format_name(Name), Attr, flag2int(Type), Pos, format_name(make_name(Name, Attr))]);
+    io_lib:format("encode_~s(_Family, {~s, Value}) ->~n    encode_~w(~s, encode_flag(flag_info_~s(), Value))", [format_name(Name), Attr, flag2int(Type), format_id(Pos), format_name(make_name(Name, Attr))]);
 
 make_encoder({Name, Attr, Pos, if_map}) ->
-    io_lib:format("encode_~s(_Family, Value)  when is_tuple(Value), element(1, Value) == ~p ->~n    encode_if_map(~w, Value)", [format_name(Name), Attr, Pos]);
+    io_lib:format("encode_~s(_Family, Value)  when is_tuple(Value), element(1, Value) == ~p ->~n    encode_if_map(~s, Value)", [format_name(Name), Attr, format_id(Pos)]);
 
 make_encoder({Name, Attr, Pos, {nested, Next}}) ->
     io_lib:format("encode_~s(Family, {~p, Value}) ->~n    enc_nla(~s, nl_enc_nla(Family, fun encode_~s/2, Value))", [format_name(Name), Attr, format_id(Pos), format_name(make_name(Name, Next))]);

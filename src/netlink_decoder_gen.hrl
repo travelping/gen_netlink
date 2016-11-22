@@ -1285,8 +1285,8 @@ decode_rtnetlink_link(_Family, 24, Value) ->
 decode_rtnetlink_link(_Family, 25, Value) ->
     {port_self, decode_none(Value)};
 
-decode_rtnetlink_link(_Family, 26, Value) ->
-    {af_spec, decode_none(Value)};
+decode_rtnetlink_link(Family, 26, Value) ->
+    {af_spec, nl_dec_nla(Family, fun decode_rtnetlink_link_af_spec/3, Value)};
 
 decode_rtnetlink_link(_Family, 27, Value) ->
     {group, decode_none(Value)};
@@ -1420,6 +1420,28 @@ decode_rtnetlink_link_protinfo_inet6(_Family, 8, Value) ->
     {addr_gen_mode, decode_none(Value)};
 
 decode_rtnetlink_link_protinfo_inet6(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_rtnetlink_link_af_spec(Family, 2, Value) ->
+    {inet, nl_dec_nla(Family, fun decode_rtnetlink_link_af_spec_inet/3, Value)};
+
+decode_rtnetlink_link_af_spec(Family, 10, Value) ->
+    {inet6, nl_dec_nla(Family, fun decode_rtnetlink_link_protinfo_inet6/3, Value)};
+
+decode_rtnetlink_link_af_spec(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_rtnetlink_link_af_spec_inet(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_rtnetlink_link_af_spec_inet(_Family, 1, Value) ->
+    decode_hsint32_array(ipv4_devconf, Value);
+
+decode_rtnetlink_link_af_spec_inet(_Family, Id, Value) ->
     {Id, Value}.
 
 %% ============================
@@ -3697,8 +3719,8 @@ encode_rtnetlink_link(_Family, {vf_ports, Value}) ->
 encode_rtnetlink_link(_Family, {port_self, Value}) ->
     encode_none(25, Value);
 
-encode_rtnetlink_link(_Family, {af_spec, Value}) ->
-    encode_none(26, Value);
+encode_rtnetlink_link(Family, {af_spec, Value}) ->
+    enc_nla(26, nl_enc_nla(Family, fun encode_rtnetlink_link_af_spec/2, Value));
 
 encode_rtnetlink_link(_Family, {group, Value}) ->
     encode_none(27, Value);
@@ -3838,6 +3860,31 @@ encode_rtnetlink_link_protinfo_inet6(_Family, {addr_gen_mode, Value}) ->
     encode_none(8, Value);
 
 encode_rtnetlink_link_protinfo_inet6(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_rtnetlink_link_af_spec(Family, {inet, Value}) ->
+    enc_nla(2, nl_enc_nla(Family, fun encode_rtnetlink_link_af_spec_inet/2, Value));
+
+encode_rtnetlink_link_af_spec(Family, {inet6, Value}) ->
+    enc_nla(10, nl_enc_nla(Family, fun encode_rtnetlink_link_protinfo_inet6/2, Value));
+
+encode_rtnetlink_link_af_spec(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_rtnetlink_link_af_spec_inet(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_rtnetlink_link_af_spec_inet(_Family, Value)
+  when is_tuple(Value), element(1, Value) == ipv4_devconf ->
+    encode_hsint32_array(1, Value);
+
+encode_rtnetlink_link_af_spec_inet(_Family, {Type, Value})
   when is_integer(Type), is_binary(Value) ->
     enc_nla(Type, Value).
 

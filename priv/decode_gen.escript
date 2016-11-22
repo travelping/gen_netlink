@@ -487,7 +487,7 @@ define_consts() ->
                           {stats64, huint64_array},
                           {vf_ports, none},
 			  {port_self, none},
-			  {af_spec, none},
+			  {af_spec, {nested, af_spec}},
 			  {group, none},
 			  {net_ns_fd, huint32},
 			  {ext_mask, huint32},
@@ -541,6 +541,14 @@ define_consts() ->
                                                   {ra_othercon, {flag, 7}},
                                                   {ready, {flag, 31}}
                                                  ]},
+     {{rtnetlink, link, af_spec}, [
+				   {{inet,  2}, {nested, inet}},
+				   {{inet6, 10}, {nested, {rtnetlink, link, protinfo, inet6}}}
+				  ]},
+     {{rtnetlink, link, af_spec, inet}, [
+                                            {unspec, none},
+                                            {ipv4_devconf, hsint32_array}
+					]},
      {{rtnetlink, prefix}, [
                             {unspec, none},
                             {address, addr},
@@ -896,9 +904,11 @@ linarize(Prefix, [{Name, {atom, Pos}}|Elements], Count, Acc) ->
 linarize(Prefix, [{Name, {flag, Pos}}|Elements], Count, Acc) ->
     linarize(Prefix, Elements, Count + 1, [{Prefix, Name, 1 bsl Pos, flag}|Acc]);
 linarize(Prefix, [{Name, flag}|Elements], Count, Acc) ->
-     linarize(Prefix, Elements, Count + 1, [{Prefix, Name, 1 bsl Count, flag}|Acc]);
+    linarize(Prefix, Elements, Count + 1, [{Prefix, Name, 1 bsl Count, flag}|Acc]);
+linarize(Prefix, [{{Name, Pos}, Type}|Elements], Count, Acc) ->
+    linarize(Prefix, Elements, Count + 1, [{Prefix, Name, Pos, Type}|Acc]);
 linarize(Prefix, [{Name, Type}|Elements], Count, Acc) ->
-     linarize(Prefix, Elements, Count + 1, [{Prefix, Name, Count, Type}|Acc]);
+    linarize(Prefix, Elements, Count + 1, [{Prefix, Name, Count, Type}|Acc]);
 linarize(Prefix, [Head|_Elements], Count, _Acc) ->
     io:format("don't match:~nPrefix: ~p~nHead: ~p~nCount: ~p~n", [Prefix, Head, Count]).
 

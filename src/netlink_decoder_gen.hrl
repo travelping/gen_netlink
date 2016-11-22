@@ -1315,6 +1315,24 @@ decode_rtnetlink_link(_Family, 34, Value) ->
 decode_rtnetlink_link(_Family, 35, Value) ->
     {carrier_changes, decode_none(Value)};
 
+decode_rtnetlink_link(_Family, 36, Value) ->
+    {phys_switch_id, decode_none(Value)};
+
+decode_rtnetlink_link(_Family, 37, Value) ->
+    {link_netnsid, decode_none(Value)};
+
+decode_rtnetlink_link(_Family, 38, Value) ->
+    {phys_port_name, decode_none(Value)};
+
+decode_rtnetlink_link(_Family, 39, Value) ->
+    {proto_down, decode_none(Value)};
+
+decode_rtnetlink_link(_Family, 40, Value) ->
+    {gso_max_segs, decode_none(Value)};
+
+decode_rtnetlink_link(_Family, 41, Value) ->
+    {gso_max_size, decode_none(Value)};
+
 decode_rtnetlink_link(_Family, Id, Value) ->
     {Id, Value}.
 
@@ -1381,7 +1399,7 @@ decode_rtnetlink_link_protinfo_inet6(_Family, 1, <<Value:32/native-integer>>) ->
     {flags, decode_flag(flag_info_rtnetlink_link_protinfo_inet6_flags(), Value)};
 
 decode_rtnetlink_link_protinfo_inet6(_Family, 2, Value) ->
-    decode_hsint32_array(conf, Value);
+    decode_hsint32_array(ipv6_devconf, Value);
 
 decode_rtnetlink_link_protinfo_inet6(_Family, 3, Value) ->
     decode_huint64_array(stats, Value);
@@ -1394,6 +1412,12 @@ decode_rtnetlink_link_protinfo_inet6(_Family, 5, Value) ->
 
 decode_rtnetlink_link_protinfo_inet6(_Family, 6, Value) ->
     decode_huint64_array(icmp6stats, Value);
+
+decode_rtnetlink_link_protinfo_inet6(_Family, 7, Value) ->
+    {token, decode_none(Value)};
+
+decode_rtnetlink_link_protinfo_inet6(_Family, 8, Value) ->
+    {addr_gen_mode, decode_none(Value)};
 
 decode_rtnetlink_link_protinfo_inet6(_Family, Id, Value) ->
     {Id, Value}.
@@ -3692,6 +3716,24 @@ encode_rtnetlink_link(_Family, {phys_port_id, Value}) ->
 encode_rtnetlink_link(_Family, {carrier_changes, Value}) ->
     encode_none(35, Value);
 
+encode_rtnetlink_link(_Family, {phys_switch_id, Value}) ->
+    encode_none(36, Value);
+
+encode_rtnetlink_link(_Family, {link_netnsid, Value}) ->
+    encode_none(37, Value);
+
+encode_rtnetlink_link(_Family, {phys_port_name, Value}) ->
+    encode_none(38, Value);
+
+encode_rtnetlink_link(_Family, {proto_down, Value}) ->
+    encode_none(39, Value);
+
+encode_rtnetlink_link(_Family, {gso_max_segs, Value}) ->
+    encode_none(40, Value);
+
+encode_rtnetlink_link(_Family, {gso_max_size, Value}) ->
+    encode_none(41, Value);
+
 encode_rtnetlink_link(_Family, {Type, Value})
   when is_integer(Type), is_binary(Value) ->
     enc_nla(Type, Value).
@@ -3760,7 +3802,7 @@ encode_rtnetlink_link_protinfo_inet6(_Family, {flags, Value}) ->
     encode_huint32(1, encode_flag(flag_info_rtnetlink_link_protinfo_inet6_flags(), Value));
 
 encode_rtnetlink_link_protinfo_inet6(_Family, Value)
-  when is_tuple(Value), element(1, Value) == conf ->
+  when is_tuple(Value), element(1, Value) == ipv6_devconf ->
     encode_hsint32_array(2, Value);
 
 encode_rtnetlink_link_protinfo_inet6(_Family, Value)
@@ -3777,6 +3819,12 @@ encode_rtnetlink_link_protinfo_inet6(_Family, Value)
 encode_rtnetlink_link_protinfo_inet6(_Family, Value)
   when is_tuple(Value), element(1, Value) == icmp6stats ->
     encode_huint64_array(6, Value);
+
+encode_rtnetlink_link_protinfo_inet6(_Family, {token, Value}) ->
+    encode_none(7, Value);
+
+encode_rtnetlink_link_protinfo_inet6(_Family, {addr_gen_mode, Value}) ->
+    encode_none(8, Value);
 
 encode_rtnetlink_link_protinfo_inet6(_Family, {Type, Value})
   when is_integer(Type), is_binary(Value) ->

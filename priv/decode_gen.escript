@@ -496,7 +496,13 @@ define_consts() ->
 			  {num_rx_queues, none},
 			  {carrier, none},
 			  {phys_port_id, none},
-			  {carrier_changes, none}
+			  {carrier_changes, none},
+			  {phys_switch_id, none},
+			  {link_netnsid, none},
+			  {phys_port_name, none},
+			  {proto_down, none},
+			  {gso_max_segs, none},
+			  {gso_max_size, none}
                          ]},
      {{rtnetlink, link, operstate}, [
                                      unknown,
@@ -520,12 +526,14 @@ define_consts() ->
      {{rtnetlink, link, protinfo, inet6}, [
                                             {unspec, none},
                                             {flags, hflag32},
-                                            {conf, hsint32_array},
+                                            {ipv6_devconf, hsint32_array},
                                             {stats, huint64_array},
                                             {mcast, none},
                                             {ifla_cacheinfo, huint32_array},
-                                            {icmp6stats, huint64_array}
-                                           ]},
+                                            {icmp6stats, huint64_array},
+					    {token, none},
+					    {addr_gen_mode, none}
+                                            ]},
      {{rtnetlink, link, protinfo, inet6, flags}, [
                                                   {rs_sent, {flag, 4}},
                                                   {ra_rcvd, {flag, 5}},

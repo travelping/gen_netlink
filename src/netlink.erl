@@ -755,7 +755,7 @@ nl_enc_payload(rtnetlink, MsgType, {Family, DstLen, SrcLen, Tos, Table, Protocol
        (encode_rtnetlink_rtm_flags(Flags)):32/native-integer, Data/binary >>;
 
 nl_enc_payload(rtnetlink, MsgType, {Family, Type, Index, Flags, Change, Req})
-  when MsgType == newlink; MsgType == dellink ->
+  when MsgType == newlink; MsgType == dellink; MsgType == getlink ->
 	Fam = gen_socket:family(Family),
 	Type0 = gen_socket:arphdr(Type),
 	Flags0 = encode_iff_flags(Flags),
@@ -837,7 +837,7 @@ nl_dec_payload(rtnetlink, MsgType, << Family:8, PrefixLen:8, Flags:8, Scope:8, I
     { Fam, PrefixLen, Flags, Scope, Index, nl_dec_nla(Fam, fun decode_rtnetlink_addr/3, Data) };
 
 nl_dec_payload(rtnetlink, MsgType, << Family:8, _Pad:8, Type:16/native-integer, Index:32/native-integer, Flags:32/native-integer, Change:32/native-integer, Data/binary >>)
-  when MsgType == newlink; MsgType == dellink ->
+  when MsgType == newlink; MsgType == dellink; MsgType == getlink ->
     Fam = gen_socket:family(Family),
     { Fam, gen_socket:arphdr(Type), Index, decode_iff_flags(Flags), decode_iff_flags(Change), nl_dec_nla(Fam, fun decode_rtnetlink_link/3, Data) };
 

@@ -959,11 +959,15 @@ nl_rt_dec(Protocol, << Len:32/native-integer, Type:16/native-integer, Flags:16/n
 nl_rt_dec(_Protocol, << >>, Acc) ->
     lists:reverse(Acc).
 
+linkinfo_dec(Family, "vrf", Data) ->
+    nl_dec_nla(Family, fun decode_linkinfo_vrf/3, Data);
 linkinfo_dec(Family, "gtp", Data) ->
     nl_dec_nla(Family, fun decode_linkinfo_gtp/3, Data);
 linkinfo_dec(_Family, _Kind, Data) ->
     Data.
 
+linkinfo_enc(Family, "vrf", Data) ->
+    nl_enc_nla(Family, fun encode_linkinfo_vrf/2, Data);
 linkinfo_enc(Family, "gtp", Data) ->
     nl_enc_nla(Family, fun encode_linkinfo_gtp/2, Data).
 

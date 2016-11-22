@@ -849,6 +849,9 @@ define_consts() ->
 				      {id,     huint32}
 				     ]},
 
+     {{linkinfo, vrf}, [{unspec, none},
+			{vrf_table, huint32}]},
+
      {{linkinfo, gtp}, [{unspec, none},
 			{fd0, huint32},
 			{fd1, huint32},

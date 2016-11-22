@@ -2403,6 +2403,17 @@ decode_genl_ctrl_attr_mcast_grp(_Family, Id, Value) ->
 
 %% ============================
 
+decode_linkinfo_vrf(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_linkinfo_vrf(_Family, 1, Value) ->
+    {vrf_table, decode_huint32(Value)};
+
+decode_linkinfo_vrf(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
 decode_linkinfo_gtp(_Family, 0, Value) ->
     {unspec, decode_none(Value)};
 
@@ -4844,6 +4855,18 @@ encode_genl_ctrl_attr_mcast_grp(_Family, {id, Value}) ->
     encode_huint32(2, Value);
 
 encode_genl_ctrl_attr_mcast_grp(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_linkinfo_vrf(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_linkinfo_vrf(_Family, {vrf_table, Value}) ->
+    encode_huint32(1, Value);
+
+encode_linkinfo_vrf(_Family, {Type, Value})
   when is_integer(Type), is_binary(Value) ->
     enc_nla(Type, Value).
 

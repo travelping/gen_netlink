@@ -337,6 +337,10 @@ genl_request() ->
     hexstr2bin("240000001000050077ce08560000000003010000060001001000000008000200"
 	       "67747000").
 
+vrf_enslave_link() ->
+    [hexstr2bin("2800000010000500a35b355800000000000000006f0000000000000000000000"
+		"08000a0005000000")].
+
 vrf_add_route() ->
     [hexstr2bin("3000000012000100c5b030580000000000000000000000000000000000000000"
 		"0d0003007672662d626c756500000000"),
@@ -474,6 +478,14 @@ test_genl(_Config) ->
     Msg = netlink:nl_enc(?NETLINK_GENERIC, netlink:nl_dec(?NETLINK_GENERIC, Msg)),
     ok.
 
+test_vrf_enslave_link(_Config) ->
+    lists:foreach(fun(Msg) ->
+			  D = netlink:nl_rt_dec(Msg),
+			  ct:pal("D: ~p", [D]),
+			  ?equal(Msg, netlink:nl_rt_enc(D))
+		  end, vrf_enslave_link()),
+    ok.
+
 test_vrf_add_route(_Config) ->
     lists:foreach(fun(Msg) ->
 			  D = netlink:nl_rt_dec(Msg),
@@ -493,7 +505,7 @@ all() ->
 	 test_nfq_set_verdict,
 	 test_nft_requests,
 	 test_genl,
-	 test_vrf_add_route
+	 test_vrf_enslave_link, test_vrf_add_route
 	].
 
 init_per_suite(Config) ->

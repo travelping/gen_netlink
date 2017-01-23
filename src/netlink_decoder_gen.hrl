@@ -2518,6 +2518,9 @@ decode_gtp_cmd(1) ->
 decode_gtp_cmd(2) ->
     get;
 
+decode_gtp_cmd(3) ->
+    enable_socket;
+
 decode_gtp_cmd(Value) ->
     Value.
 
@@ -2552,6 +2555,15 @@ decode_gtp_attrs(_Family, 8, Value) ->
 
 decode_gtp_attrs(_Family, 9, Value) ->
     {o_tid, decode_huint32(Value)};
+
+decode_gtp_attrs(_Family, 10, Value) ->
+    {pad, decode_huint32(Value)};
+
+decode_gtp_attrs(_Family, 11, Value) ->
+    {hashsize, decode_huint32(Value)};
+
+decode_gtp_attrs(_Family, 12, Value) ->
+    {fd, decode_huint32(Value)};
 
 decode_gtp_attrs(_Family, Id, Value) ->
     {Id, Value}.
@@ -5059,6 +5071,9 @@ encode_gtp_cmd(delete) ->
 encode_gtp_cmd(get) ->
     2;
 
+encode_gtp_cmd(enable_socket) ->
+    3;
+
 encode_gtp_cmd(Value) when is_integer(Value) ->
     Value.
 
@@ -5093,6 +5108,15 @@ encode_gtp_attrs(_Family, {i_tid, Value}) ->
 
 encode_gtp_attrs(_Family, {o_tid, Value}) ->
     encode_huint32(9, Value);
+
+encode_gtp_attrs(_Family, {pad, Value}) ->
+    encode_huint32(10, Value);
+
+encode_gtp_attrs(_Family, {hashsize, Value}) ->
+    encode_huint32(11, Value);
+
+encode_gtp_attrs(_Family, {fd, Value}) ->
+    encode_huint32(12, Value);
 
 encode_gtp_attrs(_Family, {Type, Value})
   when is_integer(Type), is_binary(Value) ->

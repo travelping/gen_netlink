@@ -885,7 +885,7 @@ define_consts() ->
 			{fd1, huint32},
 			{hashsize, huint32}]},
 
-     {{gtp, cmd}, [new, delete, get]},
+     {{gtp, cmd}, [new, delete, get, enable_socket]},
 
      {{gtp, attrs}, [{unspec,       none},
 		     {link,         huint32},
@@ -896,7 +896,10 @@ define_consts() ->
 		     {flow,         huint16},
 		     {net_ns_fd,    huint32},
 		     {i_tid,        huint32},
-		     {o_tid,        huint32}]}
+		     {o_tid,        huint32},
+		     {pad,          huint32},
+		     {hashsize,     huint32},
+		     {fd,           huint32}]}
      ].
 
 make_prefix(Id) when is_atom(Id) ->

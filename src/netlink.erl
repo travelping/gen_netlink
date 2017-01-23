@@ -85,7 +85,11 @@
 		       Type == newchain orelse
 		       Type == newrule orelse
 		       Type == newset orelse
-		       Type == newsetelem)).
+		       Type == newsetelem orelse
+		       Type == newnetconf orelse
+		       Type == newmdb orelse
+		       Type == newnsid orelse
+		       Type == newstats)).
 
 -define(IS_GET(Type), (Type == get orelse
 		       Type == getlink orelse
@@ -108,8 +112,11 @@
 		       Type == getrule orelse
 		       Type == getset orelse
 		       Type == getsetelem orelse
-		       Type == getgen)).
-
+		       Type == getgen orelse
+		       Type == getnetconf orelse
+		       Type == getmdb orelse
+		       Type == getnsid orelse
+		       Type == getstats)).
 
 -define(NLMSG_MIN_TYPE, 16#10).
 
@@ -297,6 +304,16 @@ enc_opt(rtnlgrp_phonet_route)          -> ?RTNLGRP_PHONET_ROUTE.
 -define(RTM_GETADDRLABEL, 74).
 -define(RTM_GETDCB, 78).
 -define(RTM_SETDCB, 79).
+-define(RTM_NEWNETCONF, 80).
+-define(RTM_GETNETCONF, 82).
+-define(RTM_NEWMDB, 84).
+-define(RTM_DELMDB, 85).
+-define(RTM_GETMDB, 86).
+-define(RTM_NEWNSID, 88).
+-define(RTM_DELNSID, 89).
+-define(RTM_GETNSID, 90).
+-define(RTM_NEWSTATS, 92).
+-define(RTM_GETSTATS, 94).
 
 -define(IPCTNL_MSG_CT_NEW, 0).
 -define(IPCTNL_MSG_CT_GET, 1).
@@ -523,8 +540,8 @@ encode_int32(NlaType, Val) ->
 %% 	enc_nla(NlaType, <<Val:64/signed-integer >>).
 %% encode_hint16(NlaType, Val) ->
 %% 	enc_nla(NlaType, <<Val:16/native-signed-integer>>).
-%% encode_hint32(NlaType, Val) ->
-%% 	enc_nla(NlaType, <<Val:32/native-signed-integer>>).
+encode_hint32(NlaType, Val) ->
+	enc_nla(NlaType, <<Val:32/native-signed-integer>>).
 %% encode_hint64(NlaType, Val) ->
 %% 	enc_nla(NlaType, <<Val:64/native-signed-integer>>).
 
@@ -612,8 +629,8 @@ decode_int32(<< Val:32/signed-integer >>) ->
 %%     Val.
 %% decode_hint16(<< Val:16/native-signed-integer >>) ->
 %%     Val.
-%% decode_hint32(<< Val:32/native-signed-integer >>) ->
-%%     Val.
+decode_hint32(<< Val:32/native-signed-integer >>) ->
+    Val.
 %% decode_hint64(<< Val:64/native-signed-integer >>) ->
 %%     Val.
 
@@ -763,11 +780,17 @@ nl_enc_payload(rtnetlink, MsgType, {Family, Type, Index, Flags, Change, Req})
 	Data = nl_enc_nla(Family, fun encode_rtnetlink_link/2, Req),
 	<<Fam:8, 0:8, Type0:16/native-integer, Index:32/native-integer, Flags0:32/native-integer, Change0:32/native-integer, Data/binary >>;
 
-nl_enc_payload(rtnetlink, MsgType,{Family, IfIndex, PfxType, PfxLen, Flags, Req})
+nl_enc_payload(rtnetlink, MsgType, {Family, IfIndex, PfxType, PfxLen, Flags, Req})
   when MsgType == newprefix; MsgType == delprefix ->
     Fam = gen_socket:family(Family),
 	Data = nl_enc_nla(Family, fun encode_rtnetlink_prefix/2, Req),
 	<< Fam:8, 0:8, 0:16, IfIndex:32/native-signed-integer, PfxType:8, PfxLen:8, Flags:8, 0:8, Data/binary >>;
+
+nl_enc_payload(rtnetlink, MsgType, {Family, Req})
+  when MsgType == newnetconf; MsgType == getnetconf ->
+    Fam = gen_socket:family(Family),
+    Data = nl_enc_nla(Family, fun encode_rtnetlink_netconf/2, Req),
+    << Fam:8, 0:24, Data/binary >>;
 
 nl_enc_payload(nftables, MsgType, {Family, Version, ResId, Req}) ->
     Fam = gen_socket:family(Family),
@@ -845,6 +868,11 @@ nl_dec_payload(rtnetlink, MsgType, << Family:8, _Pad1:8, _Pad2:16, IfIndex:32/na
   when MsgType == newprefix; MsgType == delprefix ->
     Fam = gen_socket:family(Family),
     { Fam, IfIndex, PfxType, PfxLen, Flags, nl_dec_nla(Fam, fun decode_rtnetlink_prefix/3, Data) };
+
+nl_dec_payload(rtnetlink, MsgType, << Family:8, _Pad:24, Data/binary >>)
+  when MsgType == newnetconf; MsgType == getnetconf ->
+    Fam = gen_socket:family(Family),
+    { Fam, nl_dec_nla(Fam, fun decode_rtnetlink_netconf/3, Data) };
 
 nl_dec_payload(nftables, MsgType, << Family:8, Version:8, ResId:16/native-integer, Data/binary >>) ->
     Fam = gen_socket:family(Family),

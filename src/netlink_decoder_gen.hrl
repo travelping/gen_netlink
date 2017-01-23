@@ -330,6 +330,36 @@ decode_rtm_msgtype_rtnetlink(?RTM_GETDCB) ->
 decode_rtm_msgtype_rtnetlink(?RTM_SETDCB) ->
     setdcb;
 
+decode_rtm_msgtype_rtnetlink(?RTM_NEWNETCONF) ->
+    newnetconf;
+
+decode_rtm_msgtype_rtnetlink(?RTM_GETNETCONF) ->
+    getnetconf;
+
+decode_rtm_msgtype_rtnetlink(?RTM_NEWMDB) ->
+    newmdb;
+
+decode_rtm_msgtype_rtnetlink(?RTM_DELMDB) ->
+    delmdb;
+
+decode_rtm_msgtype_rtnetlink(?RTM_GETMDB) ->
+    getmdb;
+
+decode_rtm_msgtype_rtnetlink(?RTM_NEWNSID) ->
+    newnsid;
+
+decode_rtm_msgtype_rtnetlink(?RTM_DELNSID) ->
+    delnsid;
+
+decode_rtm_msgtype_rtnetlink(?RTM_GETNSID) ->
+    getnsid;
+
+decode_rtm_msgtype_rtnetlink(?RTM_NEWSTATS) ->
+    newstats;
+
+decode_rtm_msgtype_rtnetlink(?RTM_GETSTATS) ->
+    getstats;
+
 decode_rtm_msgtype_rtnetlink(Value) ->
     Value.
 
@@ -1456,6 +1486,32 @@ decode_rtnetlink_prefix(_Family, 2, Value) ->
     decode_huint32_array(prefix_cacheinfo, Value);
 
 decode_rtnetlink_prefix(_Family, Id, Value) ->
+    {Id, Value}.
+
+%% ============================
+
+decode_rtnetlink_netconf(_Family, 0, Value) ->
+    {unspec, decode_none(Value)};
+
+decode_rtnetlink_netconf(_Family, 1, Value) ->
+    {ifindex, decode_hint32(Value)};
+
+decode_rtnetlink_netconf(_Family, 2, Value) ->
+    {forwarding, decode_hint32(Value)};
+
+decode_rtnetlink_netconf(_Family, 3, Value) ->
+    {rp_filter, decode_hint32(Value)};
+
+decode_rtnetlink_netconf(_Family, 4, Value) ->
+    {mc_filter, decode_hint32(Value)};
+
+decode_rtnetlink_netconf(_Family, 5, Value) ->
+    {proxy_neigh, decode_hint32(Value)};
+
+decode_rtnetlink_netconf(_Family, 6, Value) ->
+    {ignore_routes_with_linkdown, decode_hint32(Value)};
+
+decode_rtnetlink_netconf(_Family, Id, Value) ->
     {Id, Value}.
 
 %% ============================
@@ -2737,6 +2793,36 @@ encode_rtm_msgtype_rtnetlink(getdcb) ->
 encode_rtm_msgtype_rtnetlink(setdcb) ->
     ?RTM_SETDCB;
 
+encode_rtm_msgtype_rtnetlink(newnetconf) ->
+    ?RTM_NEWNETCONF;
+
+encode_rtm_msgtype_rtnetlink(getnetconf) ->
+    ?RTM_GETNETCONF;
+
+encode_rtm_msgtype_rtnetlink(newmdb) ->
+    ?RTM_NEWMDB;
+
+encode_rtm_msgtype_rtnetlink(delmdb) ->
+    ?RTM_DELMDB;
+
+encode_rtm_msgtype_rtnetlink(getmdb) ->
+    ?RTM_GETMDB;
+
+encode_rtm_msgtype_rtnetlink(newnsid) ->
+    ?RTM_NEWNSID;
+
+encode_rtm_msgtype_rtnetlink(delnsid) ->
+    ?RTM_DELNSID;
+
+encode_rtm_msgtype_rtnetlink(getnsid) ->
+    ?RTM_GETNSID;
+
+encode_rtm_msgtype_rtnetlink(newstats) ->
+    ?RTM_NEWSTATS;
+
+encode_rtm_msgtype_rtnetlink(getstats) ->
+    ?RTM_GETSTATS;
+
 encode_rtm_msgtype_rtnetlink(Value) when is_integer(Value) ->
     Value.
 
@@ -3901,6 +3987,33 @@ encode_rtnetlink_prefix(_Family, Value)
     encode_huint32_array(2, Value);
 
 encode_rtnetlink_prefix(_Family, {Type, Value})
+  when is_integer(Type), is_binary(Value) ->
+    enc_nla(Type, Value).
+
+%% ============================
+
+encode_rtnetlink_netconf(_Family, {unspec, Value}) ->
+    encode_none(0, Value);
+
+encode_rtnetlink_netconf(_Family, {ifindex, Value}) ->
+    encode_hint32(1, Value);
+
+encode_rtnetlink_netconf(_Family, {forwarding, Value}) ->
+    encode_hint32(2, Value);
+
+encode_rtnetlink_netconf(_Family, {rp_filter, Value}) ->
+    encode_hint32(3, Value);
+
+encode_rtnetlink_netconf(_Family, {mc_filter, Value}) ->
+    encode_hint32(4, Value);
+
+encode_rtnetlink_netconf(_Family, {proxy_neigh, Value}) ->
+    encode_hint32(5, Value);
+
+encode_rtnetlink_netconf(_Family, {ignore_routes_with_linkdown, Value}) ->
+    encode_hint32(6, Value);
+
+encode_rtnetlink_netconf(_Family, {Type, Value})
   when is_integer(Type), is_binary(Value) ->
     enc_nla(Type, Value).
 

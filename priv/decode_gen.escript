@@ -132,7 +132,17 @@ define_consts() ->
 			      {deladdrlabel, {atom, "?RTM_DELADDRLABEL"}},
 			      {getaddrlabel, {atom, "?RTM_GETADDRLABEL"}},
 			      {getdcb,       {atom, "?RTM_GETDCB"}},
-			      {setdcb,       {atom, "?RTM_SETDCB"}}
+			      {setdcb,       {atom, "?RTM_SETDCB"}},
+			      {newnetconf,   {atom, "?RTM_NEWNETCONF"}},
+			      {getnetconf,   {atom, "?RTM_GETNETCONF"}},
+			      {newmdb,       {atom, "?RTM_NEWMDB"}},
+			      {delmdb,       {atom, "?RTM_DELMDB"}},
+			      {getmdb,       {atom, "?RTM_GETMDB"}},
+			      {newnsid,      {atom, "?RTM_NEWNSID"}},
+			      {delnsid,      {atom, "?RTM_DELNSID"}},
+			      {getnsid,      {atom, "?RTM_GETNSID"}},
+			      {newstats,     {atom, "?RTM_NEWSTATS"}},
+			      {getstats,     {atom, "?RTM_GETSTATS"}}
 			     ]},
      {{nl_msgtype, nlmsg}, [
 			      {noop,         {atom, "?NLMSG_NOOP"}},
@@ -550,10 +560,20 @@ define_consts() ->
                                             {ipv4_devconf, hsint32_array}
 					]},
      {{rtnetlink, prefix}, [
-                            {unspec, none},
-                            {address, addr},
-                            {prefix_cacheinfo, huint32_array}
+			    {unspec, none},
+			    {address, addr},
+			    {prefix_cacheinfo, huint32_array}
                            ]},
+
+     {{rtnetlink, netconf}, [
+			     {unspec, none},
+			     {ifindex,                     hint32},
+			     {forwarding,                  hint32},
+			     {rp_filter,                   hint32},
+			     {mc_filter,                   hint32},
+			     {proxy_neigh,                 hint32},
+			     {ignore_routes_with_linkdown, hint32}
+			    ]},
 
      {{nl_msgtype, queue}, [
 			     {packet,        {atom, "?NFQNL_MSG_PACKET"}},

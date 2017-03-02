@@ -181,7 +181,12 @@ define_consts() ->
 			       getsetelem,
 			       delsetelem,
 			       newgen,
-			       getgen
+			       getgen,
+			       trace,
+			       newobj,
+			       getobj,
+			       delobj,
+			       getobj_reset
 			      ]},
 
      {{nl_msgtype, nft_compat}, [get]},
@@ -765,6 +770,13 @@ define_consts() ->
 				   {bytes,   uint64},
 				   {packets, uint64}]},
 
+     {{nft, quota, attributes}, [{unspec,   none},
+				 {bytes,    uint64},
+				 {flags,    atom32},
+				 {pad,      binary},
+				 {consumed, uint64}]},
+     {{nft, quota, attributes, flags}, [inverse, depleted]},
+
      {{nft, table, attributes}, [{unspec,   none},
 				 {name,     string},
 				 {flags,    flag32},
@@ -846,6 +858,40 @@ define_consts() ->
 			       {id,     uint32}
 			       ]},
 
+     {{nft, trace, attributes}, [{unspec,           none},
+				 {table,            string},
+				 {chain,            string},
+				 {rule_handle,      uint64},
+				 {type,             atom32},
+				 {verdict,          {nested, {nft, verdict, attributes}}},
+				 {id,               uint32},
+				 {ll_header,        binary},
+				 {network_header,   binary},
+				 {transport_header, binary},
+				 {iif,              uint32},
+				 {iiftype,          uint16},
+				 {oif,              uint32},
+				 {oiftype,          uint16},
+				 {mark,             uint32},
+				 {nfproto,          uint32},
+				 {policy,           uint32}
+				]},
+     {{nft, trace, attributes, type}, [unspec,
+				       policy,
+				       return,
+				       rule]},
+
+     {{nft, obj, attributes}, [{unspec, none},
+			       {table,  string},
+			       {name,   string},
+			       {type,   atom32},
+			       {data,   binary},
+			       {use,    uint32}
+			      ]},
+     {{nft, obj, attributes, type}, [unspec,
+				     counter,
+				     quota]},
+
 
      {{genl, ctrl, cmd}, [unspec,
 			  newfamily,
@@ -899,7 +945,8 @@ define_consts() ->
 		     {o_tid,        huint32},
 		     {pad,          huint32},
 		     {hashsize,     huint32},
-		     {fd,           huint32}]}
+		     {fd,           huint32},
+		     {sgsn_address6, addr}]}
      ].
 
 make_prefix(Id) when is_atom(Id) ->

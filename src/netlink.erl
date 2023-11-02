@@ -974,7 +974,7 @@ nl_ct_dec(_Protocol, << >>, Acc) ->
     lists:reverse(Acc).
 
 is_rt_dump(Type, Flags) ->
-    (Type band 3) =:= 2 andalso Flags band ?NLM_F_DUMP =/= 0.
+    (Type band 3) =:= 2 andalso Flags band ?NLM_F_DUMP =:= ?NLM_F_DUMP.
 
 -spec nl_rt_dec(binary()) -> [{'error',_} | #rtnetlink{}].
 nl_rt_dec(Msg) ->

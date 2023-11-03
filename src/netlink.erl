@@ -845,7 +845,7 @@ nl_dec_payload(_Type, done, << Length:32/native-integer >>) ->
 	Length;
 
 %% Error
-nl_dec_payload(_Type, error, <<Error:32, Msg/binary>>) ->
+nl_dec_payload(_Type, error, <<Error:32/native-signed-integer, Msg/binary>>) ->
     {Error, Msg};
 
 nl_dec_payload(ctnetlink, _MsgType, << Family:8, Version:8, ResId:16/native-integer, Data/binary >>) ->

@@ -2660,6 +2660,9 @@ decode_linkinfo_gtp(_Family, 2, Value) ->
 decode_linkinfo_gtp(_Family, 3, Value) ->
     {hashsize, decode_huint32(Value)};
 
+decode_linkinfo_gtp(_Family, 4, Value) ->
+    {role, decode_huint32(Value)};
+
 decode_linkinfo_gtp(_Family, Id, Value) ->
     {Id, Value}.
 
@@ -5373,6 +5376,9 @@ encode_linkinfo_gtp(_Family, {fd1, Value}) ->
 
 encode_linkinfo_gtp(_Family, {hashsize, Value}) ->
     encode_huint32(3, Value);
+
+encode_linkinfo_gtp(_Family, {role, Value}) ->
+    encode_huint32(4, Value);
 
 encode_linkinfo_gtp(_Family, {Type, Value})
   when is_integer(Type), is_binary(Value) ->
